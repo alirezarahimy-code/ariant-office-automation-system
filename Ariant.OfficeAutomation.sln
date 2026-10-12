@@ -1,0 +1,76 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{11111111-1111-1111-1111-111111111111}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{22222222-2222-2222-2222-222222222222}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{33333333-3333-3333-3333-333333333333}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ariant.OfficeAutomation.Common", "src\Ariant.OfficeAutomation.Common\Ariant.OfficeAutomation.Common.csproj", "{2906C205-0924-4E02-8B38-CD22A4D16933}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ariant.OfficeAutomation.Domain", "src\Ariant.OfficeAutomation.Domain\Ariant.OfficeAutomation.Domain.csproj", "{55ED3ACA-1FE0-4A5B-ACB9-58B53D689718}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ariant.OfficeAutomation.Application", "src\Ariant.OfficeAutomation.Application\Ariant.OfficeAutomation.Application.csproj", "{273B4E45-C3A8-4AFE-BDC4-8750C2E7436B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ariant.OfficeAutomation.Infrastructure", "src\Ariant.OfficeAutomation.Infrastructure\Ariant.OfficeAutomation.Infrastructure.csproj", "{9C5441A3-BE50-4B7B-BD3C-128798AB5F5E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ariant.OfficeAutomation.Web", "src\Ariant.OfficeAutomation.Web\Ariant.OfficeAutomation.Web.csproj", "{C95D5336-D450-4D75-9A50-8F139D94CD35}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ariant.OfficeAutomation.Tests", "tests\Ariant.OfficeAutomation.Tests\Ariant.OfficeAutomation.Tests.csproj", "{00CD0F1C-77DA-4A3A-ADB0-DB1A735F7190}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{44444444-4444-4444-4444-444444444444}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+		Directory.Build.props = Directory.Build.props
+		Directory.Packages.props = Directory.Packages.props
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2906C205-0924-4E02-8B38-CD22A4D16933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2906C205-0924-4E02-8B38-CD22A4D16933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2906C205-0924-4E02-8B38-CD22A4D16933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2906C205-0924-4E02-8B38-CD22A4D16933}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55ED3ACA-1FE0-4A5B-ACB9-58B53D689718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55ED3ACA-1FE0-4A5B-ACB9-58B53D689718}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55ED3ACA-1FE0-4A5B-ACB9-58B53D689718}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55ED3ACA-1FE0-4A5B-ACB9-58B53D689718}.Release|Any CPU.Build.0 = Release|Any CPU
+		{273B4E45-C3A8-4AFE-BDC4-8750C2E7436B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{273B4E45-C3A8-4AFE-BDC4-8750C2E7436B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{273B4E45-C3A8-4AFE-BDC4-8750C2E7436B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{273B4E45-C3A8-4AFE-BDC4-8750C2E7436B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C5441A3-BE50-4B7B-BD3C-128798AB5F5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C5441A3-BE50-4B7B-BD3C-128798AB5F5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C5441A3-BE50-4B7B-BD3C-128798AB5F5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C5441A3-BE50-4B7B-BD3C-128798AB5F5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C95D5336-D450-4D75-9A50-8F139D94CD35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C95D5336-D450-4D75-9A50-8F139D94CD35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C95D5336-D450-4D75-9A50-8F139D94CD35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C95D5336-D450-4D75-9A50-8F139D94CD35}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00CD0F1C-77DA-4A3A-ADB0-DB1A735F7190}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00CD0F1C-77DA-4A3A-ADB0-DB1A735F7190}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00CD0F1C-77DA-4A3A-ADB0-DB1A735F7190}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00CD0F1C-77DA-4A3A-ADB0-DB1A735F7190}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2906C205-0924-4E02-8B38-CD22A4D16933} = {11111111-1111-1111-1111-111111111111}
+		{55ED3ACA-1FE0-4A5B-ACB9-58B53D689718} = {11111111-1111-1111-1111-111111111111}
+		{273B4E45-C3A8-4AFE-BDC4-8750C2E7436B} = {11111111-1111-1111-1111-111111111111}
+		{9C5441A3-BE50-4B7B-BD3C-128798AB5F5E} = {11111111-1111-1111-1111-111111111111}
+		{C95D5336-D450-4D75-9A50-8F139D94CD35} = {11111111-1111-1111-1111-111111111111}
+		{00CD0F1C-77DA-4A3A-ADB0-DB1A735F7190} = {22222222-2222-2222-2222-222222222222}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {04DD0AF8-B25F-42CD-B9D5-3BE9F2DD1C58}
+	EndGlobalSection
+EndGlobal

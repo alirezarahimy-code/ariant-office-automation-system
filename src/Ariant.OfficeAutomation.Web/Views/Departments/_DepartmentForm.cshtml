@@ -1,0 +1,58 @@
+@model DepartmentFormRequest
+@{
+    var parentOptions = ViewData["ParentOptions"] as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                       ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+}
+
+@if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty] is not null)
+{
+    <div class="alert alert--danger" role="alert">
+        @foreach (var error in ViewData.ModelState[string.Empty]!.Errors)
+        {
+            <div>@error.ErrorMessage</div>
+        }
+    </div>
+}
+
+<div class="form-grid">
+    <div class="form__row">
+        <label class="form__label" asp-for="Title"></label>
+        <input class="form__input" asp-for="Title" autofocus placeholder="مثلاً: دبیرخانه" />
+        <span class="form__error" asp-validation-for="Title"></span>
+    </div>
+
+    <div class="form__row">
+        <label class="form__label" asp-for="Code"></label>
+        <input class="form__input" asp-for="Code" dir="ltr" placeholder="202" />
+        <span class="form__error" asp-validation-for="Code"></span>
+    </div>
+
+    <div class="form__row form__row--full">
+        <label class="form__label" asp-for="ParentId"></label>
+        <select class="form__input" asp-for="ParentId" asp-items="parentOptions"></select>
+        <span class="form__hint">اگر واحد ریشه است، بدون واحد بالادستی رها کنید.</span>
+        <span class="form__error" asp-validation-for="ParentId"></span>
+    </div>
+
+    <div class="form__row">
+        <label class="form__label" asp-for="SortOrder"></label>
+        <input class="form__input" asp-for="SortOrder" type="number" min="0" max="9999" dir="ltr" />
+        <span class="form__error" asp-validation-for="SortOrder"></span>
+    </div>
+
+    <div class="form__row form__row--inline">
+        <input class="form__checkbox" asp-for="IsActive" type="checkbox" />
+        <label class="form__label form__label--inline" asp-for="IsActive"></label>
+    </div>
+
+    <div class="form__row form__row--full">
+        <label class="form__label" asp-for="Description"></label>
+        <textarea class="form__input form__textarea" asp-for="Description" rows="4" placeholder="شرح وظایف یا توضیحات واحد…"></textarea>
+        <span class="form__error" asp-validation-for="Description"></span>
+    </div>
+</div>
+
+<div class="form__actions">
+    <button type="submit" class="btn btn--primary">ذخیره</button>
+    <a class="btn btn--ghost" asp-action="Index">انصراف</a>
+</div>

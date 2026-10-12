@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    لایه کاربرد (Application)
+    منطق کاربردی، سرویس‌ها، قراردادها (Interface) و اشیای انتقال داده (DTO).
+    EF Core فقط در سطح انتزاع (IQueryable/DbSet) استفاده می‌شود.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Ariant.OfficeAutomation.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ariant.OfficeAutomation.Domain\Ariant.OfficeAutomation.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

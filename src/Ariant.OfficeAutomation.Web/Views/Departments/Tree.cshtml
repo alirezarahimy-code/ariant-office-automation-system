@@ -1,0 +1,34 @@
+@model IReadOnlyList<DepartmentTreeItemDto>
+@{
+    ViewData["Title"] = "نمای درختی ساختار سازمانی";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">نمای درختی ساختار سازمانی</h1>
+        <p class="page-head__subtitle">نمایش سلسله‌مراتب واحدها و تعداد کارکنان هر واحد</p>
+    </div>
+    <div class="page-head__actions">
+        <a class="btn btn--outline" asp-action="Index">نمای فهرستی</a>
+        @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Manager))
+        {
+            <a class="btn btn--primary" asp-action="Create">افزودن واحد سازمانی</a>
+        }
+    </div>
+</div>
+
+<div class="card">
+    @if (Model.Count == 0)
+    {
+        <p class="empty-state">هنوز واحد سازمانی ثبت نشده است.</p>
+    }
+    else
+    {
+        <ul class="tree">
+            @foreach (DepartmentTreeItemDto node in Model)
+            {
+                <partial name="_TreeNode" model="node" />
+            }
+        </ul>
+    }
+</div>

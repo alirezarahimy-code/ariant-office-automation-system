@@ -1,0 +1,83 @@
+@model DashboardSummaryDto
+@{
+    ViewData["Title"] = "داشبورد";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">داشبورد مدیریتی</h1>
+        <p class="page-head__subtitle">@Model.TodayDisplay</p>
+    </div>
+    <div class="page-head__actions">
+        <a class="btn btn--primary" asp-controller="Departments" asp-action="Create">افزودن واحد سازمانی</a>
+        <a class="btn btn--outline" asp-controller="Departments" asp-action="Tree">نمای درختی سازمان</a>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <span class="stat-card__label">واحدهای سازمانی</span>
+        <span class="stat-card__value">@PersianText.ToPersianNumber(Model.DepartmentCount)</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card__label">کارمندان</span>
+        <span class="stat-card__value">@PersianText.ToPersianNumber(Model.EmployeeCount)</span>
+        <span class="stat-card__hint">شاغل: @PersianText.ToPersianNumber(Model.ActiveEmployeeCount)</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card__label">کاربران سامانه</span>
+        <span class="stat-card__value">@PersianText.ToPersianNumber(Model.UserCount)</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card__label">رویدادهای ثبت‌شده</span>
+        <span class="stat-card__value">@PersianText.ToPersianNumber(Model.AuditLogCount)</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">آخرین رویدادهای سامانه</h2>
+        @if (User.IsInRole(AppRoles.Admin))
+        {
+            <a class="btn btn--outline btn--sm" asp-controller="AuditLogs" asp-action="Index">مشاهده همه</a>
+        }
+    </div>
+
+    @if (Model.RecentActivities.Count == 0)
+    {
+        <p class="empty-state">هنوز رویدادی ثبت نشده است.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+            <tr>
+                <th>زمان</th>
+                <th>کاربر</th>
+                <th>شرح رویداد</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (ActivityItemDto activity in Model.RecentActivities)
+            {
+                <tr>
+                    <td class="text-nowrap">@activity.TimestampDisplay</td>
+                    <td>@(activity.UserName ?? "—")</td>
+                    <td>@activity.Description</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">راهنمای گام بعدی</h2>
+    </div>
+    <ul class="hint-list">
+        <li>ساختار سازمانی را از بخش «ساختار سازمانی» تکمیل کنید.</li>
+        <li>کارمندان را به واحدهای مربوط متصل کنید (فاز منابع انسانی).</li>
+        <li>برای اتصال سامانه تیکتینگ، راهنمای <code>docs/04-ticketing-integration.md</code> را ببینید.</li>
+    </ul>
+</div>

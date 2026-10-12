@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] is null ? "سامانه اتوماسیون اداری آرینت" : ViewData["Title"] + " | سامانه اتوماسیون اداری آرینت")</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header class="app-header">
+    <div class="app-header__inner">
+        <a class="app-brand" asp-controller="Home" asp-action="Index">
+            <span class="app-brand__mark">آ</span>
+            <span class="app-brand__text">
+                <strong>سامانه اتوماسیون اداری</strong>
+                <small>آرینت</small>
+            </span>
+        </a>
+
+        @if (User.Identity is { IsAuthenticated: true })
+        {
+            <nav class="app-nav">
+                <a class="app-nav__link" asp-controller="Home" asp-action="Index">داشبورد</a>
+                <a class="app-nav__link" asp-controller="Departments" asp-action="Index">ساختار سازمانی</a>
+                <a class="app-nav__link" asp-controller="Departments" asp-action="Tree">نمای درختی</a>
+                @if (User.IsInRole(AppRoles.Admin))
+                {
+                    <a class="app-nav__link" asp-controller="AuditLogs" asp-action="Index">گزارش ممیزی</a>
+                }
+            </nav>
+
+            <div class="app-user">
+                <span class="app-user__name">@User.Identity.Name</span>
+                <a class="app-user__link" asp-controller="Account" asp-action="ChangePassword">تغییر گذرواژه</a>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="app-user__logout">
+                    <button type="submit" class="btn btn--ghost btn--sm">خروج</button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="app-user">
+                <a class="btn btn--primary btn--sm" asp-controller="Account" asp-action="Login">ورود به سامانه</a>
+            </div>
+        }
+    </div>
+</header>
+
+<main class="app-main">
+    <div class="app-container">
+        @if (TempData["SuccessMessage"] is string successMessage)
+        {
+            <div class="alert alert--success" role="alert">@successMessage</div>
+        }
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert--danger" role="alert">@errorMessage</div>
+        }
+
+        @RenderBody()
+    </div>
+</main>
+
+<footer class="app-footer">
+    <div class="app-container app-footer__inner">
+        <span>سامانه اتوماسیون اداری آرینت — نسخه ۱٫۰٫۰</span>
+        <span>امروز: @PersianDate.Today.ToFullString()</span>
+    </div>
+</footer>
+
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

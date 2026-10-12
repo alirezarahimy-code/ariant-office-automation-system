@@ -1,0 +1,59 @@
+## تنظیمات Git برای پروژه دات‌نت
+
+# خروجی ساخت
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+
+# پکیج‌ها
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+# پایگاه‌داده محلی (SQLite) — نباید به مخزن برود
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+App_Data/
+
+# گزارش تست و پوشش کد
+[Tt]est[Rr]esult*/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# فایل‌های محلی تنظیمات و کلیدها (هرگز کامیت نشود)
+appsettings.Local.json
+*.pfx
+*.p12
+*.key
+secrets.json
+
+# لاگ‌ها
+*.log
+logs/
+
+# سیستم‌عامل
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ابزارها
+node_modules/
+__pycache__/
+*.pyc
+.venv/

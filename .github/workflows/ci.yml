@@ -1,0 +1,46 @@
+name: ساخت و آزمون (CI)
+
+on:
+  push:
+    branches:
+      - main
+      - 'arena/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: ساخت و اجرای آزمون‌ها
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب دات‌نت
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: بازیابی پکیج‌ها
+        run: dotnet restore Ariant.OfficeAutomation.sln
+
+      - name: ساخت راه‌حل
+        run: dotnet build Ariant.OfficeAutomation.sln --configuration Release --no-restore
+
+      - name: اجرای آزمون‌ها
+        run: dotnet test Ariant.OfficeAutomation.sln --configuration Release --no-build --verbosity normal
+
+      - name: انتشار خروجی اجرایی
+        if: github.ref == 'refs/heads/main'
+        run: dotnet publish src/Ariant.OfficeAutomation.Web/Ariant.OfficeAutomation.Web.csproj --configuration Release --no-build --output ./publish
+
+      - name: بارگذاری آرتیفکت
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ariant-office-automation-web
+          path: ./publish
+          if-no-files-found: ignore

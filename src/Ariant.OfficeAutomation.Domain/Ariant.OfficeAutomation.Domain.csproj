@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    لایه دامنه (Domain)
+    موجودیت‌ها، قواعد و مفاهیم کسب‌وکار. بدون وابستگی به دیتابیس یا وب.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Ariant.OfficeAutomation.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ariant.OfficeAutomation.Common\Ariant.OfficeAutomation.Common.csproj" />
+  </ItemGroup>
+
+</Project>

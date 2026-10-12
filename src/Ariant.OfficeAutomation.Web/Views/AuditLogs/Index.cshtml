@@ -1,0 +1,80 @@
+@model PagedResult<AuditLogItemDto>
+@{
+    ViewData["Title"] = "گزارش ممیزی";
+    var query = ViewData["Query"] as AuditLogQuery ?? new AuditLogQuery();
+    var entityNames = ViewData["EntityNames"] as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                      ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var actions = ViewData["Actions"] as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                  ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">گزارش ممیزی</h1>
+        <p class="page-head__subtitle">همه تغییرات داده‌ها با کاربر، زمان و جزئیات ثبت می‌شود</p>
+    </div>
+</div>
+
+<div class="card">
+    <form method="get" asp-action="Index" class="filter-bar filter-bar--wrap">
+        <select class="form__input" name="entityName" asp-items="entityNames">
+            <option value="">همه موجودیت‌ها</option>
+        </select>
+
+        <select class="form__input" name="action" asp-items="actions">
+            <option value="">همه رویدادها</option>
+        </select>
+
+        <input class="form__input" type="text" name="userName" value="@query.UserName" placeholder="نام کاربر…" />
+        <input class="form__input js-persian-date" type="text" name="fromPersianDate" value="@query.FromPersianDate" placeholder="از تاریخ (۱۴۰۴/۰۱/۰۱)" />
+        <input class="form__input js-persian-date" type="text" name="toPersianDate" value="@query.ToPersianDate" placeholder="تا تاریخ (۱۴۰۴/۱۲/۲۹)" />
+
+        <button type="submit" class="btn btn--outline">جست‌وجو</button>
+        <a class="btn btn--ghost" asp-action="Index">حذف فیلترها</a>
+    </form>
+
+    @if (Model.Items.Count == 0)
+    {
+        <p class="empty-state">رویدادی با این مشخصات یافت نشد.</p>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>زمان</th>
+                    <th>کاربر</th>
+                    <th>رویداد</th>
+                    <th>موجودیت</th>
+                    <th>شرح</th>
+                    <th>نشانی شبکه</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (AuditLogItemDto item in Model.Items)
+                {
+                    <tr>
+                        <td class="text-nowrap">@item.TimestampDisplay</td>
+                        <td>@(item.UserName ?? "—")</td>
+                        <td><span class="badge badge--muted">@item.ActionDisplay</span></td>
+                        <td>@item.EntityName</td>
+                        <td>@(item.Description ?? "—")</td>
+                        <td class="text-nowrap" dir="ltr">@(item.IpAddress ?? "—")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pager" model="@(new PagerViewModel
+                                       {
+                                           Page = Model.Page,
+                                           PageSize = Model.PageSize,
+                                           TotalPages = Model.TotalPages,
+                                           TotalCount = Model.TotalCount,
+                                           Action = "Index",
+                                           Search = query.UserName
+                                       })" />
+    }
+</div>
