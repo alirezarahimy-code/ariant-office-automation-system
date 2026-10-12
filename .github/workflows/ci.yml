@@ -10,6 +10,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   build-and-test:
     name: ساخت و اجرای آزمون‌ها
@@ -24,14 +28,25 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # خروجی همه گام‌ها در build.log ذخیره می‌شود تا در صورت خطا،
+      # متن خطا به‌صورت کامنت در Pull Request قرار بگیرد.
       - name: بازیابی پکیج‌ها
-        run: dotnet restore Ariant.OfficeAutomation.sln
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet restore Ariant.OfficeAutomation.sln 2>&1 | tee -a build.log
 
       - name: ساخت راه‌حل
-        run: dotnet build Ariant.OfficeAutomation.sln --configuration Release --no-restore
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet build Ariant.OfficeAutomation.sln --configuration Release --no-restore 2>&1 | tee -a build.log
 
       - name: اجرای آزمون‌ها
-        run: dotnet test Ariant.OfficeAutomation.sln --configuration Release --no-build --verbosity normal
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test Ariant.OfficeAutomation.sln --configuration Release --no-build --verbosity normal 2>&1 | tee -a build.log
 
       - name: انتشار خروجی اجرایی
         if: github.ref == 'refs/heads/main'
@@ -44,3 +59,21 @@ jobs:
           name: ariant-office-automation-web
           path: ./publish
           if-no-files-found: ignore
+
+      - name: گزارش خطا در Pull Request
+        if: failure() && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### نتیجه CI: ناموفق"
+            echo
+            echo "خروجی زیر از آخرین گام ناموفق گرفته شده است:"
+            echo
+            echo '```text'
+            tail -c 6000 build.log 2>/dev/null || echo "فایل گزارش موجود نیست."
+            echo '```'
+          } > ci-comment.md
+
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file ci-comment.md

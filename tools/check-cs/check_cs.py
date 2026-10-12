@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+import xml.etree.ElementTree as ElementTree
 
 try:
     import tree_sitter_c_sharp
@@ -28,6 +29,7 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 ERROR_NODE = "ERROR"
+PROJECT_FILE_PATTERNS = ("*.csproj", "*.props", "*.targets")
 
 
 def build_parser() -> "Parser":
@@ -59,6 +61,33 @@ def check_file(parser: "Parser", path: pathlib.Path) -> list[tuple[int, int, str
     return problems
 
 
+def check_project_files() -> int:
+    """
+    بررسی اعتبار XML فایل‌های پروژه (csproj/props/targets).
+
+    نکته مهم: در کامنت XML نمی‌توان از دو خط تیره پشت‌سرهم استفاده کرد
+    (خط جداکننده تزئینی مثل چند «-» پشت هم)، وگرنه MSBuild نمی‌تواند فایل را بخواند.
+    """
+    problems = 0
+    files = sorted(
+        path
+        for pattern in PROJECT_FILE_PATTERNS
+        for path in pathlib.Path(".").rglob(pattern)
+        if "obj" not in path.parts and "bin" not in path.parts
+    )
+
+    for file in files:
+        try:
+            ElementTree.parse(file)
+        except ElementTree.ParseError as error:
+            print(f"\n{file}")
+            print(f"  XML نامعتبر: {error}")
+            problems += 1
+
+    print(f"فایل‌های پروژه بررسی‌شده: {len(files)} | XML نامعتبر: {problems}")
+    return problems
+
+
 def main(argv: list[str]) -> int:
     targets = argv[1:] or ["src", "tests"]
     parser = build_parser()
@@ -86,7 +115,11 @@ def main(argv: list[str]) -> int:
                 print(f"  … و {len(problems) - 20} مورد دیگر")
             total_problems += len(problems)
 
-    print(f"\nبررسی‌شده: {len(files)} فایل | خطای نگارشی: {total_problems}")
+    print(f"\nبررسی C#: {len(files)} فایل | خطای نگارشی: {total_problems}")
+
+    total_problems += check_project_files()
+
+    print(f"مجموع خطاها: {total_problems}")
     return 0 if total_problems == 0 else 1
 
 
