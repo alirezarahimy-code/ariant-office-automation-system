@@ -1,0 +1,22 @@
+"""پیکربندی نشانی‌های سامانه."""
+from django.contrib import admin
+from django.urls import include, path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from apps.core.views import AuthMeView, home
+from apps.organization.views import HealthView
+
+urlpatterns = [
+    path('', home, name='home'),
+    path('admin/', admin.site.urls),
+    # وب‌سرویس نسخه ۱ — قرارداد پل تیکتینگ (docs/04)
+    path('api/v1/health', HealthView.as_view(), name='api-health'),
+    path('api/v1/auth/token', TokenObtainPairView.as_view(), name='api-token'),
+    path('api/v1/auth/token/refresh', TokenRefreshView.as_view(), name='api-token-refresh'),
+    path('api/v1/auth/me', AuthMeView.as_view(), name='api-me'),
+    path('api/v1/', include('apps.organization.urls')),
+]
+
+admin.site.site_header = 'سامانه اتوماسیون اداری آرینت'
+admin.site.site_title = 'مدیریت سامانه آرینت'
+admin.site.index_title = 'پنل مدیریت'

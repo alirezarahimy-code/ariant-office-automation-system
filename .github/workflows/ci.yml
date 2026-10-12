@@ -85,3 +85,33 @@ jobs:
           } > ci-comment.md
 
           gh pr comment "${{ github.event.pull_request.number }}" --body-file ci-comment.md
+
+  python-tests:
+    name: آزمون‌های پایتون (جنگو)
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب پایتون
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements/base.txt
+
+      - name: نصب نیازمندی‌ها
+        working-directory: backend
+        run: pip install -r requirements/base.txt
+
+      - name: بررسی سلامت پروژه
+        working-directory: backend
+        run: python manage.py check
+
+      - name: بررسی مهاجرت‌های پایگاه‌داده
+        working-directory: backend
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: اجرای آزمون‌ها
+        working-directory: backend
+        run: python manage.py test --verbosity=1
