@@ -2,13 +2,18 @@
 """ساخت PDF فارسی سند جامع از فایل مارک‌داون.
 
 اجرا:
-    PYTHONPATH=/tmp/pdfenv python3 tools/build_spec_pdf.py
+    # سند جامع (پیش‌فرض‌ها):
+    python3 tools/build_spec_pdf.py
+    # سند دلخواه بدون جلد و فهرست:
+    python3 tools/build_spec_pdf.py docs/07-manager-summary.md docs/07-manager-summary.pdf \
+        --title "خلاصه مدیریتی" --no-toc --header "خلاصه مدیریتی — اتوماسیون اداری"
 
 نیازمندی‌ها: reportlab, arabic-reshaper, python-bidi (در requirements نیستند؛
 فقط برای تولید سند لازم‌اند). فونت وزیرمتن در tools/fonts موجود است.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import sys
@@ -16,7 +21,7 @@ import sys
 import arabic_reshaper
 from bidi.algorithm import get_display
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
@@ -24,6 +29,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
+    Flowable,
     Frame,
     HRFlowable,
     KeepTogether,
@@ -41,6 +47,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MD_PATH = os.path.join(ROOT, 'docs', '06-comprehensive-spec-v2.md')
 PDF_PATH = os.path.join(ROOT, 'docs', '06-comprehensive-spec-v2.pdf')
 FONT_DIR = os.path.join(ROOT, 'tools', 'fonts')
+
+DOC_HEADER = 'سند جامع سامانه اتوماسیون اداری — نسخه ۲٫۰'
 
 NAVY = colors.HexColor('#1a3c6e')
 ACCENT = colors.HexColor('#0f7b6c')
@@ -62,6 +70,11 @@ pdfmetrics.registerFontFamily(
     'Vazirmatn', normal='Vazirmatn', bold='Vazirmatn-Bold')
 
 
+def pdigits(value) -> str:
+    """تبدیل ارقام لاتین به فارسی."""
+    return str(value).translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹'))
+
+
 def fa(text: str) -> str:
     """شکل‌دهی و ترتیب بصری برای رسم متن فارسی/عربی."""
     text = text.replace('«', '"').replace('»', '"')
@@ -69,22 +82,43 @@ def fa(text: str) -> str:
 
 
 def fa_runs(text: str) -> str:
-    """تبدیل متن با پررنگ‌سازی **متن** — قطعه‌ها جدا شکل می‌گیرند."""
-    parts = re.split(r'(\*\*[^*]+\*\*)', text)
-    chunks: list[tuple[str, bool]] = []
-    for part in parts:
-        if not part:
-            continue
-        if part.startswith('**') and part.endswith('**'):
-            chunks.append((fa(part[2:-2]), True))
-        else:
-            chunks.append((fa(part), False))
-    # در چیدمان راست‌به‌چپ، نخستین قطعه منطقی باید راست‌ترین باشد
+    """تبدیل متن با پررنگ‌سازی **متن**.
+
+    کل رشته (با نشانگرهای **) یکجا شکل و bidi می‌شود تا ترتیب کلمات و
+    شکست خط درست بماند؛ سپس بر پایه نشانگرها قطعه‌های پررنگ جدا می‌شوند و
+    فهرست قطعه‌ها به ترتیب منطقی باز می‌گردد (چیدمان RTL گزارش‌لب خودش
+    نخستین قطعه را راست‌ترین می‌چیند).
+    """
+    if '**' not in text:
+        return fa(text)
+    disp = get_display(arabic_reshaper.reshape(text))
+    parts = disp.split('**')
+    chunks: list[tuple[str, bool]] = [
+        (part, i % 2 == 1) for i, part in enumerate(parts)
+    ]
     chunks.reverse()
     out = []
     for shaped, bold in chunks:
+        if not shaped:
+            continue
         out.append(f'<b>{shaped}</b>' if bold else shaped)
-    return ' '.join(out)
+    return ''.join(out)
+
+
+def fa_auto(text: str, width_pt: float, font: str, size: float) -> str:
+    """متن با بولد، فقط اگر در یک خط جا شود.
+
+    چیدمان راست‌به‌چپ reportlab تنها برای پاراگراف «تک‌تکه» ترتیب و شکست خط
+    درست تولید می‌کند؛ پاراگراف چندتکه‌ای (**بولد**) که شکست خط بخورد،
+    عبارت‌هایش جابهجا می‌شود. پس اگر متن پررنگ در یک خط جا شد، قطعه‌های
+    بولد نگه داشته می‌شوند وگرنه متن ساده (تک‌تکه) می‌شود تا ترتیب درست بماند.
+    """
+    if '**' not in text:
+        return fa(text)
+    plain = text.replace('**', '')
+    if pdfmetrics.stringWidth(fa(plain), font, size) <= width_pt:
+        return fa_runs(text)
+    return fa(plain)
 
 
 # ---------------------------------------------------------------------------
@@ -159,12 +193,12 @@ class SpecDoc(BaseDocTemplate):
         canvas.saveState()
         canvas.setFont('Vazirmatn', 8)
         canvas.setFillColor(GREY)
-        header = fa('سند جامع سامانه اتوماسیون اداری — نسخه ۲٫۰')
+        header = fa(DOC_HEADER)
         canvas.drawRightString(A4[0] - 2 * cm, A4[1] - 1.4 * cm, header)
         canvas.setStrokeColor(colors.HexColor('#c9d2e0'))
         canvas.setLineWidth(0.6)
         canvas.line(2 * cm, A4[1] - 1.6 * cm, A4[0] - 2 * cm, A4[1] - 1.6 * cm)
-        page_label = fa(f'صفحه {doc.page}')
+        page_label = fa(f'صفحه {pdigits(doc.page)}')
         canvas.drawCentredString(A4[0] / 2, 1.1 * cm, page_label)
         canvas.restoreState()
 
@@ -173,17 +207,90 @@ class SpecDoc(BaseDocTemplate):
         if text is None:
             return
         level = flowable.toc_level
-        self.notify('TOCEntry', (level, text, self.page))
+        if self.page < getattr(self, '_last_toc_page', 10 ** 6):
+            TOC_ENTRIES.clear()  # نخستین عنوان هر گذر: پاک‌سازی داده گذر قبل
+        self._last_toc_page = self.page
+        TOC_ENTRIES.append((level, text, self.page))
         key = f'sec-{self.page}-{abs(hash(text))}'
         self.canv.bookmarkPage(key)
-        self.canv.addOutlineEntry(text[:120], key, level=level, closed=(level > 0))
+        outline = getattr(flowable, 'outline_text', text)
+        self.canv.addOutlineEntry(outline[:120], key, level=level, closed=(level > 0))
+
+
+TOC_ENTRIES: list[tuple[int, str, int]] = []
+
+
+class FaTocFlowable(Flowable):
+    """فهرست مطالب سفارشی: عنوان در ستون راست، شماره صفحه در ستون چپ."""
+
+    def __init__(self, styles: dict):
+        super().__init__()
+        self.styles = styles
+        self._table = None
+        self.height = 0
+
+    def _build(self, width: float) -> Table:
+        rows = []
+        for level, text, page in TOC_ENTRIES:
+            title_style = self.styles['toc0'] if level == 0 else self.styles['toc1']
+            num = Paragraph(fa(str(page)), self.styles['tocnum'])
+            title = Paragraph(text if text else ' ', title_style)
+            rows.append([num, title])
+        if not rows:
+            rows = [[Paragraph(' ', self.styles['tocnum']),
+                     Paragraph(fa(' '), self.styles['toc0'])]]
+        t = Table(rows, colWidths=[1.4 * cm, width - 1.4 * cm])
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ]))
+        return t
+
+    def wrap(self, availWidth: float, availHeight: float):
+        self._table = self._build(availWidth)
+        _, height = self._table.wrap(availWidth, availHeight)
+        self.height = height
+        return availWidth, height
+
+    def split(self, availWidth: float, availHeight: float):
+        table = self._build(availWidth)
+        parts = [pt for pt in table.split(availWidth, availHeight)
+                 if getattr(pt, '_cellvalues', None)]
+        if not parts:
+            parts = [table]  # جا نشد؛ کل فهرست به صفحه تازه می‌رود
+        return [FaTocPart(part) for part in parts]
+
+    def draw(self):
+        if self._table is not None:
+            self._table.drawOn(self.canv, 0, 0)
+
+
+class FaTocPart(Flowable):
+    """بخشی از جدول فهرست مطالب برای شکست بین صفحات."""
+
+    def __init__(self, table: Table):
+        super().__init__()
+        self._table = table
+
+    def wrap(self, availWidth: float, availHeight: float):
+        return self._table.wrap(availWidth, availHeight)
+
+    def draw(self):
+        self._table.drawOn(self.canv, 0, 0)
 
 
 class TocParagraph(Paragraph):
-    def __init__(self, text, style, toc_text=None, toc_level=0):
+    def __init__(self, text, style, toc_text=None, toc_level=0, outline_text=None):
         super().__init__(text, style)
+        # toc_text: متن شکل‌گرفته برای نمایش در فهرست مطالب
+        # outline_text: متن منطقی خام برای بوکمارک‌های ناوبری PDF
         self.toc_text = toc_text
         self.toc_level = toc_level
+        self.outline_text = outline_text
 
 
 # ---------------------------------------------------------------------------
@@ -212,11 +319,12 @@ def importance_color(text: str):
     return None
 
 
-def cell_paragraph(text: str, header: bool, wide: bool):
+def cell_paragraph(text: str, header: bool, wide: bool, width_pt: float):
     style = STYLES['cellwidehead' if wide else 'cellhead'] if header \
         else STYLES['cellwide' if wide else 'cell']
     color = None if header else (decision_color(text) or importance_color(text))
-    shaped = fa_runs(text if text else '—')
+    shaped = fa_auto(text if text else '—', width_pt - 10, style.fontName,
+                     style.fontSize)
     if color is not None:
         return Paragraph(f'<font color="{color.hexval()}">{shaped}</font>', style)
     return Paragraph(shaped, style)
@@ -228,9 +336,6 @@ def build_table(rows: list[list[str]]) -> Table:
     ncols = max(len(r) for r in rows)
     rows = [r + [''] * (ncols - len(r)) for r in rows]
     wide = ncols >= 6
-    data = []
-    for ridx, row in enumerate(rows):
-        data.append([cell_paragraph(c, header=(ridx == 0), wide=wide) for c in row])
     weights = []
     for col in range(ncols):
         longest = max(len(r[col]) for r in rows)
@@ -238,6 +343,11 @@ def build_table(rows: list[list[str]]) -> Table:
     total = sum(weights) or 1
     avail = A4[0] - 4 * cm
     col_widths = [avail * w / total for w in weights]
+    data = []
+    for ridx, row in enumerate(rows):
+        data.append([cell_paragraph(c, header=(ridx == 0), wide=wide,
+                                    width_pt=col_widths[cidx])
+                     for cidx, c in enumerate(row)])
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = [
         ('BACKGROUND', (0, 0), (-1, 0), NAVY),
@@ -257,7 +367,8 @@ def build_table(rows: list[list[str]]) -> Table:
 
 
 def build_quote(lines: list[str]) -> Table:
-    inner = [Paragraph(fa_runs(l), STYLES['quote']) for l in lines if l.strip()]
+    inner = [Paragraph(fa_auto(l, A4[0] - 4 * cm - 24, 'Vazirmatn', 9.5),
+                       STYLES['quote']) for l in lines if l.strip()]
     t = Table([[inner]], colWidths=[A4[0] - 4 * cm])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), LIGHT),
@@ -335,13 +446,15 @@ def md_to_flowables(md_text: str) -> list:
                 if not first_h1:
                     flow.append(PageBreak())
                 first_h1 = False
-                para = TocParagraph(fa_runs(title), STYLES['H1'],
-                                    toc_text=title, toc_level=0)
+                para = TocParagraph(fa_auto(title, A4[0] - 4 * cm, 'Vazirmatn-Black', 17), STYLES['H1'],
+                                    toc_text=fa(title), toc_level=0,
+                                    outline_text=title)
             elif level == 2:
-                para = TocParagraph(fa_runs(title), STYLES['H2'],
-                                    toc_text=title, toc_level=1)
+                para = TocParagraph(fa_auto(title, A4[0] - 4 * cm, 'Vazirmatn-Bold', 12.5), STYLES['H2'],
+                                    toc_text=fa(title), toc_level=1,
+                                    outline_text=title)
             else:
-                para = Paragraph(fa_runs(title), STYLES['H3'])
+                para = Paragraph(fa_auto(title, A4[0] - 4 * cm, 'Vazirmatn-Bold', 11), STYLES['H3'])
             flow.append(para)
             i += 1
             continue
@@ -349,32 +462,36 @@ def md_to_flowables(md_text: str) -> list:
         # فهرست‌ها
         if re.match(r'^[-*]\s+', stripped):
             text = re.sub(r'^[-*]\s+', '', stripped)
-            flow.append(Paragraph(fa_runs(text), STYLES['bullet'], bulletText='•'))
+            flow.append(Paragraph(fa_auto(text, A4[0] - 5 * cm, 'Vazirmatn', 10),
+                                  STYLES['bullet'], bulletText='•'))
             i += 1
             continue
 
         # پاراگراف
-        flow.append(Paragraph(fa_runs(stripped), STYLES['body']))
+        flow.append(Paragraph(fa_auto(stripped, A4[0] - 4 * cm, 'Vazirmatn', 10),
+                              STYLES['body']))
         i += 1
 
     return flow
 
 
-def build_cover() -> list:
+def build_cover(title: str = 'سند جامع سامانه اتوماسیون اداری',
+                subtitle: str = 'درخت کامل ماژول‌ها، زیرسیستم‌ها، فرم‌ها، درجه اهمیت و اولویت ساخت',
+                meta: list | None = None,
+                summary: str | None = None) -> list:
     items: list = []
     items.append(Spacer(1, 3.2 * cm))
-    items.append(Paragraph(fa('سند جامع سامانه اتوماسیون اداری'),
-                           STYLES['cover_title']))
+    items.append(Paragraph(fa(title), STYLES['cover_title']))
     items.append(Spacer(1, 0.4 * cm))
-    items.append(Paragraph(fa('درخت کامل ماژول‌ها، زیرسیستم‌ها، فرم‌ها، درجه اهمیت و اولویت ساخت'),
-                           STYLES['cover_sub']))
+    items.append(Paragraph(fa(subtitle), STYLES['cover_sub']))
     items.append(Spacer(1, 1.2 * cm))
-    meta = [
-        [fa('نسخه'), fa('۲٫۰ — بازنگری و تکمیل')],
-        [fa('تاریخ'), fa('۱۴۰۵/۰۷/۲۰')],
-        [fa('وضعیت'), fa('پیش‌نویس نهایی برای تصویب مدیریت')],
-        [fa('مبنا'), fa('بازنگری کارشناسی نسخه ۱٫۰ — رفع ایرادها + درجه اهمیت و اولویت ساخت + فازبندی اجرا و تولید')],
-    ]
+    if meta is None:
+        meta = [
+            [fa('نسخه'), fa('۲٫۰ — بازنگری و تکمیل')],
+            [fa('تاریخ'), fa('۱۴۰۵/۰۷/۲۰')],
+            [fa('وضعیت'), fa('پیش‌نویس نهایی برای تصویب مدیریت')],
+            [fa('مبنا'), fa('بازنگری کارشناسی نسخه ۱٫۰ — رفع ایرادها + درجه اهمیت و اولویت ساخت + فازبندی اجرا و تولید')],
+        ]
     t = Table(meta, colWidths=[3.6 * cm, 11.4 * cm])
     t.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (0, -1), 'Vazirmatn-Bold'),
@@ -388,58 +505,119 @@ def build_cover() -> list:
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     items.append(t)
-    items.append(Spacer(1, 1.4 * cm))
-    box = [[Paragraph(fa_runs(
-        '**خلاصه:** این سند نقشه کامل سامانه را با درجه اهمیت، اولویت ساخت، '
-        'تصمیم «بساز / وصل کن / حذف»، نیازهای غیرعملکردی، مدل داده، ماتریس نقش‌ها، '
-        'پل اتصال به سامانه تیکتینگ موجود و برنامه پنج‌فازی اجرا و تولید ارائه می‌کند.'), STYLES['quote'])]]
-    bt = Table(box, colWidths=[15 * cm])
-    bt.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e7f2ef')),
-        ('LINEBEFORE', (0, 0), (0, -1), 3, ACCENT),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-    ]))
-    items.append(bt)
+    if summary:
+        items.append(Spacer(1, 1.4 * cm))
+        box = [[Paragraph(fa_auto(summary, 15 * cm - 24, 'Vazirmatn', 9.5),
+                          STYLES['quote'])]]
+        bt = Table(box, colWidths=[15 * cm])
+        bt.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e7f2ef')),
+            ('LINEBEFORE', (0, 0), (0, -1), 3, ACCENT),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        items.append(bt)
     return items
 
 
 def build_toc() -> list:
-    toc = TableOfContents()
-    toc.levelStyles = [
-        ParagraphStyle('toc0', fontName='Vazirmatn-Bold', fontSize=10.5,
-                       leading=18, textColor=NAVY, rightIndent=0, firstLineIndent=0,
-                       alignment=TA_RIGHT, wordWrap='RTL'),
-        ParagraphStyle('toc1', fontName='Vazirmatn', fontSize=9,
-                       leading=14, textColor=colors.HexColor('#33415c'),
-                       rightIndent=16, firstLineIndent=0, alignment=TA_RIGHT,
-                       wordWrap='RTL'),
-    ]
+    """فهرست مطالب از داده‌های گذر پیشین (همگرایی در حلقه ساخت)."""
+    styles = {
+        'toc0': ParagraphStyle('toc0', fontName='Vazirmatn-Bold', fontSize=10,
+                               leading=16, textColor=NAVY, rightIndent=0,
+                               firstLineIndent=0, alignment=TA_RIGHT,
+                               wordWrap='RTL'),
+        'toc1': ParagraphStyle('toc1', fontName='Vazirmatn', fontSize=8.5,
+                               leading=12.5, textColor=colors.HexColor('#33415c'),
+                               rightIndent=16, firstLineIndent=0,
+                               alignment=TA_RIGHT, wordWrap='RTL'),
+        'tocnum': ParagraphStyle('tocnum', fontName='Vazirmatn', fontSize=8.5,
+                                 leading=12.5, textColor=colors.HexColor('#33415c'),
+                                 alignment=TA_LEFT, wordWrap='RTL'),
+    }
+    rows = []
+    for level, text, page in TOC_ENTRIES:
+        title_style = styles['toc0'] if level == 0 else styles['toc1']
+        rows.append([
+            Paragraph(fa(pdigits(page)), styles['tocnum']),
+            Paragraph(text if text else fa(' '), title_style),
+        ])
+    if not rows:
+        rows = [[Paragraph(fa(' '), styles['tocnum']),
+                 Paragraph(fa(' '), styles['toc0'])]]
+    width = A4[0] - 4 * cm
+    table = Table(rows, colWidths=[1.4 * cm, width - 1.4 * cm])
+    table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+    ]))
     return [Paragraph(fa('فهرست مطالب'), STYLES['toc_h']),
-            Spacer(1, 8), toc]
+            Spacer(1, 8), table]
 
 
-def main() -> None:
-    with open(MD_PATH, encoding='utf-8') as fh:
+def main(argv: list[str] | None = None) -> int:
+    global DOC_HEADER
+    parser = argparse.ArgumentParser(
+        description='ساخت PDF فارسی/راست‌به‌چپ از زیرمجموعه‌ای از Markdown')
+    parser.add_argument('md', nargs='?', default=MD_PATH, help='فایل Markdown ورودی')
+    parser.add_argument('pdf', nargs='?', default=PDF_PATH, help='فایل PDF خروجی')
+    parser.add_argument('--title', default='سند جامع سامانه اتوماسیون اداری')
+    parser.add_argument('--subtitle',
+                        default='درخت کامل ماژول‌ها، زیرسیستم‌ها، فرم‌ها، درجه اهمیت و اولویت ساخت')
+    parser.add_argument('--header', default=DOC_HEADER,
+                        help='متن سربرگ صفحات')
+    parser.add_argument('--meta', action='append', default=None,
+                        metavar='کلید=مقدار', help='سطر جدول مشخصات جلد (قابل تکرار)')
+    parser.add_argument('--summary', default=None,
+                        help='متن جعبه خلاصه روی جلد (**برای درشت** پشتیبانی می‌شود)')
+    parser.add_argument('--no-cover', action='store_true')
+    parser.add_argument('--no-toc', action='store_true')
+    args = parser.parse_args(argv)
+
+    DOC_HEADER = args.header
+
+    with open(args.md, encoding='utf-8') as fh:
         md_text = fh.read()
 
-    doc = SpecDoc(PDF_PATH, title='سند جامع سامانه اتوماسیون اداری — نسخه ۲٫۰',
-                  author='دفتر معماری سامانه آرینت', subject='تصویب مدیریت')
+    meta = None
+    if args.meta:
+        meta = []
+        for row in args.meta:
+            key, _, value = row.partition('=')
+            meta.append([fa(key.strip()), fa(value.strip())])
 
-    story: list = []
-    story.append(NextPageTemplate('body'))
-    story.extend(build_cover())
-    story.append(PageBreak())
-    story.extend(build_toc())
-    story.append(PageBreak())
-    story.extend(md_to_flowables(md_text))
+    def make_story() -> list:
+        story: list = [NextPageTemplate('body')]
+        if not args.no_cover:
+            story.extend(build_cover(args.title, args.subtitle, meta, args.summary))
+            story.append(PageBreak())
+        if not args.no_toc:
+            story.extend(build_toc())
+            story.append(PageBreak())
+        story.extend(md_to_flowables(md_text))
+        return story
 
-    doc.multiBuild(story)
-    size_kb = os.path.getsize(PDF_PATH) / 1024
-    print(f'PDF ساخته شد: {PDF_PATH}')
+    # گذرهای متوالی تا همگرایی شماره صفحات فهرست مطالب؛
+    # جریان‌ها در هر گذر تازه ساخته می‌شوند (بازمصرف جریان‌ها مجاز نیست)
+    previous: list | None = None
+    for _ in range(6):
+        doc = SpecDoc(args.pdf, title=args.header,
+                      author='دفتر معماری سامانه آرینت', subject='تصویب مدیریت')
+        doc.build(make_story())
+        current = list(TOC_ENTRIES)
+        if previous == current:
+            break
+        previous = current
+    size_kb = os.path.getsize(args.pdf) / 1024
+    print(f'PDF ساخته شد: {args.pdf}')
     print(f'اندازه: {size_kb:.0f} کیلوبایت')
+    return 0
 
 
 if __name__ == '__main__':
