@@ -51,6 +51,7 @@ dotnet run --project src/Ariant.OfficeAutomation.Web
 | [`docs/02-architecture.md`](docs/02-architecture.md) | معماری لایه‌ها، تصمیم‌های کلیدی، قراردادهای کدنویسی |
 | [`docs/03-setup.md`](docs/03-setup.md) | راه‌اندازی، SQL Server، تنظیمات امنیتی، رفع اشکال |
 | [`docs/04-ticketing-integration.md`](docs/04-ticketing-integration.md) | اتصال به سامانه تیکتینگ PHP |
+| [`docs/05-stack-decision.md`](docs/05-stack-decision.md) | سند تصمیم فنی پشته فناوری (بر پایه آزمون عملی در محیط دستیار) |
 
 ## فهرست کارهای فوری
 
