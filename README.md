@@ -1,6 +1,10 @@
 # سامانه اتوماسیون اداری آرینت
 
+[![ساخت و آزمون (CI)](https://github.com/alirezarahimy-code/ariant-office-automation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/alirezarahimy-code/ariant-office-automation-system/actions/workflows/ci.yml)
+
 سامانه جامع اتوماسیون اداری، فارسی و راست‌به‌چپ، بر پایه **ASP.NET Core (.NET 10)** با تقویم شمسی در تمام سامانه.
+
+> **وضعیت ساخت:** تمام پروژه با موفقیت ساخته می‌شود و **۶۶۷ آزمون** (شامل ۲۰۷ بردار تقویم شمسی) سبز است — نتیجه اجرای CI روی گیت‌هاب.
 
 > وضعیت: **فاز ۰ (پایه) انجام شد** — اسکلت معماری، تقویم شمسی آزمون‌شده، هویت کاربران، گزارش ممیزی خودکار
 > و نخستین ماژول (ساختار سازمانی) آماده است. نقشه فازهای بعد در [`docs/01-roadmap.md`](docs/01-roadmap.md).
