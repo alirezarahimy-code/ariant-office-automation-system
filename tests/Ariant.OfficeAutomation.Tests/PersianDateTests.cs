@@ -245,7 +245,10 @@ public class PersianDateTests
     public void تبدیل_رفت_و_برگشت_پایدار_است(int year, int month, int day, DateTime gregorian)
     {
         var persian = new PersianDate(year, month, day);
-        Assert.Equal(persian, PersianDate.FromDateTime(persian.ToDateTime()));
+        PersianDate roundTripped = PersianDate.FromDateTime(persian.ToDateTime());
+
+        Assert.Equal(persian, roundTripped);
+        Assert.Equal(gregorian.Date, roundTripped.ToDateTime().Date);
     }
 
     [Theory]

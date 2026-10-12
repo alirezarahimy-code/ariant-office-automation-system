@@ -4,6 +4,7 @@ using Ariant.OfficeAutomation.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace Ariant.OfficeAutomation.Web.Controllers.Api;
 

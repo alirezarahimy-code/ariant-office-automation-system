@@ -294,14 +294,15 @@ public sealed class DepartmentService : IDepartmentService
             .Select(d => new { d.Id, d.Title, d.ParentId, d.SortOrder })
             .ToListAsync(cancellationToken);
 
+        // برای واحدهای ریشه (بدون والد) از Guid.Empty استفاده می‌شود تا کلید دیکشنری نال‌پذیر نباشد
         var childrenLookup = rows
-            .GroupBy(r => r.ParentId)
+            .GroupBy(r => r.ParentId ?? Guid.Empty)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var options = new List<SelectOptionDto>();
         var visited = new HashSet<Guid>();
 
-        void Walk(Guid? parentId, int depth)
+        void Walk(Guid parentId, int depth)
         {
             if (depth > MaxTreeDepth || !childrenLookup.TryGetValue(parentId, out var children))
                 return;
@@ -323,7 +324,7 @@ public sealed class DepartmentService : IDepartmentService
             }
         }
 
-        Walk(null, 0);
+        Walk(Guid.Empty, 0);
         return options;
     }
 
