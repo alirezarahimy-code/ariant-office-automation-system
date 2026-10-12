@@ -69,11 +69,19 @@ jobs:
           {
             echo "### نتیجه CI: ناموفق"
             echo
-            echo "خروجی زیر از آخرین گام ناموفق گرفته شده است:"
+            echo "#### خطوط کلیدی خطا"
             echo
             echo '```text'
-            tail -c 6000 build.log 2>/dev/null || echo "فایل گزارش موجود نیست."
+            grep -aE "error [A-Z]+[0-9]+|\[FAIL\]|Error Message|Assert\.|Expected:|Actual:|Total tests:|Passed:|Failed:|Build FAILED" build.log 2>/dev/null | head -n 60 || echo "خطای مشخصی در گزارش یافت نشد."
             echo '```'
+            echo
+            echo "<details><summary>خروجی کامل (انتهای گزارش ساخت)</summary>"
+            echo
+            echo '```text'
+            tail -c 4000 build.log 2>/dev/null || echo "فایل گزارش موجود نیست."
+            echo '```'
+            echo
+            echo "</details>"
           } > ci-comment.md
 
           gh pr comment "${{ github.event.pull_request.number }}" --body-file ci-comment.md

@@ -107,10 +107,11 @@ public static class PersianText
 
         foreach (char character in normalized)
         {
-            if (character is ZeroWidthNonJoiner or LeftToRightMark or RightToLeftMark or '\u200B')
+            if (character is LeftToRightMark or RightToLeftMark)
                 continue;
 
-            if (char.IsWhiteSpace(character))
+            // نیم‌فاصله و فاصله مجازی مانند فاصله رفتار می‌کنند تا «مدرسه‌ها» و «مدرسه ها» یکسان جست‌وجو شوند
+            if (char.IsWhiteSpace(character) || character is ZeroWidthNonJoiner or '\u200B')
             {
                 if (!previousWasSpace && builder.Length > 0)
                     builder.Append(' ');

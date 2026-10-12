@@ -295,12 +295,20 @@ public class PersianDateTests
     }
 
     [Fact]
-    public void نوروز_۱۴۰۰_روز_شنبه_بود()
+    public void روز_هفته_و_شماره_روز_ایرانی_درست_محاسبه_می‌شود()
     {
+        // ۳۰ اسفند ۱۳۹۹ (روز کبیسه) شنبه بود → شماره ۱ در هفته ایرانی
+        var lastDayOf1399 = new PersianDate(1399, 12, 30);
+        Assert.Equal(DayOfWeek.Saturday, lastDayOf1399.DayOfWeek);
+        Assert.Equal("شنبه", lastDayOf1399.DayOfWeekName);
+        Assert.Equal(1, lastDayOf1399.PersianWeekDayNumber);
+
+        // نوروز ۱۴۰۰ روز یکشنبه بود → شماره ۲ در هفته ایرانی
         var nowruz1400 = new PersianDate(1400, 1, 1);
-        Assert.Equal(DayOfWeek.Saturday, nowruz1400.DayOfWeek);
-        Assert.Equal(1, nowruz1400.PersianWeekDayNumber);
-        Assert.Equal("شنبه", nowruz1400.DayOfWeekName);
+        Assert.Equal(DayOfWeek.Sunday, nowruz1400.DayOfWeek);
+        Assert.Equal("یکشنبه", nowruz1400.DayOfWeekName);
+        Assert.Equal(2, nowruz1400.PersianWeekDayNumber);
+        Assert.Equal(lastDayOf1399.AddDays(1), nowruz1400);
     }
 
     [Fact]
