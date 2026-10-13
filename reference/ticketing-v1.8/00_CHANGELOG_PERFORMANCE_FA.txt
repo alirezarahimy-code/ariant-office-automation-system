@@ -1,0 +1,30 @@
+رفع کندی سامانه (Performance Patch) — نسخهٔ v3.4
+=================================================
+
+هدف: کاهش چشمگیر زمان بارگذاری صفحات و حذف بلاک‌شدن درخواست‌های موازی روی سرور.
+
+۱) حذف ping دیتابیس در هر فراخوانی db()
+   - قبلاً db() در هر صدا زدن یک SELECT 1 می‌زد. حذف شد.
+   - تابع بی‌استفادهٔ db_reconnect() حذف شد.
+
+۲) کش سراسری تنظیمات (setting)
+   - setting() قبلاً برای هر کلید یک کوئری جدا می‌زد (۲۵+ کوئری در هر صفحه).
+   - اکنون همهٔ تنظیمات با یک SELECT خوانده و کش می‌شوند.
+   - save_setting() کش را به‌روزرسانی و setting_forget_cache() آن را پاک می‌کند.
+
+۳) ادغام کوئری اعلان‌های هدر
+   - new: notification_header_summary() — تعداد نخوانده و آخرین شناسه با یک کوئری.
+   - render_header() در index.php/governance.php/ola.php از آن استفاده می‌کند.
+
+۴) آزادسازی قفل session
+   - render_header() پس از رندر هدر و ساخت توکن CSRF، session_write_close() می‌کند.
+   - اپیندپوینت notification_feed فوراً session را آزاد می‌کند (هر ۳۰ ثانیه صدا زده می‌شود).
+   - نتیجه: پولینگ، تصاویر و فونت‌ها دیگر پشت قفل فایل session بلاک نمی‌شوند.
+
+۵) حذف reverse-DNS کند
+   - activity_computer_name() دیگر gethostbyaddr نمی‌زند (روی شبکه چند ثانیه معطل می‌کرد)
+     و به‌صورت پیش‌فرض رشتهٔ خالی برمی‌گرداند؛ فقط اگر ثابت ACTIVITY_RESOLVE_HOST تعریف شده باشد.
+
+۶) کاهش لاگ‌های پرتکرار
+   - activity_log_view برای notification_feed/download_backup/download_attachment/profile_photo،
+     درخواست‌های دارای action، و اپی‌های traffic_api/food_api ثبت نمی‌شود؛ برای page_view نام کامپیوتر خالی است.

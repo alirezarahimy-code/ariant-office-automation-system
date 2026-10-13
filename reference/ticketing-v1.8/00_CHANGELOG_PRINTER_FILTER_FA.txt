@@ -1,0 +1,62 @@
+====================================================================
+ تشخیص پرینتر فیزیکی/اشتراکی و حذف پرینترهای مجازی  —  v3.4
+====================================================================
+
+هدف
+----
+در شناسنامه، فیلد «مدل پرینتر» فقط وقتی پر شود که پرینتر واقعی باشد:
+  - پرینتر فیزیکی محلی (USB / LPT / COM / Dot4 / WSD)
+  - یا پرینتر شبکه‌ای / اشتراکی (Network، Shared، ShareName یا پورت IP_/\\)
+
+پرینترهای مجازی مثل OneNote (Desktop)، Microsoft Print to PDF،
+Microsoft XPS، Fax، PDFCreator، CutePDF، Adobe PDF، Foxit و … نادیده
+گرفته می‌شوند و در فیلد پرینتر شناسنامه ثبت نمی‌شوند.
+
+اصلاح تکمیلی (نسخهٔ دوم)
+------------------------
+مورد «Print to Evernote» اشتباهاً فیزیکی تشخیص داده می‌شد. الگوهای
+تشخیص مجازی گسترش یافت:
+  evernote، print to، pdf، xps، fax، document writer، universal document،
+  paperless، adobe/acrobat، foxit، nitro، pdf24/995/creator/factory/x-change،
+  bullzip، dopdf، primopdf، novapdf، snagit، amyuni، webex، skype،
+  virtual، redirected، image writer، notes writer و …
+همچنین اگر نام یا درایور پرینتر دارای «microsoft» باشد مجازی در نظر
+گرفته می‌شود. در نتیجه «Print to Evernote» دیگر ثبت نمی‌شود.
+
+اصلاح تکمیلی (نسخهٔ سوم — تشخیص بر اساس پورت)
+--------------------------------------------
+مبنای اصلی تشخیص، پورت پرینتر است:
+  فیزیکی/مجاز:  LPT* · COM* · USB* · DOT4* · WSD-* · IP_* · TCP* ·
+                 NPI* · مسیر اشتراکی \\SERVER\Printer · آدرس IP
+  مجازی:        PORTPROMPT: · nul: · SHRFAX: · FILE: · Microsoft · PDF ·
+                 XPS · Fax · virtual · redirected
+اگر پورت یکی از موارد بالا نباشد، نام و درایور پرینتر بررسی می‌شود
+(OneNote، Evernote، «Print to …»، PDF، XPS، Fax و …).
+
+نتیجه: پرینتری مثل HP LaserJet 1320 با پورت USB001 یا IP_192.168.… 
+حتماً فیزیکی/شبکه‌ای شناخته می‌شود و Printerهای مجازی هرچند نامشان
+شبیه پرینتر باشد (مثل Print to Evernote با پورت PORTPROMPT) رد می‌شوند.
+
+توابع جدید (asset-profile.php)
+------------------------------
+- asset_profile_is_virtual_printer($row): تشخیص مجازی‌بودن بر اساس نام،
+  درایور و پورت (PORTPROMPT، nul:، SHRFAX:، FILE:).
+- asset_profile_printer_kind($row): برمی‌گرداند «local» یا «network».
+- asset_profile_real_printers($printers): فقط پرینترهای واقعی را
+  برمی‌گرداند و ترتیب را طوری می‌چیند که پرینتر فیزیکی اول بیاید.
+
+رفتار فیلد «مدل پرینتر»
+-----------------------
+- اگر پرینتر فیزیکی باشد:  «HP LaserJet 1320 (پرینتر فیزیکی)»
+- اگر شبکه‌ای/اشتراکی باشد: «HP LaserJet 1320 (پرینتر شبکه/اشتراکی)»
+- اگر هیچ پرینتر واقعی نباشد، فیلد خالی می‌ماند (OneNote و PDF ثبت نمی‌شوند).
+
+فایل‌های تغییر‌یافته
+--------------------
+asset-profile.php                       (توابع تشخیص + فیلتر فیلد خودکار)
+tools/collect_server_inventory.ps1      (دریافت فیلدهای Shared، ShareName،
+                                         PrinterStatus برای تشخیص بهتر)
+00_CHANGELOG_PRINTER_FILTER_FA.txt      (همین فایل)
+
+نکته: فهرست خام همهٔ پرینترها همچنان در JSON تجهیزات جانبی سیستم ذخیره
+می‌شود؛ فقط فیلد خودکار شناسنامه از پرینترهای واقعی پر می‌شود.

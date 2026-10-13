@@ -1,0 +1,28 @@
+====================================================================
+ نصب پکیج کامل — Food Ticket Worker v5
+====================================================================
+
+محتوای اصلی این آپدیت نسبت به worker-v4:
+  • (دکمهٔ «تست پایش» در نسخهٔ بعدی حذف شد)
+  • رفع ذخیره/رمزگشایی رمز Access + جلوگیری از autofill مرورگر
+  • ابزار CLI: tools/set_attendance_password.php
+
+مراحل پیشنهادی بعد از کپی روی سرور (مثلاً C:\xampp\htdocs\ticket):
+
+1) تنظیم رمز منبع تردد (قطعی):
+   cd C:\xampp\htdocs\ticket
+   C:\xampp\php\php.exe tools\set_attendance_password.php --diagnose
+   C:\xampp\php\php.exe tools\set_attendance_password.php "<رمز پیش‌فرض کارخانه>" --test
+
+2) اگر --test موفق بود، نصب Worker:
+   PowerShell (Run as Administrator):
+   .\install-food-worker-SERVICE.ps1
+
+3) تست بدون دستگاه واقعی:
+   - یک رکورد آزمایشی در جدول SOURCE_TABLE بسازید
+   - در پنل: پایش لحظه‌ای → دکمه «تست پایش»
+
+پیش‌نیاز:
+  • Microsoft Access Database Engine 2016 (هم‌بیت با PHP)
+  • MySQL و config.php معتبر
+  • app.key در config.php خالی نباشد

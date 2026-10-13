@@ -1,0 +1,98 @@
+بازطراحی قالب فیش غذا — Designer ← دیتابیس ← Renderer مشترک ← (صف ویندوز | چاپگر شبکه)
+=====================================================================================
+
+۱) گزارش مشکل (ریشهٔ «Designer عوض می‌شود ولی چاپ نه»)
+-----------------------------------------------------
+مسیر قبلی:
+  index.html (Designer) → POST template → food_ticket_save_template() → storage/food_ticket_template.json + settings
+  → Worker: food_ticket_process_print_queue → food_ticket_render_from_template() / food_ticket_graphic_rows()
+  → food_ticket_send_raw_payload() → ویندوز: food_ticket_send_windows_graphic()  |  شبکه: food_ticket_np_send_event()
+
+مشکل اصلی «قطع بودن ارتباط Designer با Print Engine» و «چیدمان ثابت در Runtime» بود، نه ذخیره‌نشدن:
+  • Designer فقط این‌ها را می‌فرستاد: paper_width_mm (فقط 58/80)، company/title/footer و «کلید + ترتیب» فیلدها.
+    مختصات (x,y,w,h)، اندازهٔ فونت، Bold و تراز هر فیلد اصلاً به سرور نمی‌رفت؛ فقط روی بوم مرورگر اعمال می‌شد.
+  • Runtime (هر دو مسیر) چیدمان را ثابت و در کد ساخته بود: «لوگو/شرکت/عنوان ← کادر نوع غذا ← ردیف برچسب/مقدار ← پاورقی»،
+    با فونت‌های ثابت (۱۷/۱۱/۹ نقطه). حتی اگر مختصات ذخیره می‌شد، کسی آن را نمی‌خواند.
+  • طول کاغذ وجود نداشت و عرض فقط 80 یا 58 بود؛ اندازه‌ای مثل 50×50 اصلاً قابل بیان نبود.
+  • PaperSize ویندوز فقط «عرض»+«ارتفاع محاسبه‌شده» بود و هیچ ارتباطی با Designer نداشت.
+  • Preview Designer یک بوم ۳۸۰ پیکسلی دلخواه بود، نه همان رندر چاپ.
+خلاصه: Template ذخیره می‌شد و Worker هم آن را می‌خواند، اما فقط «۴ فیلد + سه متن»؛ بقیهٔ Designer دکوری بود.
+
+۲) خط لولهٔ چاپ (کدام فایل چه کاری می‌کند)
+-----------------------------------------
+  ذخیرهٔ قالب          food-ticket-templates.php  ← food_ticket_tpl_save() ← API  index.php?page=food-ticket&food_api=templates
+  خواندن قالب          food_ticket_tpl_active()  ← در لحظهٔ چاپ هر فیش از دیتابیس (بدون کش؛ Worker طولانی‌مدت هم تغییر را می‌بیند)
+  تولید مدل چاپ        food_ticket_tpl_model()   ← مشترک بین دو مسیر (مختصات میلی‌متر، فونت pt، لوگو، QR)
+  صف چاپ               food-ticket-runtime.php   ← food_ticket_process_print_queue() (بدون تغییر)
+  تصمیم مسیر           food-ticket-runtime.php   ← food_ticket_send_raw_payload(): printer_mode = windows_share|tcp_raw
+  مسیر ۱ ویندوز        food_ticket_tpl_print_windows()  → PowerShell/GDI+ (PrintDocument) → درایور → Windows Spooler
+  مسیر ۲ شبکه          food_ticket_tpl_print_network()  → رسم GD → ESC/POS «GS v 0» raster → TCP/IP پورت ۹۱۰۰
+  Worker               cron/food_ticket_worker.php (بدون تغییر؛ فقط از طریق food-ticket.php ماژول جدید را require می‌کند)
+
+نقطهٔ جدا شدن مسیرها: food_ticket_send_raw_payload() — بالادست آن (قالب، مدل، رویداد) برای هر دو یکی است.
+
+مسیر ۱ — صف ویندوز (خروجی: GDI+ Graphics → درایور؛ نه HTML/PDF/RAW):
+  • عرض/طول قالب به‌صورت PaperSize (صدم اینچ) روی PrinterSettings درایور اعمال می‌شود. اگر درایور Form هم‌اندازه داشته باشد
+    همان انتخاب می‌شود، وگرنه Custom Size ساخته می‌شود. اندازهٔ «اعمال‌شده» از درایور پس‌خوانده و در لاگ چاپ ثبت می‌شود
+    (مثال: tpl=#1 "قالب ۵۰×۵۰" win req 50.0x50.0mm applied 50.0x50.0mm (custom size)).
+    اگر درایور اندازه را نپذیرد، در error_log هشدار فارسی ثبت می‌شود.
+  • x/y/width/height میلی‌متر مستقیم (PageUnit=Millimeter)، فونت pt، Bold، تراز، فاصلهٔ خطوط، حاشیهٔ سخت‌افزاری چاپگر جبران می‌شود.
+مسیر ۲ — شبکه (ESC/POS):
+  • CSS/HTML اینجا کاربردی ندارد؛ فیش به‌صورت تصویر با تراکم ۸ نقطه بر میلی‌متر (۲۰۳dpi) رسم می‌شود، پس ۵۰mm = ۴۰۰ نقطه.
+    اگر سرِ چاپ باریک‌تر باشد (مثلاً ۵۸mm حرارتی = ۳۸۴ نقطه) فیش وسط‌چین می‌شود و لبه‌ها برش می‌خورد و در پیش‌نمایش هشدار می‌دهد.
+  • فونت با FreeType (TTF) رسم می‌شود (شکل‌دهی حروف فارسی و RTL همان کد قبلی)، تراز با اندازه‌گیری واقعی متن، لوگو با Floyd–Steinberg،
+    QR با ماژول‌های صحیح پیکسلی (سطح تصحیح M).
+  • اگر طول ثابت باشد، تغذیهٔ اضافهٔ کاغذ ارسال نمی‌شود (برچسب جابه‌جا نشود)؛ برش فقط اگر قالب cut_paper داشته باشد.
+قانون معماری: Designer → food_ticket_templates → food_ticket_tpl_model() → Renderer Windows یا Renderer Network. Designer به هیچ نوع چاپی وابسته نیست.
+
+۳) ساختار دیتابیس
+------------------
+جدول food_ticket_templates (upgrade-1.31-food-ticket-templates.sql؛ در اولین استفاده خودکار هم ساخته می‌شود):
+  id, name, paper_width (mm، پیش‌فرض ۸۰)، paper_height (mm؛ ۰ = طول متغیر)، template_json، is_active، created_at، updated_at
+template_json: { cut_paper, border, border_inset, logo_source: system|ticket, name_source: system|custom, custom_name, margin_bottom,
+  elements:[ {id, field, enabled, x, y, width, height, font_family, font_size, bold, align, line_height, show_label, label, text, border} ] }
+مثال المان: {"field":"employee_name","x":20,"y":15,"width":100,"font_size":12} (میلی‌متر/pt).
+حداکثر ۴ قالب (هم در UI هم در سرور داخل تراکنش با قفل). حذف قالب فعال ⇒ قدیمی‌ترین قالب باقی‌مانده فعال می‌شود.
+تنظیمات: کلید settings.food_ticket_logo = لوگوی اختصاصی فیش (آپلود از همان Designer؛ PNG/JPG تا ۲MB).
+قالب قدیمی (storage/food_ticket_template.json) دیگر تعیین‌کنندهٔ چیدمان نیست و فقط تنظیمات retry را می‌دهد و مبنای «قالب پیش‌فرض» است.
+
+۴) فایل‌ها
+-----------
+جدید:
+  food-ticket-templates.php                 موتور قالب: دیتابیس، کاتالوگ فیلدها، مدل چاپ، QR، رندرر شبکه (GD)، اسکریپت GDI+ ویندوز، API
+  food-ticket-web/assets/food-designer.js   Designer واقعی: Drag&Drop، تغییر اندازه، کلیدهای جهتی، فونت/Bold/تراز/فاصله خطوط، ۴ قالب،
+                                            لوگوی سیستم/اختصاصی، نام سامانه سیستم/اختصاصی، پیش‌نمایش واقعی (تصویر ارسالی به چاپگر)
+  upgrade-1.31-food-ticket-templates.sql
+  tools/test_food_templates.php             آزمون سناریوهای ۱ تا ۵ برای هر دو مسیر
+تغییر کرده:
+  food-ticket-runtime.php   food_ticket_send_raw_payload(): هر دو مسیر به رندرر قالب وصل شد؛ لاگ چاپ، قالب و اندازهٔ اعمال‌شده را می‌نویسد
+  food-ticket.php           require ماژول جدید، مسیرهای API (templates, templates/delete|activate|preview|logo) با دسترسی food.design،
+                            «چاپ آزمایشی» می‌تواند template_id بگیرد، تزریق food-designer.js
+  food-ticket-web/index.html  بخش «طراحی فیش» (تنظیمات ← طراحی فیش) به Designer جدید وصل شد (کد قدیمی به‌عنوان fallback ماند)
+  schema.sql                جدول جدید
+بدون تغییر: Worker، صف چاپ، Net Print (تابع‌های قدیمی)، Event Log، منطق سفارش غذا، کنترل چاپ تکراری، گروه‌های غذا.
+
+۵) فیلدهای قابل چاپ و منبع داده
+-------------------------------
+لوگو ← تنظیمات عمومی (app_logo) یا لوگوی اختصاصی فیش  |  نام سامانه ← app_name یا نام اختصاصی  |  عنوان فیش/متن آزاد ← متن قالب
+نام کارمند، کد پرسنلی، کد ملی ← رویداد  |  واحد سازمانی ← org_units/departments کاربر (در صورت وجود)  |  تاریخ (شمسی)، ساعت تردد
+ساعت چاپ ← لحظهٔ چاپ  |  وعده ← بازهٔ وعده‌ها  |  نام غذا ← رویداد  |  شماره فیش ← id رویداد  |  QR ← ticket_key  |  خط جداکننده
+فیلدی که مقدار ندارد (مثلاً مهمان بدون کد ملی) چاپ نمی‌شود.
+
+۶) نصب
+------
+۱) فایل‌ها را روی C:\xampp\htdocs\ticket کپی کنید. ۲) restart-food-worker-SERVICE.bat را (Admin) اجرا کنید (Worker ماژول را فقط هنگام شروع بارگذاری می‌کند).
+۳) Ctrl+F5 در پنل ← تنظیمات ← طراحی فیش (اولین بار قالب ۱ از روی قالب قدیمی ساخته می‌شود). ۴) در صورت نیاز: upgrade-1.31 را اجرا کنید (اختیاری).
+پیش‌نیاز: extension=gd (با FreeType) و proc_open/exec برای مسیر ویندوز. فونت: Tahoma (ویندوز) یا TTF در storage\fonts.
+تنظیم اختیاری چاپگر شبکه در storage\food_ticket_netprint.json:  "dots_per_mm": 8  |  "head_mm": 72 یا "head_dots": 576  (عرض قابل‌چاپ سر چاپ)
+آزمون:  C:\xampp\php\php.exe tools\test_food_templates.php   (بدون کاغذ؛ PNGها در storage\food_ticket_prints\test_*.png)
+        سپس «چاپ آزمایشی این قالب» از خود Designer روی چاپگر واقعی.
+
+۷) محدودیت‌ها که باید بدانید
+-----------------------------
+• هیچ‌کدام از آزمون‌های بالا روی چاپگر فیزیکی در محیط توسعه اجرا نشد (PHP/ویندوز/چاپگر در آنجا نبود). منطق Designer با Node و الگوریتم QR با
+  رمزگشای مستقل بررسی شد؛ بقیه را با tools\test_food_templates.php و چاپ آزمایشی روی سیستم خودتان تأیید کنید.
+• اگر درایور ویندوز اندازهٔ دلخواه (مثل ۵۰×۵۰) را نپذیرد، باید در Printer Properties یک Form/Paper با همین اندازه تعریف شود؛
+  لاگ چاپ «applied» را نشان می‌دهد تا معلوم شود درایور چه کرده است.
+• چاپ مسیر ویندوز دیگر در صورت خطای گرافیکی «بی‌صدا به متن ساده» برنمی‌گردد (آن خروجی با قالب مطابق نبود)؛ خطا ثبت و چاپ طبق retry تکرار می‌شود.
+  چاپگرهای مجازی PDF/XPS/OneNote/Fax همچنان با مسیر متنی قدیمی تست می‌شوند.

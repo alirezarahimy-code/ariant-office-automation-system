@@ -1,0 +1,33 @@
+اصلاحات نسخه Food Ticket + امنیت (بر اساس گزارش و نسخهٔ ۷.۱ سامانهٔ حضور و غیاب)
+============================================================
+
+الف) چاپ فیش
+- پشتیبانی printer_mode: tcp_raw و windows_queue
+- چاپ آزمایشی واقعاً به چاپگر ارسال می‌شود
+- سقف تلاش چاپ، لاگ خطای سوکت
+- UTF-8 BOM برای مسیر ویندوز
+
+ب) پایش تردد
+- تاریخ yyyymmdd (20260501) و ساعت HHMMSS (130523 / 083000)
+- خواندن source_row با ORDER BY و فیلتر امروز
+- لاگ شکست DELETE از source_row
+- رفرش تنظیمات در هر دور worker + reconnect DB
+
+ج) LDAP
+- حفظ employee_number اگر AD خالی باشد
+- timeout شبکه LDAP
+- غیرفعال‌سازی انبوه فقط وقتی paging کامل محتمل است
+
+د) دسترسی
+- مدیر پشتیبانی: monitoring, orders, employees, reports, dashboard
+- غیرفعال‌سازی ادمین از ماژول فیش ممنوع
+- SSO با jti یک‌بارمصرف (فایل storage/sso_jti)
+- سرویس C#: جلوگیری از سرو فایل‌های config/*.json
+
+هـ)
+- START-HERE: upgrade 1.12–1.18
+- rebuild-final: جداول guest/worker
+- install.php قفل پس از نصب
+- backup: SystemRoot/PATH برای XAMPP
+
+مهم: فقط یکی از PHP worker یا سرویس C# را همزمان اجرا کنید.

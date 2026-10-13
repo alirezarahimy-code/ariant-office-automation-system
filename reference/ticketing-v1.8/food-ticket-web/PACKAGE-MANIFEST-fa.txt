@@ -1,0 +1,12 @@
+هشدار: این manifest فقط بستهٔ میراثی C# را توصیف می‌کند و برای ماژول جاری سفارش داخلی نیست. برای عملیات نسخهٔ فعلی: ../FOOD-ORDERS-1.38-OPERATIONS-fa.md را بخوانید؛ سرویس C# را اجرا نکنید. Access تردد TENTER جدا باقی است و Access سفارش در مسیر فعلی خوانده نمی‌شود.
+
+بسته سرویس مستقل C# چاپ فیش غذا
+
+محتویات:
+- FoodTicketServer.csproj و Program.cs
+- index.html و پوشه assets
+- config.example.json
+- install_prerequisites.bat و start_food_ticket.bat
+- README-prerequisites-fa.md و README-fa.md
+
+این سرویس به MySQL وصل نمی‌شود و هیچ migration مربوط به MySQL در این بسته لازم نیست. مانیتورینگ در SQLite محلی Windows و در صورت مجوز، در tblLiveMonitoring فایل Access سفارش ذخیره می‌شود. برای استفادهٔ عملیاتی، Access ODBC، مسیرهای واقعی، جداول سفارش/کارکنان، مدیر دارای رمز، SSO و چاپگر باید روی Windows مقصد بررسی شوند.

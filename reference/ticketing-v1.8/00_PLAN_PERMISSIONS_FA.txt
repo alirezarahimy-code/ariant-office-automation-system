@@ -1,0 +1,187 @@
+====================================================================
+ فهرست کامل منوها، زیرمنوها و اجزای برنامه به‌همراه مجوزها  —  v3.5
+====================================================================
+هدف: هر منو/زیرمنو/دکمه یک «مجوز (permission)» با کد یکتا می‌شود.
+سپس برای هر «نقش» مشخص می‌شود کدام مجوزها فعال باشد (ماتریس نقش × مجوز).
+تا وقتی مجوزی به نقش داده نشود، آن منو/دکمه برای آن نقش دیده نمی‌شود.
+
+--------------------------------------------------------------------
+نقش‌های سامانه
+--------------------------------------------------------------------
+1) primary_admin  — ادمین اصلی (همان «مدیر سامانه»). دسترسی کامل و غیرقابل‌سلب.
+2) supervisor     — سوپروایز. تأیید/بستن/بازگشایی تیکت، پنل سوپروایزر.
+3) support_manager— مدیر پشتیبانی (یکی از معاونت‌ها، ولی چون امور غیرتیکت هم دارد
+                    نقش مستقل می‌گیرد).
+4) inspector      — بازرسی. مشاهدهٔ گزارش‌ها/ممیزی و کنترل CD/DVD ورودی.
+5) manager        — مدیر (معاونت/اداره/واحد). مدیریت واحد خود و تیکت‌های زیرمجموعه.
+6) agent          — کارشناس. رسیدگی به تیکت‌های ارجاعی و دارایی‌های فنی.
+7) user           — کاربر عادی. ثبت تیکت و پیگیری تیکت خود.
+
+نکته: «جایگاه سازمانی» (معاونت/اداره/واحد) از «نقش» جدا است و فقط دامنهٔ
+دیده‌شدن (scope) را تعیین می‌کند؛ به‌تنهایی مجوز نمی‌دهد.
+
+--------------------------------------------------------------------
+فهرست اجزا (منوها/صفحات/اکشن‌ها) و کد مجوز
+--------------------------------------------------------------------
+گروه: داشبورد و پایه
+  dash.view            مشاهدهٔ داشبورد
+  search.global        جست‌وجوی سراسری
+  notif.view           اعلان‌های من
+  notif.mark           علامت‌گذاری اعلان خوانده‌شده
+  profile.edit         ویرایش پروفایل خودم
+
+گروه: تیکت
+  ticket.create        ثبت تیکت جدید
+  ticket.view_own      مشاهدهٔ تیکت‌های خودم
+  ticket.view_unit     مشاهدهٔ تیکت‌های واحد/زیرمجموعه
+  ticket.view_all      مشاهدهٔ همهٔ تیکت‌ها
+  ticket.reply         پاسخ/مکالمه در تیکت
+  ticket.edit          ویرایش تیکت
+  ticket.assign        ارجاع تیکت به کارشناس
+  ticket.bulk          عملیات گروهی روی تیکت‌ها
+  ticket.rate          امتیازدهی به تیکت بسته‌شده
+  ticket.attach_asset  اتصال دارایی به تیکت
+  queue.view           صف کاری
+  supervisor.panel     پنل سوپروایزر
+  supervisor.decide    تأیید/بستن تیکت (تصمیم سوپروایزر)
+  supervisor.reopen    بازگشایی/برگشت تیکت برای اصلاح
+
+گروه: خدمات و دسته‌بندی
+  services.view        مشاهدهٔ فهرست خدمات
+  services.manage      افزودن/ویرایش/حذف خدمت
+  service_cat.manage   مدیریت دسته‌بندی خدمات
+  service_field.manage مدیریت فیلدهای خدمت
+
+گروه: دانش‌نامه
+  knowledge.view       مشاهدهٔ دانش‌نامه
+  knowledge.manage     افزودن/ویرایش مقاله
+
+گروه: CD/DVD
+  cddvd.view           فرم کنترل CD/DVD
+  cddvd.submit         ثبت CD/DVD
+  cddvd.review         بررسی/ثبت ورودی CD/DVD
+  cddvd.inspect        بازرسی CD/DVD
+  cddvd.history        تاریخچهٔ CD/DVD
+
+گروه: دارایی و شناسنامه فنی
+  assets.view          فهرست شناسنامه‌ها
+  assets.own_unit      فقط دارایی‌های واحد خودم
+  asset.view           مشاهدهٔ شناسنامهٔ یک دارایی
+  asset.edit           ویرایش شناسنامه
+  asset.extract        استخراج سخت‌افزار از همین سرور
+  asset.remote_extract استخراج از راه دور (WMI)
+  asset.history        تاریخچهٔ دارایی
+  asset.ping           پینگ سیستم‌های انتخابی
+  inventory.view       فهرست موجودی
+  inventory.diagnosticsتشخیص موجودی
+  domain.import        ورود کامپیوترهای دامنه
+  domain.scan          اسکن دامنه
+
+گروه: گزارش و تحلیل
+  reports.view         گزارش‌ها
+  analytics.view       چارت‌ها
+  audit.view           ممیزی (audit log)
+  logs.view            گزارش خطا
+
+گروه: غذا (فیش غذا)
+  food.view            پنل چاپ فیش غذا
+  food.manage          مدیریت صف/گزارش فیش غذا
+
+گروه: سازمان
+  org.view             مشاهدهٔ چارت سازمانی
+  org.manage           مدیریت ساختار سازمانی (واحد/انتصاب/مدیر)
+
+گروه: تنظیمات و سیستم
+  settings.general     تنظیمات عمومی و هویت پنل فیش
+  settings.domain      اتصال دامین و اسکن دامنه
+  settings.users       مدیریت کاربران، نقش‌ها و دسترسی‌ها
+  settings.key_roles   نقش‌های کلیدی
+  backup.manage        پشتیبان‌گیری/بازگردانی
+  ola.manage           تنظیمات OLA/SLA
+  governance.manage    تغییر و مشکل (governance)
+  holidays.manage      مدیریت تعطیلات
+
+--------------------------------------------------------------------
+ماتریس پیشنهادی نقش × دسترسی (✓ = فعال پیش‌فرض)
+--------------------------------------------------------------------
+                                  ادمین  سوپر  مد‌پشت  بازرس  مدیر  کارشناس  کاربر
+dash.view                           ✓     ✓      ✓      ✓      ✓      ✓       ✓
+search.global                       ✓     ✓      ✓      ✓      ✓      ✓       ✓
+notif.view / notif.mark             ✓     ✓      ✓      ✓      ✓      ✓       ✓
+profile.edit                        ✓     ✓      ✓      ✓      ✓      ✓       ✓
+ticket.create                       ✓     ✓      ✓      ✓      ✓      ✓       ✓
+ticket.view_own                     ✓     ✓      ✓      ✓      ✓      ✓       ✓
+ticket.view_unit                    ✓     ✓      ✓      ✓      ✓      ✓       –
+ticket.view_all                     ✓     ✓      ✓      ✓      –      –       –
+ticket.reply                        ✓     ✓      ✓      ✓      ✓      ✓       ✓
+ticket.edit                         ✓     ✓      ✓      –      ✓      ✓       –
+ticket.assign                       ✓     –      ✓      –      ✓      –       –
+ticket.bulk                         ✓     –      ✓      –      ✓      –       –
+ticket.rate                         ✓     ✓      ✓      ✓      ✓      ✓       ✓
+ticket.attach_asset                 ✓     –      ✓      –      ✓      ✓       –
+queue.view                          ✓     ✓      ✓      ✓      ✓      ✓       –
+supervisor.panel                    ✓     ✓      –      –      –      –       –
+supervisor.decide                   ✓     ✓      –      –      –      –       –
+supervisor.reopen                   ✓     ✓      –      –      –      –       –
+services.view                       ✓     ✓      ✓      ✓      ✓      ✓       ✓
+services.manage                     ✓     –      ✓      –      –      –       –
+service_cat.manage                  ✓     –      ✓      –      –      –       –
+service_field.manage                ✓     –      ✓      –      –      –       –
+knowledge.view                      ✓     ✓      ✓      ✓      ✓      ✓       ✓
+knowledge.manage                    ✓     –      ✓      –      ✓      ✓       –
+cddvd.view                          ✓     ✓      ✓      ✓      ✓      ✓       ✓
+cddvd.submit                        ✓     ✓      ✓      ✓      ✓      ✓       ✓
+cddvd.review                        ✓     ✓      ✓      ✓      –      –       –
+cddvd.inspect                       ✓     –      –      ✓      –      –       –
+cddvd.history                       ✓     ✓      ✓      ✓      ✓      ✓       –
+assets.view                         ✓     ✓      ✓      ✓      ✓      ✓       –
+assets.own_unit                     –     –      –      –      ✓      ✓       –
+asset.view                          ✓     ✓      ✓      ✓      ✓      ✓       –
+asset.edit                          ✓     –      ✓      –      ✓      ✓       –
+asset.extract                       ✓     –      ✓      –      ✓      ✓       –
+asset.remote_extract                ✓     –      ✓      –      –      –       –
+asset.history                       ✓     ✓      ✓      ✓      ✓      ✓       –
+asset.ping                          ✓     –      ✓      –      ✓      ✓       –
+inventory.view                      ✓     ✓      ✓      ✓      ✓      ✓       –
+inventory.diagnostics               ✓     –      ✓      –      –      –       –
+domain.import                       ✓     –      ✓      –      –      –       –
+domain.scan                         ✓     –      ✓      –      –      –       –
+reports.view                        ✓     ✓      ✓      ✓      ✓      ✓       –
+analytics.view                      ✓     ✓      ✓      ✓      ✓      –       –
+audit.view                          ✓     –      ✓      ✓      –      –       –
+logs.view                           ✓     –      ✓      –      –      –       –
+food.view                           ✓     ✓      ✓      ✓      ✓      ✓       ✓
+food.manage                         ✓     –      ✓      –      –      –       –
+org.view                            ✓     ✓      ✓      ✓      ✓      ✓       ✓
+org.manage                          ✓     –      –      –      –      –       –
+settings.general                    ✓     –      ✓      –      –      –       –
+settings.domain                     ✓     –      ✓      –      –      –       –
+settings.users                      ✓     –      –      –      –      –       –
+settings.key_roles                  ✓     –      –      –      –      –       –
+backup.manage                       ✓     –      –      –      –      –       –
+holidays.manage                     ✓     –      ✓      –      –      –       –
+ola.manage                          ✓     –      –      –      –      –       –
+governance.manage                   ✓     ✓      ✓      ✓      ✓      ✓       ✓
+
+--------------------------------------------------------------------
+قاعده‌های مهم
+--------------------------------------------------------------------
+- ادمین اصلی (primary_admin) هرگز مجوزی را از دست نمی‌دهد و صفحهٔ نقش‌ها فقط
+  برای او قابل ویرایش است.
+- «بازرس» به گزارش‌ها و ممیزی و بازرسی CD/DVD دسترسی دارد ولی ویرایش ندارد.
+- «مدیر پشتیبانی» معادل سوپروایز در امور تیکت + مدیریت خدمات/دارایی‌های دامنه
+  خودش؛ تأیید نهایی تیکت (supervisor.decide) مخصوص سوپروایز است مگر ادمین
+  آن را بدهد.
+- «مدیر» فقط scope واحد خود را می‌بیند؛ بدون ticket.view_all.
+- «کارشناس» تیکت ارجاعی و دارایی فنی واحد خود را می‌بیند.
+- ذخیره‌سازی: جدول `role_permissions(role, permission)` + در bootstrap تابع
+  `user_can($perm)` که برای primary_admin همیشه true است.
+
+====================================================================
+وضعیت: ✅ پیاده‌سازی شد.
+- کاتالوگ مجوزها + helperها: `permissions.php`.
+- جدول `role_permissions` و نقش‌های جدید: `upgrade-1.22-permissions.sql`.
+- صفحهٔ «نقش‌ها و دسترسی‌ها» به‌صورت تب داخل تنظیمات (فقط ادمین اصلی).
+- اکشن‌های `save_role_permissions` و `reset_role_permissions`.
+- منو و محافظت صفحه‌ها بر اساس `user_can()`؛ ادمین اصلی همیشه کامل.
+جزئیات در `00_CHANGELOG_ROLES_FA.txt`.

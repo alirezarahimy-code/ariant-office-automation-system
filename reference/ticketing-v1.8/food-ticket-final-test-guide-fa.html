@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>راهنمای نهایی نصب و آزمون فیش غذا</title>
+<style>
+:root{--ink:#192522;--muted:#586660;--line:#dce5df;--paper:#fbfcfa;--green:#176b53;--green2:#dff2e8;--amber:#89521a;--amberbg:#fff2dc;--red:#8e3434;--redbg:#fff0ed;--blue:#315e76;--shadow:0 18px 50px #20352a12}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.9 Tahoma,Arial,sans-serif}
+a{color:var(--green);text-underline-offset:3px;overflow-wrap:anywhere}
+main{max-width:1050px;margin:auto;padding:34px 24px 72px}
+.hero{position:relative;overflow:hidden;background:#183d32;color:#f3faf4;border-radius:24px;padding:34px 38px;box-shadow:var(--shadow)}
+.hero:after{content:"";position:absolute;width:260px;height:260px;border:1px solid #b7dfc433;border-radius:50%;left:-60px;top:-135px;box-shadow:0 0 0 32px #b7dfc411,0 0 0 64px #b7dfc40b}
+.eyebrow{font-size:12px;letter-spacing:.04em;color:#b9d8c8}
+h1{font-size:30px;line-height:1.55;margin:6px 0 8px;max-width:760px}
+.hero p{color:#deebe2;max-width:810px;margin:0;font-size:16px}
+h2{font-size:21px;margin:38px 0 12px;line-height:1.6}
+h3{font-size:16px;margin:0 0 7px}
+p{margin:0 0 11px;color:var(--muted)}
+.notice{padding:15px 17px;border-radius:14px;margin:18px 0;border:1px solid}
+.notice strong{display:block;margin-bottom:4px}
+.danger{background:var(--redbg);border-color:#efc8c1;color:#713232}
+.warning{background:var(--amberbg);border-color:#efd3a5;color:#69451e}
+.safe{background:#eaf6ee;border-color:#c7e3d0;color:#225a3e}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:18px;min-width:0;box-shadow:0 3px 12px #20352a08}
+.card p:last-child{margin-bottom:0}
+.card ul,.card ol{margin:7px 0 0;padding-right:21px;color:var(--muted)}
+.card li{margin:4px 0}
+.choice{border-top:4px solid var(--green)}
+.choice.secondary{border-top-color:#58748a}
+.tag{display:inline-block;border-radius:999px;padding:2px 9px;background:#edf3ef;color:#36574a;font-size:11px;margin-inline-start:6px;white-space:nowrap}
+.steps{display:grid;gap:11px;counter-reset:step}
+.step{position:relative;border:1px solid var(--line);border-radius:15px;background:#fff;padding:17px 56px 17px 18px;min-width:0}
+.step:before{counter-increment:step;content:counter(step);position:absolute;right:16px;top:17px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:var(--green2);color:var(--green);font-weight:700}
+.step p:last-child{margin-bottom:0}
+.path,.code{direction:ltr;unicode-bidi:plaintext;display:inline-block;font:13px/1.7 Consolas,"Courier New",monospace;background:#f0f3f1;padding:1px 6px;border-radius:5px;overflow-wrap:anywhere}
+.code{display:block;text-align:left;white-space:pre-wrap;background:#15251f;color:#e4f4e9;padding:12px 14px;margin:9px 0}
+.table-wrap{border:1px solid var(--line);border-radius:14px;overflow-x:auto;background:white}
+table{width:100%;border-collapse:collapse;min-width:630px;font-size:13px}
+th,td{padding:10px 12px;text-align:right;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:#edf4ef;color:#355345;font-weight:700}
+tr:last-child td{border-bottom:0}
+td code{direction:ltr;unicode-bidi:plaintext;font:12px Consolas,"Courier New",monospace;white-space:nowrap}
+.checklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;padding:0;list-style:none}
+.checklist li{position:relative;padding-right:25px;color:var(--muted)}
+.checklist li:before{content:"□";position:absolute;right:0;top:0;color:var(--green);font-size:18px;line-height:1.5}
+.mini{font-size:12px;color:#6d7973}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
+.toc a{border:1px solid #c9ddd0;color:#e8f4ec;border-radius:999px;padding:5px 12px;font-size:12px;text-decoration:none}
+footer{border-top:1px solid var(--line);margin-top:34px;padding-top:16px;color:#77817b;font-size:12px}
+@media(max-width:720px){main{padding:16px 12px 44px}.hero{padding:24px 20px;border-radius:18px}h1{font-size:24px}.hero p{font-size:14px}h2{font-size:19px;margin-top:30px}.grid{grid-template-columns:1fr}.step{padding:15px 50px 15px 14px}.checklist{grid-template-columns:1fr}.card{padding:15px}}
+@media print{body{background:#fff}main{padding:0}.hero,.card,.step{box-shadow:none}.toc{display:none}.hero{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<main>
+<aside role="note" style="border:2px solid #b45309;background:#fff7ed;color:#7c2d12;padding:14px 18px;border-radius:12px;margin:0 0 22px;font-weight:700">سند میراثی برای موتور قدیمی Access/C# است و دستورهای آن برای ماژول جاری قابل اجرا نیست. نسخهٔ جاری سفارش را از MySQL داخلی می‌خواند؛ Access تردد TENTER باقی است. برای نصب و rollback ماژول فعلی، <a href="FOOD-ORDERS-1.38-OPERATIONS-fa.md">راهنمای عملیاتی 1.38</a> را ببینید. Worker قدیمی C# را اجرا نکنید.</aside>
+
+<header class="hero">
+  <div class="eyebrow">راهنمای عملیاتی · ویندوز · از بررسی اولیه تا آزمون نهایی</div>
+  <h1>نصب امن و آزمون نهایی چاپ فیش غذا</h1>
+  <p>این راهنما مسیر آماده‌سازی را قدم‌به‌قدم مشخص می‌کند. اول فقط یکی از دو موتور را انتخاب کنید، سپس در محیط آزمایشی یک تردد کنترل‌شده را تا چاپ و مانیتورینگ بررسی کنید.</p>
+  <nav class="toc" aria-label="بخش‌های راهنما"><a href="#choose">انتخاب موتور</a><a href="#mapping">نگاشت داده</a><a href="#csharp">سرویس C#</a><a href="#php">Worker PHP</a><a href="#test">آزمون نهایی</a><a href="#trouble">عیب‌یابی</a></nav>
+</header>
+
+<div class="notice danger"><strong>نکتهٔ ایمنی مهم</strong>سرویس C# بلافاصله پس از اجرا، جدول SOURCE_TABLE را دوره‌ای می‌خواند و ممکن است ترددهای موجود را پردازش یا چاپ کند. دکمهٔ «آزمون کامل موتور چاپ» هم یک فیش نمونهٔ واقعی می‌فرستد. برای شروع، از نسخهٔ آزمایشی فایل‌های Access استفاده کنید و قبل از آزمون، وجود کاغذ را بررسی کنید.</div>
+
+<section id="choose">
+  <h2>۱. فقط یک موتور را انتخاب کنید</h2>
+  <div class="grid">
+    <article class="card choice"><h3>سرویس مستقل C# <span class="tag">این راهنما، مسیر کامل</span></h3><p>برای اجرای پنل روی Windows و خواندن Access از راه ODBC. نیازمند .NET 8 SDK، درایور Microsoft Access ODBC و دسترسی همان حساب Windows به فایل‌ها و چاپگر است.</p><p>این سرویس به MySQL سامانهٔ اصلی وصل نمی‌شود؛ دادهٔ کارکنان را از <code class="path">tblEmployees</code> می‌خواند و مانیتورینگ را در SQLite محلی و جدول Access ثبت می‌کند.</p></article>
+    <article class="card choice secondary"><h3>PHP Worker</h3><p>برای سامانهٔ PHP موجود و پایگاه MySQL/MariaDB آن. نصب‌گر آن Task زمان‌بندی‌شدهٔ Windows را می‌سازد و باید طبق راهنمای PHP جداگانه تنظیم شود.</p><p><a href="food-ticket-worker-install-fa.html">بازکردن راهنمای نصب و آزمون PHP Worker</a></p></article>
+  </div>
+  <div class="notice warning"><strong>این دو مسیر را هم‌زمان اجرا نکنید.</strong>اگر Worker فعلی، Task زمان‌بندی‌شده یا سرویس قدیمی دارید، هنگام آزمون آن را متوقف کنید. دو موتور ممکن است برای یک تردد چاپ تکراری انجام دهند.</div>
+</section>
+
+<section id="mapping">
+  <h2>۲. نگاشت دادهٔ سفارش را دقیق بررسی کنید</h2>
+  <p>سفارش غذا دیگر از Access خوانده نمی‌شود. سفارش‌ها را در «برنامه غذایی» ثبت کنید؛ سیستم آن‌ها را در جدول داخلی <code class="path">food_orders</code> نگه می‌دارد.</p>
+  <div class="table-wrap"><table><thead><tr><th>ستون جدول سفارش</th><th>کاربرد درست</th><th>نکته</th></tr></thead><tbody>
+    <tr><td><code>cod_meli</code></td><td>کد ملی برای پیدا کردن سفارش همان کارمند</td><td>با کد ملی او در <code>tblEmployees</code> یکی باشد.</td></tr>
+    <tr><td><code>nahar_entekhabi</code></td><td>نوع غذای انتخاب‌شده برای ناهار</td><td>مقدار همین ستون روی نتیجهٔ سفارش اثر می‌گذارد.</td></tr>
+    <tr><td><code>tarikh_entekhabi</code></td><td>تاریخ واقعی غذا</td><td>باید با تاریخ تردد یکی باشد.</td></tr>
+    <tr><td><code>naam</code> / <code>famili</code></td><td>نام و نام خانوادگی برای نمایش</td><td>کد پرسنلی از این جدول سفارش گرفته نمی‌شود.</td></tr>
+    <tr><td><code>d</code> / <code>s</code></td><td>تاریخ رزرو / ساعت رزرو</td><td>برای نمایش اطلاعات رزرو هستند، نه تطبیق کارمند.</td></tr>
+    <tr><td><code>roz_entekhabi</code></td><td>روز هفته</td><td>برای تاریخ غذا استفاده نکنید.</td></tr>
+  </tbody></table></div>
+  <div class="notice safe"><strong>کارمند از کجا پیدا می‌شود؟</strong>ستون <code class="path">L_UID</code> در SOURCE_TABLE باید با کد پرسنلی همان کارمند در <code class="path">tblEmployees</code> جور باشد؛ سپس کد ملی کارمند با <code class="path">cod_meli</code> سفارش تطبیق داده می‌شود. فیلد شام یا کد پرسنلی داخل جدول سفارش لازم نیست.</div>
+</section>
+
+<section id="csharp">
+  <h2>۳. آماده‌سازی سرویس مستقل C#</h2>
+  <div class="steps">
+    <article class="step"><h3>پوشه و پیش‌نیازها را آماده کنید</h3><p>ZIP بستهٔ کامل را در مسیری کوتاه روی همان Windows Server یا رایانه‌ای استخراج کنید که به Access و چاپگر دسترسی دارد؛ مثلاً <code class="path">C:\FoodTicket</code>. درایور Access ODBC باید با معماری پردازش Windows سازگار باشد. سپس <code class="path">install_prerequisites.bat</code> را اجرا کنید. این اسکریپت وجود .NET 8 SDK را بررسی، در صورت نبود تنظیمات نمونه را کپی و بسته‌های پروژه را Restore می‌کند. هشدار نبود ODBC را نادیده نگیرید؛ پیش از اتصال واقعی، درایور مناسب را نصب کنید.</p></article>
+    <article class="step"><h3>از Access نسخهٔ آزمایشی بسازید</h3><p>از فایل منبع تردد و فایل سفارش پشتیبان بگیرید. برای اولین آزمون، مسیرهای تنظیمات را به کپی‌های آزمایشی بدهید که در SOURCE_TABLE فقط رکورد آزمایشی مجاز وجود دارد و در جدول سفارش، سفارش همان کارمند برای تاریخ امروز ثبت شده است. فایل‌ها را با Microsoft Access یا روش امن سازمانی کپی کنید؛ در فایل زندهٔ دستگاه تردد، رکورد آزمایشی نسازید.</p><p class="mini">کپی آزمایشی سفارش باید جدول کارکنان و امکان نوشتن جدول مانیتورینگ را هم داشته باشد. برنامه در اولین اجرا تلاش می‌کند <code class="path">tblLiveMonitoring</code> را بسازد؛ حساب اجراکننده باید اجازهٔ نوشتن داشته باشد.</p></article>
+    <article class="step"><h3>فایل تنظیمات را تکمیل کنید</h3><p>فایل <code class="path">food_ticket_config.json</code> کنار فایل‌های پروژه قرار می‌گیرد. اگر اسکریپت آن را ساخته است، همان فایل را با ویرایشگر متن باز کنید. رمز غیرخالی برای دست‌کم یک مدیر بگذارید و مسیرهای واقعیِ فایل‌های آزمایشی را وارد کنید. برای مسیر شبکه از UNC استفاده کنید، نه درایو Map شده؛ مانند نمونهٔ زیر:</p><code class="code">"path": "\\\\server\\share\\منبع تردد-test.mdb",
+"table": "SOURCE_TABLE",
+"columns": { "uid": "L_UID", "card": "C_Card", "name": "C_Name", "date": "C_Date", "time": "C_Time" }</code><p>سفارش‌ها نیاز به تنظیم Access ندارند؛ تردد TENTER همچنان از Access خوانده می‌شود.</p></article>
+    <article class="step"><h3>فهرست کارکنان را بررسی کنید</h3><p>در Access سفارش، جدول <code class="path">tblEmployees</code> باید حداقل یک کارمند آزمایشی داشته باشد و کد پرسنلی، کد ملی، نام و نام خانوادگی آن درست باشد. این سرویس جدول را به فهرست محلی‌اش وارد می‌کند؛ کد پرسنلی آزمایشی در <code class="path">L_UID</code> و کد ملی آن در سفارش <code class="path">cod_meli</code> باید با این کارمند تطبیق داشته باشند.</p></article>
+    <article class="step"><h3>چاپگر را روی همان Windows آماده کنید</h3><p>برای روش پیشنهادی Windows Spooler، درایور چاپگر را روی همان رایانه نصب کنید. در <code class="path">food_ticket_config.json</code> مقدار <code class="path">printer.mode</code> را <code class="path">windows-spooler</code> و نام صف نصب‌شده را در <code class="path">printer.name</code> بگذارید. در روش شبکه‌ای مستقیم، حالت <code class="path">socket</code>، آدرس چاپگر و پورت درست (اغلب 9100، اگر چاپگر شما همین را پشتیبانی می‌کند) را تنظیم کنید. مقدار رمزگذاری باید با چاپگر سازگار باشد.</p></article>
+    <article class="step"><h3>برای اولین اجرا حذف رکورد را خاموش کنید</h3><p>در کپی آزمایشی، <code class="path">attendance.cutSourceRows</code> و <code class="path">cutFromSource</code> را <code class="path">false</code> بگذارید. این کار از حذف رکورد آزمایشی SOURCE_TABLE هنگام آزمون جلوگیری می‌کند. آن را تا زمانی که نتیجهٔ پردازش و سیاست حذف را تأیید نکرده‌اید روشن نکنید.</p></article>
+    <article class="step"><h3>سرویس را اجرا و وارد پنل شوید</h3><p><code class="path">start_food_ticket.bat</code> را اجرا کنید و پنجرهٔ آن را باز نگه دارید. سرویس به‌طور پیش‌فرض فقط روی همین رایانه در <code class="path">http://127.0.0.1:8080/index.html</code> در دسترس است. با نام کاربری و رمز مدیر وارد شوید. سرویس از همان لحظهٔ شروع SOURCE_TABLE را پایش می‌کند؛ به همین دلیل باید پیش از شروع، مسیر آزمایشی و محتوای SOURCE_TABLE کنترل شده باشد.</p></article>
+  </div>
+</section>
+
+<section id="php">
+  <h2>۴. اگر مسیر شما PHP Worker است</h2>
+  <div class="card"><p>به‌جای مراحل اختصاصی C#، راهنمای <a href="food-ticket-worker-install-fa.html">نصب Worker PHP</a> را دنبال کنید. آن مسیر به PHP CLI و افزونه‌های موردنیاز، تنظیم Access/چاپگر در سامانهٔ موجود و Task Scheduler وابسته است. از نصب XAMPP دوم روی سرور عملیاتی خودداری کنید؛ معمولاً PHP فعلی همان سرور باید استفاده شود.</p><ul><li>هم‌زمان سرویس C# را اجرا نکنید.</li><li>قبل از فعال‌کردن Task، وجود رکوردهای پردازش‌نشدهٔ واقعی را بررسی کنید؛ Worker ممکن است آن‌ها را بی‌درنگ بخواند.</li><li>تست چاپ/اتصال می‌تواند کاغذ واقعی چاپ کند. آن را فقط پس از انتخاب چاپگر، گذاشتن کاغذ و آماده‌کردن مسیر آزمایشی اجرا کنید.</li><li>پس از یک دور آزمایشی، لاگ/پایش Worker و گزارش فیش را بررسی کنید؛ سپس دربارهٔ فعال‌سازی دائمی Task تصمیم بگیرید.</li></ul></div>
+</section>
+
+<section id="test">
+  <h2>۵. آزمون نهایی کنترل‌شده</h2>
+  <div class="notice warning"><strong>آزمون کامل، آزمون بی‌اثر نیست.</strong>در سرویس C#، «آزمون کامل موتور چاپ» علاوه بر خواندن دیتابیس داخلی، SOURCE_TABLE، جدول سفارش و کارکنان، یک فیش آزمایشی را واقعاً به چاپگر می‌فرستد؛ اما به‌تنهایی نگاشت سفارش به کارمند را اثبات نمی‌کند.</div>
+  <div class="steps">
+    <article class="step"><h3>پیش از تست، دامنه را محدود کنید</h3><p>مطمئن شوید سرویس/Worker دیگری فعال نیست؛ مسیرها به کپی آزمایشی اشاره می‌کنند؛ در SOURCE_TABLE فقط تردد آزمایشی مجاز هست؛ و صف چاپگر کاغذ دارد. اگر نمی‌توانید SOURCE_TABLE را در محیط جداگانه کنترل کنید، آزمون یکپارچه را متوقف کنید تا یک پنجرهٔ آزمایش هماهنگ با مسئول دستگاه فراهم شود.</p></article>
+    <article class="step"><h3>اتصال‌ها را از پنل بررسی کنید</h3><p>در پنل C# وارد «تنظیمات» ← «سلامت سیستم» شوید. نتیجهٔ آزمون کامل باید برای دیتابیس داخلی، منبع SOURCE_TABLE، سفارش غذا، کارکنان و چاپگر موفق باشد. این مرحله یک فیش نمونه چاپ می‌کند. جدول کارکنان باید قابل‌خواندن و دارای رکورد باشد.</p><p>اگر فقط خواندن اتصال موفق است اما سفارش درست نیست، صفحهٔ سفارش غذا را برای تاریخ امروز باز کنید و یک سفارش آزمایشی را از نظر کد ملی، نوع غذا و تاریخ بررسی کنید. نام جدول تردد را از خود فایل Access تأیید کنید؛ از نام نمونه به‌عنوان واقعیت قطعی استفاده نکنید.</p></article>
+    <article class="step"><h3>یک تردد آزمایشی را تا انتها دنبال کنید</h3><p>در کپی آزمایشی SOURCE_TABLE یک رکورد کنترل‌شده با <code class="path">L_UID</code> کارمند آزمایشی و تاریخ/ساعت معتبر قرار دهید. سفارش همان کارمند باید در برنامه غذایی (food_orders داخلی) برای تاریخ همان تردد، از طریق کد ملی کارمند پیدا شود و نوع غذای آن خالی نباشد. در پنل «پایش» و «گزارش‌ها» نتیجه را دنبال کنید.</p></article>
+    <article class="step"><h3>معیار قبولی را ثبت کنید</h3><p>برای کارمند فعالِ دارای سفارش امروز، انتظار می‌رود نام، غذا و تاریخ درست نشان داده شود؛ یک فیش واقعی چاپ شود؛ رویداد در SQLite محلی و جدول مانیتورینگ Access ثبت شود؛ و وضعیت چاپ موفق باشد. چون در آزمون نخست حذف از SOURCE_TABLE خاموش است، رکورد باید در کپی آزمایشی باقی بماند. نتیجهٔ «غذا ندارد» یا «کاربر ناشناس» یعنی بخشی از نگاشت کارمند/سفارش هنوز درست نشده است.</p></article>
+    <article class="step"><h3>برای بهره‌برداری زنده، جداگانه تأیید بگیرید</h3><p>پس از قبولی کپی آزمایشی، سرویس را متوقف کنید و مسیرهای واقعی را فقط در زمان هماهنگ‌شده تنظیم کنید. قبل از شروع، رکوردهای در انتظار واقعی SOURCE_TABLE و چاپگر را بررسی کنید. اگر سیاست سازمان حذف رکورد پس از پردازش موفق را می‌خواهد، گزینهٔ حذف را آگاهانه فعال کنید: در C# هر دو <code class="path">attendance.cutSourceRows</code> و <code class="path">cutFromSource</code> باید روشن باشند. ابتدا یک تردد واقعیِ مجاز را زیر نظر بگیرید و سپس وضعیت را دوباره بررسی کنید.</p></article>
+  </div>
+</section>
+
+<section id="trouble">
+  <h2>۶. اگر آزمون رد شد</h2>
+  <div class="grid">
+    <article class="card"><h3>Access در PHP Worker باز نمی‌شود</h3><p>اگر پیام می‌گوید Providerهای ACE/Jet ثبت نشده‌اند، نتیجهٔ «سفارشی نیست» را نبود سفارش تلقی نکنید؛ خواندن فایل Access شکست خورده است. یا افزونهٔ <code class="path">odbc</code> و درایور Access را در همان PHP فعال کنید، یا Access Database Engine/Runtime سازگار با معماری Windows، Office و PHP نصب باشد. مسیرهای <code class="path">php.exe</code> و فایل INI را از خروجی <code class="path">php.exe --ini</code> همان برنامه بررسی کنید؛ تنظیم <code class="path">C:\php84\php.ini</code> برای <code class="path">C:\xampp\php\php.exe</code> اعمال نمی‌شود.</p></article>
+    <article class="card"><h3>درایور Access پیدا نشد</h3><p>درایور Microsoft Access Database Engine/ODBC را با معماری Windows و برنامه هماهنگ کنید. بعد <code class="path">install_prerequisites.bat</code> و آزمون اتصال را دوباره اجرا کنید.</p></article>
+    <article class="card"><h3>SOURCE_TABLE خوانده نمی‌شود</h3><p>مسیر UNC، دسترسی حساب Windows، نام جدول <code class="path">SOURCE_TABLE</code> و نگاشت ستون‌های L_UID، C_Card، C_Date و C_Time را بررسی کنید. درایوهای شبکه‌ای Map شده را با UNC جایگزین کنید.</p></article>
+    <article class="card"><h3>کارمند ناشناس دیده می‌شود</h3><p>وجود کارمند فعال در <code class="path">tblEmployees</code>، تطابق کد پرسنلی با <code class="path">L_UID</code> و وارد شدن رکورد به فهرست کارکنان محلی را بررسی کنید.</p></article>
+    <article class="card"><h3>«غذا ندارد» یا غذای نادرست است</h3><p>نام جدول سفارش و نگاشت <code class="path">cod_meli</code>، <code class="path">nahar_entekhabi</code> و به‌ویژه تاریخ واقعی <code class="path">tarikh_entekhabi</code> را بررسی کنید. <code class="path">roz_entekhabi</code> روز هفته است، نه تاریخ غذا.</p></article>
+    <article class="card"><h3>آزمون چاپ ناموفق است</h3><p>یک فیش از Windows با همان حساب چاپ کنید، صف نصب‌شده را انتخاب و روش spooler/socket، آدرس، پورت و Encoding را بررسی کنید. برای هر تلاش آزمایشی، احتمال چاپ واقعی را در نظر بگیرید.</p></article>
+    <article class="card"><h3>دسترسی یا ثبت مانیتورینگ خطا می‌دهد</h3><p>حساب اجراکننده باید به پوشهٔ SQLite محلی، فایل Access سفارش و مسیر شبکه دسترسی لازم داشته باشد. برای ساخت/نوشتن <code class="path">tblLiveMonitoring</code> مجوز فایل Access را با مدیر پایگاه بررسی کنید.</p></article>
+  </div>
+</section>
+
+<section>
+  <h2>چک‌لیست تحویل آزمون</h2>
+  <div class="card"><ul class="checklist"><li>فقط یک موتور فعال است.</li><li>نام واقعی جدول سفارش تأیید شده است.</li><li>نگاشت ستون‌ها با فایل Access تطبیق دارد.</li><li>کپی آزمایشی و نسخهٔ پشتیبان آماده است.</li><li>کارمند و سفارش آزمایشی با هم تطبیق دارند.</li><li>فیش نمونه با چاپگر درست چاپ شده است.</li><li>نتیجه در مانیتورینگ ثبت شده است.</li><li>سیاست حذف SOURCE_TABLE جداگانه تصمیم‌گیری شده است.</li></ul><p class="mini">این راهنما بر اساس کد و نمونهٔ تنظیمات بسته تهیه شده است. دسترسی واقعی Access/ODBC، نام نهایی جدول سازمان و سازگاری مدل چاپگر باید روی Windows مقصد تأیید شوند.</p></div>
+</section>
+
+<footer>فایل‌های مرتبط در بسته: <code class="path">food-ticket-web\config.example.json</code>، <code class="path">food-ticket-web\install_prerequisites.bat</code>، <code class="path">food-ticket-web\start_food_ticket.bat</code>، <code class="path">food-ticket-web\README-prerequisites-fa.md</code> و راهنمای PHP Worker.</footer>
+</main>
+</body>
+</html>

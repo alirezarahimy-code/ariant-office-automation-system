@@ -1,0 +1,10 @@
+Options -Indexes
+DirectoryIndex index.php
+
+<FilesMatch "^(config\.php|config\.sample\.php|schema\.sql|installed\.lock)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(bak|log|sql|ini)$">
+    Require all denied
+</FilesMatch>
