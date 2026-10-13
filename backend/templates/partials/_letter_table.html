@@ -1,0 +1,44 @@
+{% load persian_tags %}
+<div class="card table-wrap" style="padding:0">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>موضوع و فرستنده</th>
+        <th>شماره</th>
+        <th>وضعیت</th>
+        <th>مهلت</th>
+        <th>فوریت</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for letter in letters %}
+      <tr>
+        <td class="subject">
+          <div style="display:flex;gap:10px;align-items:center">
+            <span class="avatar teal">{{ letter.subject|slice:":1" }}</span>
+            <span>
+              <a href="{% url 'secretariat:letter_detail' letter.pk %}">{{ letter.subject }}</a><br>
+              <span class="cell-sub">
+                {% if letter.sender_org %}{{ letter.sender_org }}{% elif letter.sender_name %}{{ letter.sender_name }}{% else %}{{ letter.get_letter_type_display }} — {{ letter.office.name }}{% endif %}
+              </span>
+            </span>
+          </div>
+        </td>
+        <td>{{ letter.number_display }}</td>
+        <td><span class="pill {{ letter.status|status_pill }}">{{ letter.get_status_display }}</span></td>
+        <td>
+          {% if letter.deadline %}
+          <b class="tiny">{{ letter.deadline|jdate }}</b>
+          <div class="deadline-bar"><i class="{{ letter.deadline|deadline_kind }}" style="width:70%"></i></div>
+          {% else %}<span class="tiny muted">—</span>{% endif %}
+        </td>
+        <td><span class="pill {{ letter.priority|priority_pill }}">{{ letter.get_priority_display }}</span></td>
+        <td><a class="btn sm secondary" href="{% url 'secretariat:letter_detail' letter.pk %}">مشاهده</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6"><div class="empty"><span class="big">🗂</span>موردی در این بخش نیست.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

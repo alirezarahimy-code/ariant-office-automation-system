@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}ثبت نامه جدید — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">دبیرخانه</span>
+    <h1>ثبت نامه جدید</h1>
+    <span class="hint">وارده: ثبت با شماره‌گذاری خودکار و همزان‌امن — صادره: ایجاد پیش‌نویس تا گردش تأیید و امضا</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  {% if can_incoming %}
+  <div class="card">
+    <div class="card-title">نامه وارده <span class="pill info">ثبت دبیرخانه</span></div>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="form" value="incoming">
+      <div class="form-grid">{% include 'partials/_form_fields.html' with form=incoming_form %}</div>
+      <div class="form-actions">
+        <button class="btn" type="submit">ثبت وارده و دریافت شماره</button>
+      </div>
+    </form>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-title">نامه وارده</div>
+    <div class="empty"><span class="big">🔒</span>ثبت وارده فقط با مجوز دبیرخانه انجام می‌شود.</div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-title">پیش‌نویس نامه صادره <span class="pill teal">گردش تأیید</span></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="form" value="outgoing">
+      <div class="form-grid">{% include 'partials/_form_fields.html' with form=outgoing_form %}</div>
+      <div class="form-actions">
+        <button class="btn navy" type="submit">ایجاد پیش‌نویس</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

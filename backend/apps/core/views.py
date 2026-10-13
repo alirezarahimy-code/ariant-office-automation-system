@@ -2,7 +2,9 @@
 from datetime import date
 
 import jdatetime
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+from django.views.decorators.http import require_POST
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,17 +13,11 @@ from apps.core.persian import to_persian_digits
 
 
 def home(request):
-    today_j = jdatetime.date.fromgregorian(date=date.today())
-    body = f"""<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head><meta charset="utf-8"><title>سامانه اتوماسیون اداری آرینت</title></head>
-<body style="font-family: Tahoma, sans-serif; padding: 2rem;">
-<h1>سامانه اتوماسیون اداری آرینت</h1>
-<p>تاریخ امروز: {to_persian_digits(today_j.strftime('%Y/%m/%d'))} — {today_j.j_weekdays[persian_weekday_index(today_j)]}</p>
-<p>پنل مدیریت: <a href="/admin/">/admin/</a></p>
-<p>وب‌سرویس سلامت: <a href="/api/v1/health">/api/v1/health</a></p>
-</body></html>"""
-    return HttpResponse(body)
+    """ورودی سامانه: کاربر وارد شده به کارتابل، ناشناس به ورود می‌رود."""
+    from django.shortcuts import redirect
+    if request.user.is_authenticated:
+        return redirect('secretariat:kartable')
+    return redirect('accounts:login')
 
 
 def persian_weekday_index(jdate) -> int:
@@ -46,3 +42,31 @@ class AuthMeView(APIView):
             'email': user.email,
             'is_staff': user.is_staff,
         })
+
+
+@login_required
+def notifications_list(request):
+    """فهرست اعلان‌های کاربر (۱۰۰ مورد آخر)."""
+    from django.shortcuts import render
+    notifications = request.user.notifications.all()[:100]
+    unread = request.user.notifications.filter(is_read=False).count()
+    return render(request, 'core/notifications.html', {
+        'notifications': notifications, 'unread': unread})
+
+
+@login_required
+@require_POST
+def notification_read(request, pk):
+    from django.shortcuts import get_object_or_404, redirect
+    notification = get_object_or_404(request.user.notifications, pk=pk)
+    notification.is_read = True
+    notification.save(update_fields=['is_read', 'updated_at'])
+    return redirect('accounts:notifications')
+
+
+@login_required
+@require_POST
+def notifications_read_all(request):
+    from django.shortcuts import redirect
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    return redirect('accounts:notifications')

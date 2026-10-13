@@ -57,12 +57,13 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'apps.core.context_processors.platform_context',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -139,6 +140,7 @@ LANGUAGES = [
 # ---------------------------------------------------------------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
@@ -200,3 +202,36 @@ SECRETARIAT_ATTACHMENT_ALLOWED_EXTENSIONS = [
     'pdf', 'jpg', 'jpeg', 'png', 'tif', 'tiff',
     'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip',
 ]
+
+# --- آزمون: بدون manifest استاتیک (صفحه‌ها در تست رندر شوند) ---
+import sys
+TESTING = 'test' in sys.argv
+if TESTING and 'STORAGES' in globals():
+    STORAGES['staticfiles'] = {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}
+
+# --- احراز هویت وب ---
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'secretariat:kartable'
+LOGOUT_REDIRECT_URL = 'accounts:login'
+
+# --- هویت سازمان (سربرگ نامه‌ها) ---
+PLATFORM_ORG_NAME = os.environ.get('PLATFORM_ORG_NAME', 'سازمان آرینت')
+PLATFORM_ORG_MOTTO = os.environ.get('PLATFORM_ORG_MOTTO', 'اتوماسیون اداری یکپارچه')
+
+# --- دبیرخانه ---
+SECRETARIAT_DEADLINE_WARNING_DAYS = 3
+
+# --- پل تیکتینگ (docs/04 + قرارداد SSO در docs/14 بند ۷) ---
+TICKET_BRIDGE = {
+    'system': 'php-ticketing',
+    'base_url': os.environ.get('TICKET_BRIDGE_URL', ''),
+    'sso_key': os.environ.get('TICKET_BRIDGE_SSO_KEY', 'dev-secret-change-me'),
+    'fixture': str(BASE_DIR / 'apps' / 'ticket_bridge' / 'fixtures' / 'sample_tickets.json'),
+    'db': {
+        'host': os.environ.get('TICKET_DB_HOST', ''),
+        'port': int(os.environ.get('TICKET_DB_PORT', '3306')),
+        'name': os.environ.get('TICKET_DB_NAME', 'persian_ticketing'),
+        'user': os.environ.get('TICKET_DB_USER', ''),
+        'password': os.environ.get('TICKET_DB_PASSWORD', ''),
+    },
+}

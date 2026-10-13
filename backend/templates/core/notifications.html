@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}اعلان‌ها — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">میز کار</span>
+    <h1>اعلان‌ها</h1>
+    <span class="hint">{{ unread }} اعلان نخوانده</span>
+  </div>
+  <div class="actions">
+    {% if unread %}
+    <form method="post" action="{% url 'accounts:notifications_read_all' %}">{% csrf_token %}
+      <button class="btn secondary" type="submit">خواندن همه</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+<div class="card">
+  {% if notifications %}
+  <ul class="notif-list">
+    {% for n in notifications %}
+    <li class="{% if not n.is_read %}unread{% endif %}">
+      <div style="flex:1">
+        <div class="n-title">{% if not n.is_read %}● {% endif %}{{ n.title }}</div>
+        {% if n.body %}<div class="n-body">{{ n.body }}</div>{% endif %}
+        <div class="n-time">{{ n.created_at|jalali_datetime }}</div>
+      </div>
+      <div class="row-gap">
+        {% if n.url %}<a class="btn sm secondary" href="{{ n.url }}">مشاهده</a>{% endif %}
+        {% if not n.is_read %}
+        <form method="post" action="{% url 'accounts:notification_read' n.pk %}">{% csrf_token %}
+          <button class="btn sm" type="submit">خوانده شد</button>
+        </form>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty"><span class="big">🔕</span>اعلانی ندارید.</div>
+  {% endif %}
+</div>
+{% endblock %}
