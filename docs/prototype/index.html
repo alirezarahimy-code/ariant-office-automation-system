@@ -3,197 +3,165 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>پلتفرم آرینت — پیش‌نمایش طراحی نوین</title>
+<title>پلتفرم آرینت — پیش‌نمایش طراحی (نسخه آرام و شفاف)</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
 <style>
 :root{
-  --ink:#0b1f3a; --ink2:#12294b; --navy:#1a3c6e; --teal:#0f9d8a; --teal-deep:#0b7f70;
-  --bg:#f6f7fb; --surface:#ffffff; --line:#e7eaf3; --line2:#eef1f7;
-  --t1:#101828; --t2:#667085; --t3:#98a2b3;
-  --ok:#067647; --ok-bg:#e7f6ef; --warn:#b54708; --warn-bg:#fef0c7;
-  --bad:#b42318; --bad-bg:#fee4e2; --info:#175cd3; --info-bg:#eff4ff; --violet:#6941c6; --violet-bg:#f4f0ff;
-  --sh1:0 1px 2px rgba(16,24,40,.05); --sh2:0 8px 24px -8px rgba(16,24,40,.12); --sh3:0 20px 45px -18px rgba(11,31,58,.28);
-  --r:14px;
+  --navy:#16365f; --navy-2:#1d4373; --teal:#0e8f7e; --teal-2:#0b7568;
+  --bg:#f7f8fa; --surface:#ffffff; --line:#e4e7ee; --line-2:#eef0f5;
+  --t1:#1a2333; --t2:#5c6b80; --t3:#8b98ab;
+  --ok:#0d7a4f; --ok-bg:#e8f5ee; --warn:#9a5b00; --warn-bg:#fdf3d8;
+  --bad:#b3261e; --bad-bg:#fdecea; --info:#1a56b0; --info-bg:#e9f0fb; --violet:#5b3fa8; --violet-bg:#f0ecfa;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--t1);font-family:Vazirmatn,Tahoma,sans-serif;font-size:14px;line-height:1.85}
+body{margin:0;background:var(--bg);color:var(--t1);font-family:Vazirmatn,Tahoma,sans-serif;font-size:14px;line-height:1.9}
 b{font-weight:700}
-::selection{background:#cdeae5}
-/* ===== پوسته ===== */
 .shell{display:flex;min-height:100vh}
-.side{width:268px;background:linear-gradient(180deg,#0b1f3a 0%,#0e2647 55%,#102c52 100%);color:#cbd5e1;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex-shrink:0}
-.side .brand{padding:22px 22px 18px;display:flex;gap:12px;align-items:center;position:relative;overflow:hidden}
-.side .brand::after{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56'><path d='M28 2L33 12L44 8L40 19L50 24L40 29L44 40L33 36L28 46L23 36L12 40L16 29L6 24L16 19L12 8L23 12Z' fill='none' stroke='white' stroke-opacity='.07'/></svg>");opacity:.9}
-.brand .mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--teal),#0b7f70);display:grid;place-items:center;color:#fff;font-weight:800;font-size:19px;box-shadow:0 6px 16px -6px rgba(15,157,138,.7);position:relative;z-index:1}
-.brand b{color:#fff;font-size:15.5px;position:relative;z-index:1}
-.brand small{display:block;color:#8ea3c0;font-size:11px;position:relative;z-index:1}
-.nav{padding:10px 14px;overflow-y:auto;flex:1}
-.nav .grp{font-size:10.5px;letter-spacing:.4px;color:#5f7699;margin:14px 10px 6px;font-weight:700}
-.nav a{display:flex;align-items:center;gap:11px;color:#b6c4d9;text-decoration:none;padding:9.5px 12px;border-radius:10px;margin-bottom:2px;font-size:13.5px;transition:.18s}
-.nav a svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;flex-shrink:0}
-.nav a:hover{background:rgba(255,255,255,.06);color:#fff}
-.nav a.on{background:linear-gradient(270deg,rgba(15,157,138,.22),rgba(15,157,138,.08));color:#fff;box-shadow:inset 3px 0 0 var(--teal)}
-.nav a .cnt{margin-right:auto;background:rgba(255,255,255,.12);color:#dce6f2;font-size:10.5px;border-radius:20px;padding:1px 8px;font-weight:700}
-.nav a.on .cnt{background:var(--teal);color:#fff}
-.side .me{margin:14px;padding:12px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.08)}
-.side .me .av{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f2b657,#e08c2f);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
-.side .me b{color:#fff;font-size:12.5px;display:block}
-.side .me small{color:#8ea3c0;font-size:10.5px}
-.main{flex:1;min-width:0;display:flex;flex-direction:column}
-.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 28px}
+/* ===== سایدبار: رنگ یکدست، بدون گرادیان و بدون نقش ===== */
+.side{width:262px;background:var(--navy);color:#c7d3e2;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:12px;align-items:center;padding:20px;border-bottom:1px solid rgba(255,255,255,.12)}
+.brand .mark{width:40px;height:40px;border-radius:10px;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px}
+.brand b{color:#fff;font-size:15px}
+.brand small{display:block;color:#9db1c9;font-size:11px}
+.nav{padding:12px;overflow-y:auto;flex:1}
+.nav .grp{font-size:11px;color:#7e93ad;margin:14px 10px 6px;font-weight:700}
+.nav a{display:flex;align-items:center;gap:11px;color:#c7d3e2;text-decoration:none;padding:9px 12px;border-radius:8px;margin-bottom:2px;font-size:13.5px}
+.nav a svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;flex-shrink:0}
+.nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav a.on{background:var(--navy-2);color:#fff;border-right:3px solid var(--teal);font-weight:700}
+.nav a .cnt{margin-right:auto;background:rgba(255,255,255,.16);border-radius:12px;padding:0 8px;font-size:11px;font-weight:700}
+.me{margin:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.14);border-radius:10px;display:flex;gap:10px;align-items:center}
+.me .av{width:34px;height:34px;border-radius:8px;background:#c98a2e;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+.me b{color:#fff;font-size:12.5px;display:block}
+.me small{color:#9db1c9;font-size:10.5px}
+/* ===== بدنه ===== */
+.main{flex:1;min-width:0}
+.top{background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:11px 26px;position:sticky;top:0;z-index:5}
 .crumb{font-size:12px;color:var(--t3)} .crumb b{color:var(--t1);font-size:13.5px}
-.search{margin-right:auto;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 12px;width:300px;color:var(--t3);font-size:12.5px}
-.search kbd{margin-right:auto;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;font-size:10px;padding:1px 6px;color:var(--t2);font-family:inherit}
-.icbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--t2);position:relative;transition:.15s}
-.icbtn:hover{box-shadow:var(--sh1);color:var(--navy)}
-.icbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7}
-.icbtn .dot{position:absolute;top:8px;left:9px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:2px solid #fff}
-.content{padding:26px 28px 60px;max-width:1280px;width:100%}
-/* ===== سربرگ صفحه ===== */
-.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
-.hero h1{margin:0;font-size:23px;font-weight:800;letter-spacing:-.2px}
-.hero p{margin:4px 0 0;color:var(--t2);font-size:13px}
-.hero .acts{display:flex;gap:10px}
-.btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:11px;padding:10px 18px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:.18s;text-decoration:none}
-.btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
-.btn-p{background:linear-gradient(180deg,#1e4b86,var(--navy));color:#fff;box-shadow:0 8px 18px -8px rgba(26,60,110,.65)}
-.btn-p:hover{transform:translateY(-1px);box-shadow:0 12px 22px -8px rgba(26,60,110,.7)}
-.btn-t{background:linear-gradient(180deg,#12b39e,var(--teal-deep));color:#fff;box-shadow:0 8px 18px -8px rgba(15,157,138,.6)}
-.btn-o{background:#fff;color:var(--t1);border:1px solid var(--line)}
-.btn-o:hover{border-color:#cfd6e4;box-shadow:var(--sh1)}
-.btn-ghost{background:transparent;color:var(--t2)}
-/* ===== کارت‌های KPI ===== */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh1);position:relative;overflow:hidden;transition:.2s}
-.kpi:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
-.kpi .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.kpi .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center}
-.kpi .ic svg{width:20px;height:20px;stroke-width:1.8;fill:none;stroke:currentColor}
-.kpi .lbl{color:var(--t2);font-size:12.5px}
-.kpi .val{font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1.2}
-.kpi .foot{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;color:var(--t3)}
-.chip{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
-.chip svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.4}
-.chip.up{background:var(--ok-bg);color:var(--ok)} .chip.down{background:var(--bad-bg);color:var(--bad)} .chip.flat{background:var(--info-bg);color:var(--info)}
-.kpi .spark{position:absolute;left:14px;bottom:14px;opacity:.9}
-/* ===== شبکه اصلی ===== */
-.grid{display:grid;grid-template-columns:1fr 348px;gap:16px;align-items:start}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh1)}
-.card>header{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line2)}
-.card>header h3{margin:0;font-size:14.5px;font-weight:800}
-.card>header .more{margin-right:auto;font-size:12px;color:var(--info);text-decoration:none;font-weight:700}
-.tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
-.tabs span{padding:5px 14px;border-radius:8px;font-size:12px;color:var(--t2);cursor:pointer;font-weight:700}
-.tabs span.on{background:#fff;color:var(--navy);box-shadow:var(--sh1)}
-/* جدول نوین */
-.rows{padding:6px 8px 10px}
-.row{display:grid;grid-template-columns:44px 1fr 128px 118px 108px 40px;gap:12px;align-items:center;padding:12px 12px;border-radius:12px;transition:.15s}
-.row:hover{background:#f8fafd}
-.row+.row{border-top:1px solid var(--line2)}
-.row:hover{border-top-color:transparent}
-.av{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff}
-.row .sub b{font-size:13.5px;display:block;line-height:1.6}
-.row .sub small{color:var(--t3);font-size:11.5px}
-.pill{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:700}
+.search{margin-right:auto;display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 12px;width:300px;color:var(--t3);font-size:12.5px}
+.search kbd{margin-right:auto;border:1px solid var(--line);border-radius:5px;background:#fff;font-size:10px;padding:0 6px;color:var(--t2);font-family:inherit}
+.icbtn{width:36px;height:36px;border:1px solid var(--line);background:#fff;border-radius:8px;display:grid;place-items:center;color:var(--t2);position:relative}
+.icbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.icbtn .dot{position:absolute;top:7px;left:8px;width:7px;height:7px;background:var(--bad);border:2px solid #fff;border-radius:50%}
+.content{padding:24px 26px 56px;max-width:1240px}
+.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.hero h1{margin:0;font-size:21px;font-weight:800}
+.hero p{margin:3px 0 0;color:var(--t2);font-size:13px}
+.btn{display:inline-flex;gap:8px;align-items:center;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-p{background:var(--navy);color:#fff}
+.btn-p:hover{background:var(--navy-2)}
+.btn-t{background:var(--teal);color:#fff}
+.btn-t:hover{background:var(--teal-2)}
+.btn-o{background:#fff;border:1px solid var(--line);color:var(--t1)}
+/* ===== KPI تخت و خوانا ===== */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.kpi .l{display:flex;align-items:center;gap:9px;color:var(--t2);font-size:12.5px;margin-bottom:8px}
+.kpi .l i{width:34px;height:34px;border-radius:8px;display:grid;place-items:center}
+.kpi .l i svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.kpi .v{font-size:24px;font-weight:800;line-height:1.3}
+.kpi .f{font-size:11.5px;color:var(--t3);margin-top:2px}
+.kpi .f b.up{color:var(--ok)} .kpi .f b.dn{color:var(--bad)}
+/* ===== کارت و جدول ===== */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.card>header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-2)}
+.card>header h3{margin:0;font-size:14px;font-weight:800}
+.card>header .more{margin-right:auto;font-size:12px;color:var(--info);font-weight:700;text-decoration:none}
+.tabs{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px}
+.tabs span{padding:4px 13px;border-radius:6px;font-size:12px;color:var(--t2);font-weight:700;cursor:pointer}
+.tabs span.on{background:#fff;color:var(--navy);border:1px solid var(--line)}
+table.grid{width:100%;border-collapse:collapse}
+table.grid th{background:#f2f4f8;color:var(--t2);font-size:12px;font-weight:700;text-align:right;padding:10px 18px;border-bottom:1px solid var(--line)}
+table.grid td{padding:12px 18px;border-bottom:1px solid var(--line-2);font-size:13px;vertical-align:middle}
+table.grid tr:last-child td{border-bottom:none}
+table.grid tr:hover td{background:#fafbfc}
+.who{display:flex;gap:10px;align-items:center}
+.av{width:34px;height:34px;border-radius:8px;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0}
+.who b{font-size:13px;display:block;line-height:1.6}
+.who small{color:var(--t3);font-size:11.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:14px;padding:2px 10px;font-size:11.5px;font-weight:700;white-space:nowrap}
 .pill i{width:6px;height:6px;border-radius:50%}
 .p-ok{background:var(--ok-bg);color:var(--ok)} .p-ok i{background:var(--ok)}
 .p-run{background:var(--info-bg);color:var(--info)} .p-run i{background:var(--info)}
 .p-warn{background:var(--warn-bg);color:var(--warn)} .p-warn i{background:var(--warn)}
 .p-bad{background:var(--bad-bg);color:var(--bad)} .p-bad i{background:var(--bad)}
 .p-sec{background:var(--violet-bg);color:var(--violet)} .p-sec i{background:var(--violet)}
-.due{font-size:12px;color:var(--t2)} .due b{color:var(--t1)}
-.due.late b{color:var(--bad)}
-.bar{height:5px;border-radius:6px;background:var(--line2);overflow:hidden;margin-top:6px}
-.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(270deg,var(--teal),#67cabb)}
-.bar.w i{background:linear-gradient(270deg,#f79009,#fdb022)} .bar.b i{background:linear-gradient(270deg,#f04438,#f97066)}
-.kebab{color:var(--t3);text-align:center;font-size:16px;cursor:pointer;border-radius:8px}
-.kebab:hover{background:var(--line2);color:var(--t1)}
-.pager{display:flex;gap:6px;justify-content:center;padding:12px 0 4px;color:var(--t2);font-size:12px;align-items:center}
-.pager i{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--line);font-style:normal;cursor:pointer}
-.pager i.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-/* ستون کناری */
-.stack{display:flex;flex-direction:column;gap:16px}
-.donutwrap{display:flex;gap:16px;align-items:center;padding:18px}
+.due{font-size:12px;color:var(--t2)}
+.bar{height:4px;border-radius:4px;background:var(--line-2);margin-top:5px;width:96px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px}
+.lnk{color:var(--info);font-size:12.5px;font-weight:700;text-decoration:none}
+/* ===== ردیف تحلیل ===== */
+.tri{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px}
+.donutwrap{display:flex;gap:18px;align-items:center;padding:18px}
 .legend{flex:1;font-size:12px;color:var(--t2)}
-.legend div{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.legend i{width:9px;height:9px;border-radius:3px}
+.legend div{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+.legend i{width:9px;height:9px;border-radius:2px}
 .legend b{margin-right:auto;color:var(--t1)}
-.bars{display:flex;align-items:flex-end;gap:10px;height:118px;padding:18px 18px 6px}
-.bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10.5px;color:var(--t3)}
-.bars .b i{width:100%;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#dce7f5,#eef3fa);display:block}
-.bars .b.hi i{background:linear-gradient(180deg,var(--teal),#0b7f70);box-shadow:0 8px 16px -8px rgba(15,157,138,.7)}
-.bars .b span{color:var(--t2);font-weight:700}
-.todo{padding:8px}
-.todo .t{display:flex;gap:10px;align-items:center;padding:11px 10px;border-radius:11px}
-.todo .t:hover{background:#f8fafd}
-.todo .t .av{width:34px;height:34px;border-radius:10px;font-size:12px}
+.bars{display:flex;align-items:flex-end;gap:12px;height:112px;padding:16px 18px 4px}
+.bars .b{flex:1;text-align:center;font-size:10.5px;color:var(--t3)}
+.bars .b i{display:block;border-radius:5px 5px 2px 2px;background:#dbe4f0;margin-bottom:6px}
+.bars .b.hi i{background:var(--teal)}
+.todo{padding:6px 8px}
+.todo .t{display:flex;gap:10px;align-items:center;padding:10px;border-radius:8px}
+.todo .t:hover{background:#fafbfc}
 .todo .t b{font-size:12.5px;display:block}
 .todo .t small{color:var(--t3);font-size:11px}
-.todo .t .go{margin-right:auto;display:flex;gap:6px}
-.mini{border-radius:9px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--t2)}
+.todo .go{margin-right:auto;display:flex;gap:6px}
+.mini{border-radius:7px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--t2)}
 .mini.ok{background:var(--ok-bg);border-color:transparent;color:var(--ok)}
-.mini.no{background:#fff;border-color:var(--line);color:var(--bad)}
-/* ===== نمای نامه ===== */
-.lettergrid{display:grid;grid-template-columns:1fr 336px;gap:16px;margin-top:16px;align-items:start}
-.sheetcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh1);overflow:hidden}
-.sheetbar{display:flex;align-items:center;gap:10px;padding:12px 18px;background:linear-gradient(270deg,#f8fafd,#fff);border-bottom:1px solid var(--line2);font-size:12.5px;color:var(--t2)}
-.sheetbar .pill{margin-right:2}
+.mini.no{color:var(--bad)}
+/* ===== نامه ===== */
+.lettergrid{display:grid;grid-template-columns:1fr 330px;gap:14px;margin-top:16px;align-items:start}
+.sheetbar{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line-2);font-size:12.5px;color:var(--t2);flex-wrap:wrap}
 .sheetbar .acts{margin-right:auto;display:flex;gap:8px}
-.sheet{margin:26px auto;width:min(620px,92%);background:#fff;border:1px solid var(--line);box-shadow:var(--sh3);padding:52px 58px;font-size:13.5px;position:relative;border-radius:4px}
-.sheet::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(270deg,var(--navy),var(--teal))}
-.sheet .lh{display:flex;justify-content:space-between;gap:20px;border-bottom:1.5px solid var(--navy);padding-bottom:16px}
-.sheet .lh .org{display:flex;gap:12px;align-items:center}
-.sheet .lh .crest{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--navy);display:grid;place-items:center;color:var(--navy);font-weight:800;font-size:17px}
-.sheet .lh b{font-size:14.5px;color:var(--navy)}
-.sheet .lh small{display:block;color:var(--t2);font-size:11px}
+.sheet{margin:24px auto;width:min(600px,92%);background:#fff;border:1px solid var(--line);border-top:3px solid var(--navy);padding:46px 52px;font-size:13.5px}
+.sheet .lh{display:flex;justify-content:space-between;gap:18px;border-bottom:1.5px solid var(--navy);padding-bottom:14px}
+.sheet .crest{width:44px;height:44px;border:1.5px solid var(--navy);border-radius:50%;display:grid;place-items:center;color:var(--navy);font-weight:800;font-size:16px}
+.sheet .org b{font-size:14px;color:var(--navy)}
+.sheet .org small{display:block;color:var(--t2);font-size:11px}
 .sheet .no{text-align:left;font-size:11.5px;color:var(--t2);line-height:2.1}
 .sheet .no b{color:var(--t1)}
-.sheet h4{text-align:center;font-size:15px;font-weight:800;margin:26px 0 18px;color:var(--ink)}
-.sheet p{text-align:justify;margin:0 0 13px;color:#232b38}
-.sheet .sig{margin-top:40px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--t2)}
-.steps{padding:18px}
-.step{display:flex;gap:12px;position:relative;padding-bottom:20px}
+.sheet h4{text-align:center;font-size:15px;font-weight:800;margin:24px 0 16px}
+.sheet p{text-align:justify;margin:0 0 12px;color:#25314a}
+.sheet .sig{margin-top:36px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--t2)}
+.steps{padding:16px 18px}
+.step{display:flex;gap:12px;position:relative;padding-bottom:18px}
 .step:last-child{padding-bottom:0}
-.step::before{content:"";position:absolute;right:13px;top:28px;bottom:0;width:2px;background:var(--line2)}
+.step::before{content:"";position:absolute;right:12px;top:26px;bottom:0;width:2px;background:var(--line-2)}
 .step:last-child::before{display:none}
-.step .d{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--ok-bg);color:var(--ok);flex-shrink:0;position:relative;z-index:1}
-.step .d svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.6}
-.step.now .d{background:var(--navy);color:#fff;box-shadow:0 0 0 5px #e8eef7}
-.step.todo-s .d{background:var(--line2);color:var(--t3)}
+.step .d{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;position:relative;z-index:1;background:var(--ok-bg);color:var(--ok)}
+.step .d svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.6}
+.step.now .d{background:var(--navy);color:#fff}
+.step.wait .d{background:var(--line-2);color:var(--t3)}
 .step b{font-size:12.5px;display:block}
 .step small{color:var(--t3);font-size:11px}
-.files{padding:6px 18px 18px;display:flex;flex-direction:column;gap:8px}
-.file{display:flex;gap:10px;align-items:center;border:1px solid var(--line2);border-radius:11px;padding:9px 12px;font-size:12px;color:var(--t2)}
-.file .fi{width:32px;height:32px;border-radius:9px;background:var(--bad-bg);color:var(--bad);display:grid;place-items:center;font-size:10px;font-weight:800}
+.files{padding:6px 18px 16px;display:flex;flex-direction:column;gap:8px}
+.file{display:flex;gap:10px;align-items:center;border:1px solid var(--line-2);border-radius:9px;padding:8px 12px;font-size:11.5px;color:var(--t2)}
+.file .fi{width:30px;height:30px;border-radius:7px;background:var(--bad-bg);color:var(--bad);display:grid;place-items:center;font-size:9.5px;font-weight:800}
 .file .fi.x{background:var(--ok-bg);color:var(--ok)}
-.file b{color:var(--t1);font-size:12px;display:block}
-/* ===== راهنمای سبک ===== */
-.sg{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.sg .card .body{padding:18px}
-.sw2{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.sw2 div{border-radius:11px;height:62px;position:relative;overflow:hidden}
-.sw2 div span{position:absolute;bottom:6px;right:9px;font-size:10px;color:#fff;background:rgba(0,0,0,.25);border-radius:6px;padding:1px 7px;backdrop-filter:blur(4px)}
-.type b.h1{font-size:23px;font-weight:800;display:block}
-.type b.h2{font-size:18px;font-weight:800;display:block;color:var(--navy)}
+.file b{display:block;color:var(--t1);font-size:12px}
+.note{background:var(--info-bg);border:1px solid #cfdcf3;border-right:4px solid var(--info);color:#1c4587;border-radius:9px;padding:12px 16px;font-size:12.5px;margin:22px 0 14px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sg .body{padding:18px}
+.sw2{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.sw2 div{height:56px;border-radius:9px;border:1px solid var(--line);position:relative}
+.sw2 span{position:absolute;bottom:5px;right:8px;font-size:10px;color:var(--t2);background:#fff;border:1px solid var(--line);border-radius:5px;padding:0 6px}
+.type b.h1{display:block;font-size:21px;font-weight:800}
+.type b.h2{display:block;font-size:17px;font-weight:800;color:var(--navy)}
 .type p{margin:6px 0;color:var(--t2);font-size:13px}
-.note{background:var(--info-bg);border:1px solid #d5e2ff;border-right:4px solid var(--info);color:#1e408f;border-radius:12px;padding:12px 16px;font-size:12.5px;margin:20px 0}
-@media (max-width:1080px){.grid,.lettergrid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.side{display:none}.sg{grid-template-columns:1fr}}
-@media print{.side,.top,.noprint{display:none!important}.sheet{box-shadow:none;border:none}body{background:#fff}}
+@media (max-width:1060px){.tri,.lettergrid,.sg{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.side{display:none}}
+@media print{.side,.top,.noprint{display:none!important}body{background:#fff}.sheet{border:none}}
 </style>
 </head>
 <body>
 <div class="shell">
-  <!-- ===== نوار کناری ===== -->
   <aside class="side">
-    <div class="brand">
-      <div class="mark">آ</div>
-      <div><b>پلتفرم آرینت</b><small>اتوماسیون اداری یکپارچه سازمان</small></div>
-    </div>
+    <div class="brand"><div class="mark">آ</div><div><b>پلتفرم آرینت</b><small>اتوماسیون اداری یکپارچه</small></div></div>
     <nav class="nav">
       <div class="grp">میز کار</div>
       <a class="on" href="#"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>کارتابل من<span class="cnt">۳</span></a>
-      <a href="#"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5"/></svg>داشبورد مدیریتی</a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M4 13h6v7H4zM14 4h6v16h-6z"/></svg>داشبورد مدیریتی</a>
       <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>وظایف من<span class="cnt">۶</span></a>
       <div class="grp">دبیرخانه و اسناد</div>
       <a href="#"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 8v12h12V8"/></svg>نامه‌های وارده</a>
@@ -207,228 +175,187 @@ b{font-weight:700}
       <a href="#"><svg viewBox="0 0 24 24"><path d="M9 3v6a3 3 0 003 3 3 3 0 003-3V3M12 12v9"/></svg>کنترل تردد</a>
       <a href="#"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>سفارش و چاپ فیش</a>
     </nav>
-    <div class="me">
-      <div class="av">م‌ر</div>
-      <div style="flex:1"><b>مریم رضایی</b><small>مدیر دبیرخانه — دفتر مدیرکل</small></div>
-      <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#8ea3c0;fill:none;stroke-width:1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12a7 7 0 00.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6A7 7 0 0019 12z"/></svg>
-    </div>
+    <div class="me"><div class="av">م‌ر</div><div style="flex:1"><b>مریم رضایی</b><small>مدیر دبیرخانه</small></div></div>
   </aside>
 
   <div class="main">
-    <!-- ===== سربرگ بالا ===== -->
     <div class="top">
       <div class="crumb">میز کار / <b>کارتابل من</b></div>
-      <div class="search"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>جست‌وجوی سراسری: نامه، وظیفه، مصوبه…<kbd>Ctrl K</kbd></div>
+      <div class="search"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>جست‌وجو: شماره نامه، موضوع، فرستنده<kbd>Ctrl K</kbd></div>
       <div class="icbtn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg><span class="dot"></span></div>
-      <div class="icbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 17h.01"/></svg></div>
     </div>
 
     <div class="content">
-      <!-- ===== خوش‌آمد ===== -->
       <div class="hero">
         <div>
-          <h1>سلام، مریم رضایی</h1>
-          <p>امروز سه‌شنبه ۲۰ مهر ۱۴۰۵ — ۳۴ مورد در انتظار اقدام شماست، ۶ مورد به مهلت نزدیک‌اند.</p>
+          <h1>کارتابل من</h1>
+          <p>سه‌شنبه ۲۰ مهر ۱۴۰۵ — ۳۴ مورد در انتظار اقدام، ۶ مورد نزدیک به مهلت</p>
         </div>
-        <div class="acts">
+        <div style="display:flex;gap:10px">
           <button class="btn btn-o"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>ثبت نامه وارده</button>
           <button class="btn btn-p"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>پیش‌نویس نامه صادره</button>
         </div>
       </div>
 
-      <!-- ===== KPI ===== -->
       <div class="kpis">
-        <div class="kpi">
-          <div class="top"><div class="ic" style="background:var(--info-bg);color:var(--info)"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 8v12h12V8"/></svg></div><div class="lbl">نامه‌های در جریان</div></div>
-          <div class="val">۱۲</div>
-          <div class="foot"><span class="chip up"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>۱۲٪</span> نسبت به مهر ماه قبل</div>
-          <svg class="spark" width="72" height="26" viewBox="0 0 72 26"><path d="M0 20 10 16 20 18 30 10 40 13 50 6 62 9 72 3" fill="none" stroke="#175cd3" stroke-width="2" stroke-linecap="round"/></svg>
-        </div>
-        <div class="kpi">
-          <div class="top"><div class="ic" style="background:var(--warn-bg);color:var(--warn)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div><div class="lbl">نزدیک به مهلت</div></div>
-          <div class="val">۶</div>
-          <div class="foot"><span class="chip flat">امروز</span> ۲ مورد باید پاسخ گیرد</div>
-          <svg class="spark" width="72" height="26" viewBox="0 0 72 26"><path d="M0 8 12 12 24 9 36 16 48 14 60 20 72 18" fill="none" stroke="#f79009" stroke-width="2" stroke-linecap="round"/></svg>
-        </div>
-        <div class="kpi">
-          <div class="top"><div class="ic" style="background:var(--bad-bg);color:var(--bad)"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01"/><path d="M10.3 3.8L2.6 17a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/></svg></div><div class="lbl">متأخر از مهلت</div></div>
-          <div class="val">۹</div>
-          <div class="foot"><span class="chip down"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>۳ مورد</span> نسبت به هفته قبل</div>
-          <svg class="spark" width="72" height="26" viewBox="0 0 72 26"><path d="M0 6 12 10 24 8 36 14 48 12 60 18 72 16" fill="none" stroke="#f04438" stroke-width="2" stroke-linecap="round"/></svg>
-        </div>
-        <div class="kpi">
-          <div class="top"><div class="ic" style="background:var(--ok-bg);color:var(--ok)"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg></div><div class="lbl">پاسخ در مهلت قانونی</div></div>
-          <div class="val">۹۶٫۲٪</div>
-          <div class="foot"><span class="chip up"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>۱٫۴٪</span> میانگین فصل</div>
-          <svg class="spark" width="72" height="26" viewBox="0 0 72 26"><path d="M0 18 12 14 24 16 36 10 48 12 60 7 72 9" fill="none" stroke="#067647" stroke-width="2" stroke-linecap="round"/></svg>
-        </div>
+        <div class="kpi"><div class="l"><i style="background:var(--info-bg);color:var(--info)"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 8v12h12V8"/></svg></i>نامه در جریان</div><div class="v">۱۲</div><div class="f"><b class="up">▲ ۱۲٪</b> نسبت به ماه قبل</div></div>
+        <div class="kpi"><div class="l"><i style="background:var(--warn-bg);color:var(--warn)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></i>نزدیک به مهلت</div><div class="v">۶</div><div class="f">۲ مورد باید امروز پاسخ گیرد</div></div>
+        <div class="kpi"><div class="l"><i style="background:var(--bad-bg);color:var(--bad)"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01M10.3 3.8L2.6 17a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/></svg></i>متأخر از مهلت</div><div class="v">۹</div><div class="f"><b class="dn">▼ ۳ مورد</b> نسبت به هفته قبل</div></div>
+        <div class="kpi"><div class="l"><i style="background:var(--ok-bg);color:var(--ok)"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg></i>پاسخ در مهلت قانونی</div><div class="v">۹۶٫۲٪</div><div class="f"><b class="up">▲ ۱٫۴٪</b> میانگین فصل</div></div>
       </div>
 
-      <!-- ===== کارتابل + ستون تحلیل ===== -->
-      <div class="grid">
+      <div class="card">
+        <header>
+          <h3>صف کار</h3>
+          <div class="tabs"><span class="on">در انتظار من</span><span>در جریان</span><span>پیگیری من</span><span>بایگانی</span></div>
+          <a class="more" href="#">همه موارد</a>
+        </header>
+        <table class="grid">
+          <tr><th>موضوع و فرستنده</th><th>وضعیت</th><th>مهلت پاسخ</th><th>درجه</th><th></th></tr>
+          <tr>
+            <td><div class="who"><div class="av" style="background:#16365f">بـ</div><div><b>استعلام بهای تجهیزات رایانه‌ای</b><small>مدیریت بازرگانی • ۱۴۰۵/۰۷/۱۸</small></div></div></td>
+            <td><span class="pill p-run"><i></i>در جریان</span></td>
+            <td><div class="due">۲۴ مهر<div class="bar"><i style="width:62%;background:var(--info)"></i></div></div></td>
+            <td><span class="pill p-sec"><i></i>عادی</span></td>
+            <td><a class="lnk" href="#letter">مشاهده</a></td>
+          </tr>
+          <tr>
+            <td><div class="who"><div class="av" style="background:#0e8f7e">مـ</div><div><b>ابلاغ شیوه‌نامه جدید بایگانی اسناد</b><small>معاونت توسعه مدیریت • ۱۴۰۵/۰۷/۱۷</small></div></div></td>
+            <td><span class="pill p-warn"><i></i>نزدیک مهلت</span></td>
+            <td><div class="due">۲۰ مهر<div class="bar"><i style="width:86%;background:#e0a10c"></i></div></div></td>
+            <td><span class="pill p-sec"><i></i>عادی</span></td>
+            <td><a class="lnk" href="#letter">مشاهده</a></td>
+          </tr>
+          <tr>
+            <td><div class="who"><div class="av" style="background:#b3261e">فـ</div><div><b>پیگیری قرارداد نگهداری سامانه تردد</b><small>فناوری اطلاعات • ۱۴۰۵/۰۷/۱۵</small></div></div></td>
+            <td><span class="pill p-bad"><i></i>متأخر</span></td>
+            <td><div class="due">۱ روز عقب<div class="bar"><i style="width:100%;background:var(--bad)"></i></div></div></td>
+            <td><span class="pill p-bad"><i></i>فوری</span></td>
+            <td><a class="lnk" href="#letter">مشاهده</a></td>
+          </tr>
+          <tr>
+            <td><div class="who"><div class="av" style="background:#5b3fa8">ر</div><div><b>گزارش عملکرد فصلی واحدها</b><small>روابط عمومی • ۱۴۰۵/۰۷/۱۲</small></div></div></td>
+            <td><span class="pill p-run"><i></i>در جریان</span></td>
+            <td><div class="due">۲۸ مهر<div class="bar"><i style="width:35%;background:var(--info)"></i></div></div></td>
+            <td><span class="pill p-sec"><i></i>محرمانه</span></td>
+            <td><a class="lnk" href="#letter">مشاهده</a></td>
+          </tr>
+          <tr>
+            <td><div class="who"><div class="av" style="background:#9a5b00">د</div><div><b>دعوت‌نامه جلسه کمیته انفورماتیک</b><small>دفتر مدیرکل • ۱۴۰۵/۰۷/۱۴</small></div></div></td>
+            <td><span class="pill p-ok"><i></i>پاسخ‌داده</span></td>
+            <td><div class="due">پاسخ: ۱۶ مهر<div class="bar"><i style="width:100%;background:var(--ok)"></i></div></div></td>
+            <td><span class="pill p-sec"><i></i>عادی</span></td>
+            <td><a class="lnk" href="#letter">مشاهده</a></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="tri">
         <div class="card">
-          <header>
-            <h3>صف کار کارتابل</h3>
-            <div class="tabs"><span class="on">در انتظار من</span><span>در جریان</span><span>پیگیری من</span><span>بایگانی</span></div>
-            <a class="more" href="#">همه موارد</a>
-          </header>
-          <div class="rows">
-            <div class="row">
-              <div class="av" style="background:linear-gradient(135deg,#1a3c6e,#2b5ea7)">بـ</div>
-              <div class="sub"><b>استعلام بهای تجهیزات رایانه‌ای</b><small>مدیریت بازرگانی • ۱۴۰۵/۰۷/۱۸</small></div>
-              <span class="pill p-run"><i></i>در جریان</span>
-              <div class="due">مهلت <b>۲۴ مهر</b><div class="bar"><i style="width:62%"></i></div></div>
-              <span class="pill p-sec"><i></i>عادی</span>
-              <div class="kebab">⋯</div>
-            </div>
-            <div class="row">
-              <div class="av" style="background:linear-gradient(135deg,#0f9d8a,#0b7f70)">مـ</div>
-              <div class="sub"><b>ابلاغ شیوه‌نامه جدید بایگانی اسناد</b><small>معاونت توسعه مدیریت • ۱۴۰۵/۰۷/۱۷</small></div>
-              <span class="pill p-warn"><i></i>نزدیک مهلت</span>
-              <div class="due">مهلت <b>۲۰ مهر</b><div class="bar w"><i style="width:86%"></i></div></div>
-              <span class="pill p-sec"><i></i>عادی</span>
-              <div class="kebab">⋯</div>
-            </div>
-            <div class="row">
-              <div class="av" style="background:linear-gradient(135deg,#b42318,#e04a3a)">فـ</div>
-              <div class="sub"><b>پیگیری قرارداد نگهداری سامانه تردد</b><small>فناوری اطلاعات • ۱۴۰۵/۰۷/۱۵</small></div>
-              <span class="pill p-bad"><i></i>متأخر</span>
-              <div class="due late">عقب <b>۱ روز</b><div class="bar b"><i style="width:100%"></i></div></div>
-              <span class="pill p-sec"><i></i>فوری</span>
-              <div class="kebab">⋯</div>
-            </div>
-            <div class="row">
-              <div class="av" style="background:linear-gradient(135deg,#6941c6,#8b6ee8)">ر</div>
-              <div class="sub"><b>گزارش عملکرد فصلی واحدها</b><small>روابط عمومی • ۱۴۰۵/۰۷/۱۲</small></div>
-              <span class="pill p-run"><i></i>در جریان</span>
-              <div class="due">مهلت <b>۲۸ مهر</b><div class="bar"><i style="width:35%"></i></div></div>
-              <span class="pill p-sec"><i></i>محرمانه</span>
-              <div class="kebab">⋯</div>
-            </div>
-            <div class="row">
-              <div class="av" style="background:linear-gradient(135deg,#b54708,#e08c2f)">د</div>
-              <div class="sub"><b>دعوت‌نامه جلسه کمیته انفورماتیک</b><small>دفتر مدیرکل • ۱۴۰۵/۰۷/۱۴</small></div>
-              <span class="pill p-ok"><i></i>پاسخ‌داده</span>
-              <div class="due">پاسخ <b>۱۶ مهر</b><div class="bar"><i style="width:100%"></i></div></div>
-              <span class="pill p-sec"><i></i>عادی</span>
-              <div class="kebab">⋯</div>
+          <header><h3>وضعیت مکاتبات مهر</h3><a class="more" href="#">گزارش</a></header>
+          <div class="donutwrap">
+            <svg width="112" height="112" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#eef0f5" stroke-width="5.5"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#0e8f7e" stroke-width="5.5" stroke-dasharray="45 55" stroke-dashoffset="25"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#16365f" stroke-width="5.5" stroke-dasharray="30 70" stroke-dashoffset="80"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#e0a10c" stroke-width="5.5" stroke-dasharray="15 85" stroke-dashoffset="50"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#b3261e" stroke-width="5.5" stroke-dasharray="10 90" stroke-dashoffset="35"/>
+              <text x="21" y="20.8" text-anchor="middle" font-size="7" font-weight="800" fill="#1a2333" font-family="Vazirmatn">۱۲۸</text>
+              <text x="21" y="26.2" text-anchor="middle" font-size="3.3" fill="#5c6b80" font-family="Vazirmatn">نامه در جریان</text>
+            </svg>
+            <div class="legend">
+              <div><i style="background:#0e8f7e"></i>پاسخ‌داده<b>۵۸</b></div>
+              <div><i style="background:#16365f"></i>در جریان<b>۳۸</b></div>
+              <div><i style="background:#e0a10c"></i>نزدیک مهلت<b>۱۹</b></div>
+              <div><i style="background:#b3261e"></i>متأخر<b>۱۳</b></div>
             </div>
           </div>
-          <div class="pager"><i>‹</i><i class="on">۱</i><i>۲</i><i>۳</i><i>…</i><i>۱۲</i><i>›</i></div>
         </div>
-
-        <div class="stack">
-          <div class="card">
-            <header><h3>وضعیت مکاتبات مهر</h3><a class="more" href="#">گزارش</a></header>
-            <div class="donutwrap">
-              <svg width="118" height="118" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#eef1f7" stroke-width="6"/>
-                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#0f9d8a" stroke-width="6" stroke-dasharray="45 55" stroke-dashoffset="25" stroke-linecap="round"/>
-                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#1a3c6e" stroke-width="6" stroke-dasharray="30 70" stroke-dashoffset="80" stroke-linecap="round"/>
-                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#fdb022" stroke-width="6" stroke-dasharray="15 85" stroke-dashoffset="50" stroke-linecap="round"/>
-                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#f04438" stroke-width="6" stroke-dasharray="10 90" stroke-dashoffset="35" stroke-linecap="round"/>
-                <text x="21" y="20.6" text-anchor="middle" font-size="7.4" font-weight="800" fill="#101828" font-family="Vazirmatn">۱۲۸</text>
-                <text x="21" y="26.4" text-anchor="middle" font-size="3.4" fill="#667085" font-family="Vazirmatn">نامه در جریان</text>
-              </svg>
-              <div class="legend">
-                <div><i style="background:#0f9d8a"></i>پاسخ‌داده<b>۵۸</b></div>
-                <div><i style="background:#1a3c6e"></i>در جریان<b>۳۸</b></div>
-                <div><i style="background:#fdb022"></i>نزدیک مهلت<b>۱۹</b></div>
-                <div><i style="background:#f04438"></i>متأخر<b>۱۳</b></div>
-              </div>
-            </div>
+        <div class="card">
+          <header><h3>روند ثبت هفتگی</h3></header>
+          <div class="bars">
+            <div class="b"><i style="height:42px"></i>ش</div>
+            <div class="b"><i style="height:64px"></i>ی</div>
+            <div class="b"><i style="height:50px"></i>د</div>
+            <div class="b hi"><i style="height:92px"></i>س</div>
+            <div class="b"><i style="height:68px"></i>چ</div>
+            <div class="b"><i style="height:36px"></i>پ</div>
+            <div class="b"><i style="height:14px"></i>ج</div>
           </div>
-          <div class="card">
-            <header><h3>روند ثبت هفتگی</h3><a class="more" href="#">جزئیات</a></header>
-            <div class="bars">
-              <div class="b"><i style="height:44px"></i><span>ش</span></div>
-              <div class="b"><i style="height:66px"></i><span>ی</span></div>
-              <div class="b"><i style="height:52px"></i><span>د</span></div>
-              <div class="b hi"><i style="height:96px"></i><span>س</span></div>
-              <div class="b"><i style="height:70px"></i><span>چ</span></div>
-              <div class="b"><i style="height:38px"></i><span>پ</span></div>
-              <div class="b"><i style="height:16px"></i><span>ج</span></div>
-            </div>
-            <div style="padding:0 18px 16px;font-size:11.5px;color:var(--t3)">اوج ثبت: سه‌شنبه‌ها — پیشنهاد: کشیک دبیرخانه</div>
-          </div>
-          <div class="card">
-            <header><h3>در انتظار تأیید شما</h3></header>
-            <div class="todo">
-              <div class="t"><div class="av" style="background:linear-gradient(135deg,#1a3c6e,#2b5ea7)">کـ</div><div><b>مرخصی استحقاقی — ک. موسوی</b><small>۳ روز • جایگزین: م. احمدی</small></div><div class="go"><button class="mini ok">تأیید</button><button class="mini no">رد</button></div></div>
-              <div class="t"><div class="av" style="background:linear-gradient(135deg,#0f9d8a,#0b7f70)">حـ</div><div><b>حواله انبار شماره ۱۴۰۵/۲۲۱</b><small>ملزومات مصرفی • انبار مرکزی</small></div><div class="go"><button class="mini ok">تأیید</button><button class="mini no">رد</button></div></div>
-              <div class="t"><div class="av" style="background:linear-gradient(135deg,#6941c6,#8b6ee8)">پـ</div><div><b>پیش‌نویس پاسخ به بازرسی</b><small>گردش کار: تأیید مدیرکل</small></div><div class="go"><button class="mini ok">تأیید</button><button class="mini no">رد</button></div></div>
-            </div>
+          <div style="padding:0 18px 16px;font-size:11.5px;color:var(--t3)">اوج ثبت: سه‌شنبه‌ها</div>
+        </div>
+        <div class="card">
+          <header><h3>در انتظار تأیید شما</h3></header>
+          <div class="todo">
+            <div class="t"><div class="av" style="background:#16365f">کـ</div><div><b>مرخصی استحقاقی — ک. موسوی</b><small>۳ روز • جایگزین: م. احمدی</small></div><div class="go"><button class="mini ok">تأیید</button><button class="mini no">رد</button></div></div>
+            <div class="t"><div class="av" style="background:#0e8f7e">حـ</div><div><b>حواله انبار ۱۴۰۵/۲۲۱</b><small>ملزومات مصرفی • انبار مرکزی</small></div><div class="go"><button class="mini ok">تأیید</button><button class="mini no">رد</button></div></div>
+            <div class="t"><div class="av" style="background:#5b3fa8">پـ</div><div><b>پیش‌نویس پاسخ به بازرسی</b><small>گردش کار: تأیید مدیرکل</small></div><div class="go"><button class="mini ok">تأیید</button><button class="mini no">رد</button></div></div>
           </div>
         </div>
       </div>
 
-      <!-- ===== نمای نامه ===== -->
-      <div class="lettergrid">
-        <div class="sheetcard">
+      <div class="lettergrid" id="letter">
+        <div class="card">
           <div class="sheetbar">
             <span class="pill p-run"><i></i>در جریان</span>
-            <b style="color:var(--t1)">نامه شماره ۱۴۰۵/د/۰۴۸۲</b>
+            <b style="color:var(--t1)">نامه ۱۴۰۵/د/۰۴۸۲</b>
             <span>ثبت: ۱۸ مهر ۱۴۰۵، ۰۹:۱۴</span>
             <div class="acts">
-              <button class="btn btn-o" style="padding:7px 14px;font-size:12px">ارجاع</button>
-              <button class="btn btn-t" style="padding:7px 14px;font-size:12px">ثبت پاسخ</button>
-              <button class="btn btn-o" style="padding:7px 14px;font-size:12px" onclick="window.print()">چاپ A4</button>
+              <button class="btn btn-o" style="padding:6px 13px;font-size:12px">ارجاع</button>
+              <button class="btn btn-t" style="padding:6px 13px;font-size:12px">ثبت پاسخ</button>
+              <button class="btn btn-o" style="padding:6px 13px;font-size:12px" onclick="window.print()">چاپ A4</button>
             </div>
           </div>
           <div class="sheet">
             <div class="lh">
-              <div class="org">
-                <div class="crest">آ</div>
-                <div><b>سازمان نمونه — دفتر مدیرکل</b><small>اداره دبیرخانه و مکاتبات رسمی</small></div>
-              </div>
+              <div class="who"><div class="crest">آ</div><div class="org"><b>سازمان نمونه — دفتر مدیرکل</b><small>اداره دبیرخانه و مکاتبات رسمی</small></div></div>
               <div class="no">شماره: <b>۱۴۰۵/د/۰۴۸۲</b><br>تاریخ: <b>۱۴۰۵/۰۷/۱۸</b><br>پیوست: <b>۱ برگ</b></div>
             </div>
             <h4>درخواست استعلام بهای تجهیزات رایانه‌ای</h4>
             <p>جناب آقای مهندس کریمی — مدیریت محترم بازرگانی؛ با سلام و احترام، بازگشت به نامه شماره ۱۴۰۵/ب/۰۳۱۱ مورخ ۱۴۰۵/۰۷/۱۰ در خصوص تجهیز ایستگاه‌های کاری معاونت توسعه، خواهشمند است دستور فرمایید استعلام بهای تجهیزات مذکور حداکثر تا تاریخ ۱۴۰۵/۰۷/۲۴ به این دفتر ارسال شود.</p>
             <p>پیشاپیش از حسن توجه و همکاری جنابعالی سپاسگزارم.</p>
-            <div class="sig"><div>رونوشت: معاونت توسعه مدیریت، فناوری اطلاعات</div><div>امضا: مدیرکل<br><b style="color:var(--t1)">دکتر س. محمدی</b></div></div>
+            <div class="sig"><div>رونوشت: معاونت توسعه مدیریت، فناوری اطلاعات</div><div>امضا: مدیرکل<br><b>دکتر س. محمدی</b></div></div>
           </div>
         </div>
-        <div class="stack">
+        <div style="display:flex;flex-direction:column;gap:14px">
           <div class="card">
             <header><h3>گردش کار نامه</h3></header>
             <div class="steps">
               <div class="step"><div class="d"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><div><b>ثبت در دبیرخانه</b><small>۱۸ مهر ۰۹:۱۴ — م. رضایی</small></div></div>
               <div class="step"><div class="d"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><div><b>تأیید مدیرکل</b><small>۱۸ مهر ۱۱:۴۰ — س. محمدی</small></div></div>
               <div class="step now"><div class="d"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div><div><b>اقدام مدیریت بازرگانی</b><small>در جریان — مهلت ۲۴ مهر</small></div></div>
-              <div class="step todo-s"><div class="d"><svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7"/></svg></div><div><b>بایگانی نهایی</b><small>پس از ثبت پاسخ</small></div></div>
+              <div class="step wait"><div class="d"><svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7"/></svg></div><div><b>بایگانی نهایی</b><small>پس از ثبت پاسخ</small></div></div>
             </div>
           </div>
           <div class="card">
             <header><h3>پیوست‌ها</h3></header>
             <div class="files">
-              <div class="file"><div class="fi">PDF</div><div style="flex:1"><b>فهرست تجهیزات پیشنهادی.pdf</b>۲۴۰ کیلوبایت • اسکن دبیرخانه</div><button class="mini">دانلود</button></div>
-              <div class="file"><div class="fi x">XLS</div><div style="flex:1"><b>جدول برآورد اولیه.xlsx</b>۸۸ کیلوبایت • پیوست داخلی</div><button class="mini">دانلود</button></div>
+              <div class="file"><div class="fi">PDF</div><div style="flex:1"><b>فهرست تجهیزات پیشنهادی.pdf</b>۲۴۰ کیلوبایت</div><button class="mini">دانلود</button></div>
+              <div class="file"><div class="fi x">XLS</div><div style="flex:1"><b>جدول برآورد اولیه.xlsx</b>۸۸ کیلوبایت</div><button class="mini">دانلود</button></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ===== راهنمای سبک ===== -->
-      <div class="note">این صفحه «سند زنده طراحی» است: داده‌ها نمایشی‌اند. پالت، سایه‌ها، شعاع‌ها و اجزا دقیقاً همان‌اند که در کد فاز ۱ استفاده می‌شوند. نظرتان را بگویید تا پیش از کدنویسی تنظیم شود.</div>
+      <div class="note">نسخه «آرام و شفاف»: بدون شیشه‌ماتی، بدون گرادیان، بدون سایه سنگین — رنگ یکدست، حاشیه روشن و فضای سفید کافی. داده‌ها نمایشی‌اند؛ همین توکن‌ها در کد فاز ۱ استفاده می‌شوند.</div>
       <div class="sg">
-        <div class="card"><header><h3>پالت رنگ سازمانی</h3></header><div class="body">
+        <div class="card"><header><h3>پالت رنگ</h3></header><div class="body">
           <div class="sw2">
-            <div style="background:linear-gradient(135deg,#0b1f3a,#12294b)"><span>سرمه‌ای عمیق</span></div>
-            <div style="background:linear-gradient(135deg,#1a3c6e,#2b5ea7)"><span>سرمه‌ای</span></div>
-            <div style="background:linear-gradient(135deg,#0f9d8a,#0b7f70)"><span>فیروزه‌ای</span></div>
-            <div style="background:linear-gradient(135deg,#f6f7fb,#eef1f7)"><span>بوم روشن</span></div>
-            <div style="background:linear-gradient(135deg,#f79009,#fdb022)"><span>هشدار</span></div>
-            <div style="background:linear-gradient(135deg,#dc6803,#f79009)"><span>نزدیک مهلت</span></div>
-            <div style="background:linear-gradient(135deg,#b42318,#f04438)"><span>بحران</span></div>
-            <div style="background:linear-gradient(135deg,#6941c6,#8b6ee8)"><span>محرمانه</span></div>
+            <div style="background:#16365f"><span>سرمه‌ای</span></div>
+            <div style="background:#0e8f7e"><span>فیروزه‌ای</span></div>
+            <div style="background:#f7f8fa"><span>بوم</span></div>
+            <div style="background:#e4e7ee"><span>حاشیه</span></div>
+            <div style="background:#e0a10c"><span>هشدار</span></div>
+            <div style="background:#b3261e"><span>بحران</span></div>
+            <div style="background:#0d7a4f"><span>موفق</span></div>
+            <div style="background:#5b3fa8"><span>محرمانه</span></div>
           </div>
         </div></div>
         <div class="card"><header><h3>تایپوگرافی و اجزا</h3></header><div class="body type">
           <b class="h1">عنوان صفحه — وزیرمتن ۸۰۰</b>
           <b class="h2">عنوان کارت — وزیرمتن ۷۰۰</b>
-          <p>متن بدنه ۱۴ با فاصله‌خط ۱٫۸۵؛ ارقام فارسی و تاریخ شمسی در همه‌جا؛ کنتراست AA.</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <p>بدنه ۱۴ با فاصله‌خط ۱٫۹؛ ارقام فارسی و تاریخ شمسی در همه‌جا؛ کنتراست AA.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
             <button class="btn btn-p">اقدام اصلی</button>
             <button class="btn btn-t">تأیید</button>
             <button class="btn btn-o">ثانویه</button>
@@ -436,11 +363,9 @@ b{font-weight:700}
             <span class="pill p-run"><i></i>در جریان</span>
             <span class="pill p-warn"><i></i>نزدیک مهلت</span>
             <span class="pill p-bad"><i></i>متأخر</span>
-            <span class="pill p-sec"><i></i>محرمانه</span>
           </div>
         </div></div>
       </div>
-
     </div>
   </div>
 </div>
