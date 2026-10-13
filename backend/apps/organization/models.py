@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 from django_jalali.db import models as jmodels
 from mptt.models import MPTTModel, TreeForeignKey
@@ -64,6 +65,11 @@ class Employee(TimeStampedModel, SoftDeleteModel):
     department = models.ForeignKey(
         Department, verbose_name='واحد سازمانی', related_name='employees',
         null=True, blank=True, on_delete=models.SET_NULL,
+    )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر سامانه', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='employee_profile',
+        help_text='پیوند حساب ورود به رکورد کارمند — مبنای سطح دسترسی «واحد و زیرمجموعه»',
     )
     job_title = models.CharField('سمت', max_length=150, blank=True, default='')
     hire_date = jmodels.jDateField('تاریخ استخدام', null=True, blank=True)

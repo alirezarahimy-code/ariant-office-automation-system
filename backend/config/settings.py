@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     # برنامه‌های سامانه
     'apps.core',
     'apps.organization',
+    'apps.secretariat',
 ]
 
 MIDDLEWARE = [
@@ -187,4 +188,15 @@ SIMPLE_HISTORY_HISTORY_CHANGE_REASON_USE_TEXT_FIELD = True
 # ---------------------------------------------------------------------------
 DATE_INPUT_FORMATS = [
     '%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d', '%d-%m-%Y',
+]
+
+# --- رسانه و پیوست‌ها ---
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# --- سیاست پیوست دبیرخانه (docs/10 بند ۱٫۵) ---
+SECRETARIAT_ATTACHMENT_MAX_MB = 25
+SECRETARIAT_ATTACHMENT_ALLOWED_EXTENSIONS = [
+    'pdf', 'jpg', 'jpeg', 'png', 'tif', 'tiff',
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip',
 ]
