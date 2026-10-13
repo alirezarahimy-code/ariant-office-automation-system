@@ -22,7 +22,7 @@ from apps.core.models import Notification
 from apps.core.persian import to_persian_digits
 from .forms import (AnswerActionForm, CopyForm, DelegationForm, IncomingLetterForm,
                     OutgoingDraftForm, ReferralActionForm)
-from .models import Attachment, Copy, Letter, LetterEvent, Office, Referral
+from .models import Attachment, Copy, Letter, LetterApproval, LetterEvent, Office, Referral
 from .services import (apply_confidentiality, current_jalali_year, register_letter,
                        visible_letters)
 
@@ -30,7 +30,7 @@ CLOSED_STATUSES = (Letter.Status.CLOSED, Letter.Status.ARCHIVED)
 STEP_INDEX = {
     'draft': 0, 'registered': 1, 'in_review': 1, 'referred': 2,
     'in_progress': 2, 'waiting_user': 2, 'answered': 3,
-    'sent': 4, 'closed': 4, 'archived': 4,
+    'signed': 3, 'sent': 4, 'closed': 4, 'archived': 4,
 }
 
 
@@ -39,6 +39,18 @@ def deadline_gregorian(letter):
     if d is None:
         return None
     return d.togregorian() if hasattr(d, 'togregorian') else d
+
+
+def _parse_jalali_input(raw: str):
+    """رشته ورودی شمسی → jdatetime.date یا None (بدون خطا)."""
+    from django import forms as dj_forms
+    from .forms import JalaliDateField
+    if not raw or not raw.strip():
+        return None
+    try:
+        return JalaliDateField().clean(raw)
+    except dj_forms.ValidationError:
+        return None
 
 
 def _notify(user, title, body='', url=''):
@@ -135,6 +147,13 @@ def letter_list(request):
         'internal': counted.filter(letter_type='internal').count(),
     }
 
+    date_from = _parse_jalali_input(request.GET.get('date_from', ''))
+    date_to = _parse_jalali_input(request.GET.get('date_to', ''))
+    if date_from:
+        qs = qs.filter(letter_date__gte=date_from.togregorian())
+    if date_to:
+        qs = qs.filter(letter_date__lte=date_to.togregorian())
+
     if request.GET.get('export') == 'xlsx':
         return _export_xlsx(qs.order_by('-jalali_year', '-serial')[:5000])
 
@@ -152,7 +171,9 @@ def letter_list(request):
         'priority_choices': Letter.Priority.choices,
         'conf_choices': Letter.Confidentiality.choices,
         'cur': {'type': letter_type, 'q': q, 'status': status_f, 'priority': priority_f,
-                'conf': conf_f, 'office': office_f},
+                'conf': conf_f, 'office': office_f,
+                'date_from': request.GET.get('date_from', ''),
+                'date_to': request.GET.get('date_to', '')},
     })
 
 
@@ -212,8 +233,22 @@ def letter_detail(request, pk):
     is_open = letter.status not in CLOSED_STATUSES
 
     referrals = letter.referrals.select_related('to_user', 'to_department', 'from_user', 'parent')
+    can_approve = (letter.letter_type == 'outgoing'
+                   and letter.status == Letter.Status.IN_REVIEW
+                   and (user.is_superuser or user.has_perm('secretariat.approve_letter')))
+    can_submit = (letter.letter_type == 'outgoing' and letter.status == Letter.Status.DRAFT
+                  and (letter.created_by_id == user.pk or user.is_superuser
+                       or user.has_perm('secretariat.manage_secretariat')))
+    can_send = (letter.letter_type == 'outgoing' and letter.status == Letter.Status.SIGNED
+                and (letter.created_by_id == user.pk or user.is_superuser
+                     or user.has_perm('secretariat.manage_secretariat')
+                     or user.has_perm('secretariat.approve_letter')))
     return render(request, 'secretariat/letter_detail.html', {
         'letter': letter,
+        'approvals': letter.approvals.select_related('approver'),
+        'can_submit': can_submit,
+        'can_approve': can_approve,
+        'can_send': can_send,
         'referrals': referrals,
         'copies': letter.copies.select_related('to_user', 'to_department'),
         'attachments': letter.attachments.all(),
@@ -421,8 +456,10 @@ def kartable(request):
     rate = round(on_time / total_answered * 100) if total_answered else None
 
     tab = request.GET.get('tab', 'waiting')
+    tickets = _my_tickets(user, tab)
     return render(request, 'secretariat/kartable.html', {
         'tab': tab,
+        'tickets': tickets,
         'waiting': waiting_letters,
         'referral_map': referral_map,
         'in_progress': [r.letter for r in in_progress],
@@ -437,3 +474,181 @@ def kartable(request):
             'rate': to_persian_digits(rate) if rate is not None else '—',
         },
     })
+
+
+def _my_tickets(user, tab: str):
+    """تیکت‌های کاربر از پل PHP (فقط‌خواندنی) — docs/14 بند ۷."""
+    if tab != 'tickets':
+        return []
+    try:
+        from apps.ticket_bridge.models import ExternalTicket
+    except ImportError:
+        return []
+    usernames = list(
+        user.integration_maps.values_list('external_username', flat=True)) or [user.username]
+    return ExternalTicket.objects.filter(
+        requester_username__in=usernames).order_by('-created_label')[:50]
+
+
+# ---------- گردش صادره: بازبینی، تأیید/امضا، ارسال ----------
+
+def _notify_approvers(letter):
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    User = get_user_model()
+    perm = Permission.objects.filter(
+        codename='approve_letter', content_type__app_label='secretariat').first()
+    if not perm:
+        return
+    approvers = User.objects.filter(
+        Q(groups__permissions=perm) | Q(user_permissions=perm), is_active=True).distinct()
+    url = reverse('secretariat:letter_detail', args=[letter.pk])
+    for approver in approvers:
+        _notify(approver, f'نامه «{letter.subject[:50]}» در انتظار بازبینی/امضا است', '', url)
+
+
+@login_required
+@require_POST
+def letter_submit(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    allowed = (letter.created_by_id == request.user.pk or request.user.is_superuser
+               or request.user.has_perm('secretariat.manage_secretariat'))
+    if letter.letter_type != 'outgoing' or letter.status != Letter.Status.DRAFT or not allowed:
+        messages.error(request, 'ارسال به بازبینی فقط برای پیش‌نویس صادره خودتان ممکن است.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    letter.status = Letter.Status.IN_REVIEW
+    letter.save(update_fields=['status', 'updated_at'])
+    LetterEvent.objects.create(
+        letter=letter, actor=request.user, action=LetterEvent.Action.STATUS_CHANGED,
+        from_status=Letter.Status.DRAFT, to_status=letter.status, note='ارسال به بازبینی')
+    _notify_approvers(letter)
+    messages.success(request, 'نامه برای بازبینی/امضا ارسال شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def letter_approve(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if not (request.user.is_superuser or request.user.has_perm('secretariat.approve_letter')):
+        messages.error(request, 'مجوز تأیید/امضا ندارید.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    if letter.letter_type != 'outgoing' or letter.status != Letter.Status.IN_REVIEW:
+        messages.error(request, 'فقط نامه صادره در بازبینی قابل تأیید است.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    approval = LetterApproval.objects.create(
+        letter=letter, step=letter.approvals.count() + 1, approver=request.user,
+        approver_label=request.POST.get('label', '')[:150],
+        decision=LetterApproval.Decision.APPROVED,
+        note=request.POST.get('note', '')[:500],
+        decided_at=timezone.now(),
+        signature_image=request.FILES.get('signature') or None)
+    letter.status = Letter.Status.SIGNED
+    letter.save(update_fields=['status', 'updated_at'])
+    LetterEvent.objects.create(
+        letter=letter, actor=request.user, action=LetterEvent.Action.STATUS_CHANGED,
+        from_status=Letter.Status.IN_REVIEW, to_status=letter.status,
+        note=f'تأیید/امضا — {approval.approver_label or "امضا"}')
+    url = reverse('secretariat:letter_detail', args=[letter.pk])
+    _notify(letter.created_by, f'نامه {letter.number_display} امضا شد', approval.note, url)
+    messages.success(request, 'نامه تأیید و امضا شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def letter_reject(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if not (request.user.is_superuser or request.user.has_perm('secretariat.approve_letter')):
+        messages.error(request, 'مجوز بازبینی ندارید.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    if letter.letter_type != 'outgoing' or letter.status != Letter.Status.IN_REVIEW:
+        messages.error(request, 'فقط نامه صادره در بازبینی قابل رد است.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    note = request.POST.get('note', '')[:500]
+    LetterApproval.objects.create(
+        letter=letter, step=letter.approvals.count() + 1, approver=request.user,
+        approver_label=request.POST.get('label', '')[:150],
+        decision=LetterApproval.Decision.REJECTED, note=note, decided_at=timezone.now())
+    letter.status = Letter.Status.DRAFT
+    letter.save(update_fields=['status', 'updated_at'])
+    LetterEvent.objects.create(
+        letter=letter, actor=request.user, action=LetterEvent.Action.STATUS_CHANGED,
+        from_status=Letter.Status.IN_REVIEW, to_status=letter.status,
+        note=f'رد در بازبینی — {note}')
+    url = reverse('secretariat:letter_detail', args=[letter.pk])
+    _notify(letter.created_by, f'نامه {letter.number_display} در بازبینی رد شد', note, url)
+    messages.warning(request, 'نامه رد و به پیش‌نویس برگشت.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def letter_send(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    allowed = (letter.created_by_id == request.user.pk or request.user.is_superuser
+               or request.user.has_perm('secretariat.manage_secretariat')
+               or request.user.has_perm('secretariat.approve_letter'))
+    if letter.letter_type != 'outgoing' or letter.status != Letter.Status.SIGNED or not allowed:
+        messages.error(request, 'ثبت ارسال فقط برای نامه امضاشده ممکن است.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    letter.status = Letter.Status.SENT
+    letter.save(update_fields=['status', 'updated_at'])
+    LetterEvent.objects.create(
+        letter=letter, actor=request.user, action=LetterEvent.Action.STATUS_CHANGED,
+        from_status=Letter.Status.SIGNED, to_status=letter.status,
+        note='ارسال/ثبت در دفتر صادره')
+    url = reverse('secretariat:letter_detail', args=[letter.pk])
+    for copy in letter.copies.select_related('to_user'):
+        _notify(copy.to_user, f'رونوشت نامه ارسال‌شده {letter.number_display}', letter.subject, url)
+    messages.success(request, 'نامه ارسال و در دفتر صادره ثبت شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+def letter_pdf(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    from .pdf import build_letter_pdf
+    data = build_letter_pdf(letter)
+    response = HttpResponse(data, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="letter-{letter.pk}.pdf"'
+    return response
+
+
+@login_required
+def letter_print(request, pk):
+    letter = get_object_or_404(
+        visible_letters(request.user).select_related('office', 'created_by'), pk=pk)
+    return render(request, 'secretariat/letter_print.html', {
+        'letter': letter,
+        'attachments': letter.attachments.all(),
+    })
+
+
+# ---------- جانشینی/تفویض ----------
+
+@login_required
+def delegations(request):
+    form = DelegationForm(request.POST or None, from_user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        delegation = form.save()
+        messages.success(request, f'جانشینی برای {delegation.to_user.get_full_name() or delegation.to_user.username} ثبت شد.')
+        _notify(delegation.to_user, 'شما جانشین کارتابل شدید',
+                f'از {delegation.start_date} تا {delegation.end_date}',
+                reverse('secretariat:kartable'))
+        return redirect('secretariat:delegations')
+    return render(request, 'secretariat/delegations.html', {
+        'form': form,
+        'given': request.user.delegations_given.select_related('to_user'),
+        'received': request.user.delegations_received.select_related('from_user'),
+    })
+
+
+@login_required
+@require_POST
+def delegation_deactivate(request, pk):
+    delegation = get_object_or_404(request.user.delegations_given, pk=pk)
+    delegation.is_active = False
+    delegation.save(update_fields=['is_active', 'updated_at'])
+    messages.success(request, 'جانشینی غیرفعال شد.')
+    return redirect('secretariat:delegations')

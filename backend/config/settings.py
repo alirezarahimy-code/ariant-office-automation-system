@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.organization',
     'apps.secretariat',
+    'apps.ticket_bridge',
 ]
 
 MIDDLEWARE = [

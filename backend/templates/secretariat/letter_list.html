@@ -57,6 +57,14 @@
       {% endfor %}
     </select>
   </div>
+  <div class="field">
+    <label>از تاریخ (شمسی)</label>
+    <input type="text" name="date_from" value="{{ cur.date_from }}" placeholder="۱۴۰۵/۰۷/۰۱" dir="ltr" inputmode="numeric">
+  </div>
+  <div class="field">
+    <label>تا تاریخ (شمسی)</label>
+    <input type="text" name="date_to" value="{{ cur.date_to }}" placeholder="۱۴۰۵/۰۷/۳۰" dir="ltr" inputmode="numeric">
+  </div>
   <div class="row-gap">
     <button class="btn sm" type="submit">اعمال</button>
     <a class="btn sm secondary" href="{% url 'secretariat:letter_list' %}{% if cur.type %}?type={{ cur.type }}{% endif %}">پاک‌کردن</a>

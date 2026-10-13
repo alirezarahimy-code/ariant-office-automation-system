@@ -13,6 +13,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('apps.core.urls')),
     path('', include('apps.secretariat.urls')),
+    path('bridge/', include('apps.ticket_bridge.urls')),
     # وب‌سرویس نسخه ۱ — قرارداد پل تیکتینگ (docs/04)
     path('api/v1/health', HealthView.as_view(), name='api-health'),
     path('api/v1/auth/token', TokenObtainPairView.as_view(), name='api-token'),

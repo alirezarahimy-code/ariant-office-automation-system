@@ -42,6 +42,7 @@
   <a class="tab {% if tab == 'follow' %}active{% endif %}" href="?tab=follow">پیگیری من <span class="count">({{ followups|length|fa }})</span></a>
   <a class="tab {% if tab == 'sent' %}active{% endif %}" href="?tab=sent">ارسالی‌ها <span class="count">({{ sent|length|fa }})</span></a>
   <a class="tab {% if tab == 'archive' %}active{% endif %}" href="?tab=archive">بایگانی من</a>
+  <a class="tab {% if tab == 'tickets' %}active{% endif %}" href="?tab=tickets">تیکت‌های من <span class="count">({{ tickets|length|fa }})</span></a>
 </div>
 
 {% if tab == 'waiting' %}
@@ -71,6 +72,27 @@
   </div>
 {% elif tab == 'sent' %}
   {% include 'partials/_letter_table.html' with letters=sent %}
+{% elif tab == 'tickets' %}
+  <div class="card table-wrap" style="padding:0">
+    <table class="table">
+      <thead><tr><th>تیکت</th><th>شناسه</th><th>حوزه</th><th>وضعیت</th><th>اولویت</th><th>تاریخ</th></tr></thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td class="subject"><span>{{ t.subject }}</span><br><span class="cell-sub">از سامانه تیکتینگ (فقط‌خواندنی)</span></td>
+          <td>{{ t.external_id }}</td>
+          <td>{% if t.service_group == 'support' %}پشتیبانی{% else %}IT{% endif %}</td>
+          <td><span class="pill {{ t.status|status_pill }}">{{ t.status_fa }}</span></td>
+          <td>{% if t.priority == 'critical' %}<span class="pill bad">بحرانی</span>{% elif t.priority == 'urgent' %}<span class="pill warn">فوری</span>{% else %}<span class="pill gray">عادی</span>{% endif %}</td>
+          <td class="tiny">{{ t.created_label }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty"><span class="big">🎫</span>تیکتی برای شما یافت نشد. همگام‌سازی: <code>manage.py sync_tickets</code></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="tiny muted mt">ورود یکپارچه به سامانه تیکتینگ: <a href="{% url 'bridge:jump' %}">پرش با توکن امضاشده (SSO)</a></p>
 {% else %}
   {% include 'partials/_letter_table.html' with letters=archive %}
 {% endif %}

@@ -27,6 +27,12 @@
           اعلان‌ها
           {% if UNREAD_NOTIFICATIONS %}<span class="badge">{{ UNREAD_NOTIFICATIONS }}</span>{% endif %}
         </a>
+        <a class="side-link {% if request.resolver_match.url_name == 'delegations' %}active{% endif %}" href="{% url 'secretariat:delegations' %}">جانشینی و تفویض</a>
+      </div>
+      <div class="side-group">
+        <div class="label">زیرسامانه‌های متصل</div>
+        <a class="side-link" href="{% url 'secretariat:kartable' %}?tab=tickets">تیکت‌های من</a>
+        <a class="side-link" href="{% url 'bridge:jump' %}">ورود به سامانه تیکتینگ</a>
       </div>
       <div class="side-group">
         <div class="label">دبیرخانه</div>

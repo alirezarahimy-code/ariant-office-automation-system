@@ -85,6 +85,8 @@ class Letter(TimeStampedModel, SoftDeleteModel):
         REFERRED = 'referred', 'ارجاع‌شده'
         IN_PROGRESS = 'in_progress', 'در جریان'
         ANSWERED = 'answered', 'پاسخ‌شده'
+        SIGNED = 'signed', 'امضاشده'
+        SENT = 'sent', 'ارسال‌شده'
         CLOSED = 'closed', 'بسته‌شده'
         ARCHIVED = 'archived', 'بایگانی'
 
@@ -143,6 +145,7 @@ class Letter(TimeStampedModel, SoftDeleteModel):
             ('view_confidential_letter', 'مشاهده نامه‌های محرمانه و سری'),
             ('refer_letter', 'ارجاع نامه'),
             ('answer_letter', 'ثبت پاسخ نامه'),
+            ('approve_letter', 'تأیید و امضای نامه صادره'),
             ('close_letter', 'بستن و بایگانی نامه'),
             ('manage_secretariat', 'مدیریت دبیرخانه و شماره‌گذاری'),
         ]
@@ -297,3 +300,34 @@ class LetterEvent(TimeStampedModel):
 
     def __str__(self) -> str:
         return f'{self.letter_id}: {self.action}'
+
+
+class LetterApproval(TimeStampedModel):
+    """گام تأیید/امضای نامه صادره — گردش ساده پیش‌نویس→بازبینی→امضا→ارسال."""
+
+    class Decision(models.TextChoices):
+        PENDING = 'pending', 'در انتظار'
+        APPROVED = 'approved', 'تأیید/امضا شد'
+        REJECTED = 'rejected', 'رد شد'
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='approvals')
+    step = models.PositiveSmallIntegerField('گام', default=1)
+    approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='تأییدکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='letter_approvals')
+    approver_label = models.CharField('سمت امضا', max_length=150, blank=True, default='')
+    decision = models.CharField(
+        'نتیجه', max_length=10, choices=Decision.choices, default=Decision.PENDING)
+    note = models.TextField('یادداشت', blank=True, default='')
+    decided_at = models.DateTimeField('زمان تصمیم', null=True, blank=True)
+    signature_image = models.FileField(
+        'تصویر امضا', upload_to='secretariat/signatures/', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'تأیید نامه'
+        verbose_name_plural = 'تأییدهای نامه'
+        ordering = ['step', 'created_at']
+
+    def __str__(self) -> str:
+        return f'{self.letter_id} — گام {self.step}: {self.decision}'

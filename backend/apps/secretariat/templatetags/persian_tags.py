@@ -60,7 +60,7 @@ def status_pill(value):
     return {
         'draft': 'gray', 'registered': 'info', 'in_review': 'violet',
         'referred': 'info', 'in_progress': 'warn', 'waiting_user': 'warn',
-        'answered': 'ok', 'sent': 'teal', 'closed': 'gray', 'archived': 'gray',
+        'answered': 'ok', 'signed': 'ok', 'sent': 'teal', 'closed': 'gray', 'archived': 'gray',
         'pending': 'warn', 'acted': 'ok', 'returned': 'bad',
     }.get(value, 'gray')
 

@@ -157,6 +157,65 @@
 
   <!-- ستون اقدام‌ها -->
   <div class="no-print">
+    {% if letter.letter_type == 'outgoing' %}
+    <div class="card">
+      <div class="card-title">گردش تأیید صادره <span class="pill {{ letter.status|status_pill }}">{{ letter.get_status_display }}</span></div>
+
+      {% if letter.status == 'draft' %}
+        {% if can_submit %}
+        <form method="post" action="{% url 'secretariat:letter_submit' letter.pk %}">{% csrf_token %}
+          <button class="btn" type="submit">ارسال به بازبینی/امضا</button>
+        </form>
+        {% else %}<p class="tiny muted">پیش‌نویس در ویرایش است.</p>{% endif %}
+      {% elif letter.status == 'in_review' %}
+        {% if can_approve %}
+        <form method="post" action="{% url 'secretariat:letter_approve' letter.pk %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="field"><label>سمت امضا</label><input type="text" name="label" placeholder="مثلاً: مدیرکل"></div>
+          <div class="field mt"><label>یادداشت (اختیاری)</label><textarea name="note" rows="2"></textarea></div>
+          <div class="field mt"><label>تصویر امضا (اختیاری)</label><input type="file" name="signature" accept="image/png,image/jpeg"></div>
+          <div class="form-actions">
+            <button class="btn" type="submit">تأیید و امضا</button>
+          </div>
+        </form>
+        <form method="post" action="{% url 'secretariat:letter_reject' letter.pk %}" class="mt"
+              onsubmit="return confirm('نامه رد و به پیش‌نویس برگردانده شود؟')">
+          {% csrf_token %}
+          <div class="field"><label>دلیل رد</label><textarea name="note" rows="2" required></textarea></div>
+          <button class="btn danger" type="submit">رد نامه</button>
+        </form>
+        {% else %}<p class="tiny muted">در انتظار بازبینی/امضا…</p>{% endif %}
+      {% elif letter.status == 'signed' %}
+        <p class="tiny" style="color:var(--ok)">✓ امضا شده</p>
+        {% if can_send %}
+        <form method="post" action="{% url 'secretariat:letter_send' letter.pk %}">{% csrf_token %}
+          <button class="btn navy" type="submit">ثبت ارسال و صدور قطعی</button>
+        </form>
+        {% endif %}
+      {% elif letter.status == 'sent' %}
+        <p class="tiny" style="color:var(--teal-dark)">✓ ارسال و در دفتر صادره ثبت شد</p>
+      {% endif %}
+
+      <div class="form-actions">
+        <a class="btn secondary sm" href="{% url 'secretariat:letter_pdf' letter.pk %}" target="_blank">PDF سربرگ‌دار</a>
+      </div>
+
+      {% if approvals %}
+      <ul class="timeline mt">
+        {% for a in approvals %}
+        <li>
+          <div class="t-head">گام {{ a.step|fa }} — {{ a.get_decision_display }}
+            {% if a.approver %}<span class="tiny muted">({{ a.approver.get_full_name|default:a.approver.username }}{% if a.approver_label %} — {{ a.approver_label }}{% endif %})</span>{% endif %}
+          </div>
+          <div class="t-meta">{% if a.decided_at %}{{ a.decided_at|jalali_datetime }}{% endif %}</div>
+          {% if a.note %}<div class="t-note">{{ a.note }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if referral_form %}
     <div class="card">
       <div class="card-title">ارجاع نامه</div>
