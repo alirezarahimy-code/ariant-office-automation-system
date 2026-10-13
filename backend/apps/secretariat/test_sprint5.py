@@ -5,7 +5,7 @@ import jdatetime
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.db import connection
@@ -134,3 +134,23 @@ class LightLoadTests(TestCase):
             response = self.client.get(reverse('secretariat:letter_list'))
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(ctx), 25, f'کوئری‌های فهرست: {len(ctx)}')
+
+
+class EmailNotificationTests(TestCase):
+    """زیرساخت اعلان ایمیلی فاز ۲ — با backend حافظه‌ای آزموده می‌شود."""
+
+    @override_settings(NOTIFICATIONS_EMAIL_ENABLED=True,
+                       EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_referral_sends_email(self):
+        from django.core import mail
+        office = make_office()
+        sender = give(User.objects.create_user('s', password='x', email='s@ex.ir'),
+                      'view_all_letter', 'refer_letter')
+        receiver = User.objects.create_user('r', password='x', email='r@ex.ir')
+        letter = register_letter(office, 'incoming', 'نامه ایمیلی', created_by=sender)
+        self.client.force_login(sender)
+        self.client.post(reverse('secretariat:letter_refer', args=[letter.pk]),
+                         {'to_user': receiver.pk, 'note': 'لطفاً اقدام شود'})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('ارجاع نامه', mail.outbox[0].subject)
+        self.assertEqual(mail.outbox[0].to, ['r@ex.ir'])

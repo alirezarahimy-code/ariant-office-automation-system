@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from urllib.parse import quote
 
 import jdatetime
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -57,6 +58,10 @@ def _notify(user, title, body='', url=''):
     if user is None:
         return
     Notification.objects.create(user=user, title=title, body=body[:300], url=url)
+    if settings.NOTIFICATIONS_EMAIL_ENABLED and user.email:
+        from django.core.mail import send_mail
+        message = (body or '') + (f'\n\n{url}' if url else '')
+        send_mail(title, message, None, [user.email], fail_silently=True)
 
 
 def _form_errors_message(form):

@@ -1,0 +1,31 @@
+# نمونه Nginx برای اتوماسیون اداری — HTTPS را با certbot فعال کنید
+server {
+    listen 80;
+    server_name automation.example.ir;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name automation.example.ir;
+
+    ssl_certificate     /etc/letsencrypt/live/automation.example.ir/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/automation.example.ir/privkey.pem;
+
+    client_max_body_size 30m;   # سقف پیوست نامه‌ها (سیاست: ۲۵ مگابایت)
+
+    location /static/ {
+        alias /opt/ariant/backend/staticfiles/;
+        expires 30d;
+    }
+    location /media/ {
+        alias /opt/ariant/backend/media/;
+        internal;   # پیوست‌ها فقط از مسیر محافظت‌شده جنگو
+    }
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}

@@ -1,0 +1,11 @@
+# زمان‌بندی عملیاتی اتوماسیون اداری (crontab -e با کاربر www-data)
+# مسیرها را با نصب واقعی تنظیم کنید؛ env از /etc/ariant.env
+
+# هشدار مهلت‌ها هر ۶ ساعت
+0 */6 * * * cd /opt/ariant/backend && set -a && . /etc/ariant.env && set +a && .venv/bin/python manage.py check_deadlines >> /var/log/ariant/deadlines.log 2>&1
+
+# همگام‌سازی فقط‌خواندنی تیکت‌ها هر ۱۵ دقیقه
+*/15 * * * * cd /opt/ariant/backend && set -a && . /etc/ariant.env && set +a && .venv/bin/python manage.py sync_tickets >> /var/log/ariant/sync.log 2>&1
+
+# پشتیبان‌گیری روزانه پایگاه‌داده (۲ بامداد)
+0 2 * * * set -a && . /etc/ariant.env && set +a && pg_dump "$DJANGO_DB_NAME" | gzip > /var/backups/ariant/db-$(date +\%F).sql.gz && find /var/backups/ariant -mtime +30 -delete

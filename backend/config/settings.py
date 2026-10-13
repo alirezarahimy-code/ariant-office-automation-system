@@ -236,3 +236,12 @@ TICKET_BRIDGE = {
         'password': os.environ.get('TICKET_DB_PASSWORD', ''),
     },
 }
+
+# --- اعلان ایمیلی (زیرساخت فاز ۲ — اسپرینت ۵ زودتر تحویل شد) ---
+NOTIFICATIONS_EMAIL_ENABLED = os.environ.get('NOTIFY_EMAIL', '0') == '1'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '25'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', '0') == '1'
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', 'automation@localhost')
