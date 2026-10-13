@@ -1,0 +1,69 @@
+### متغیرها
+@host = http://localhost:5100
+@token = ابتدا نشانه را از درخواست زیر بگیرید و اینجا جای‌گذاری کنید
+
+### بررسی سلامت سرویس (بدون احراز هویت)
+GET {{host}}/api/v1/health
+Accept: application/json
+
+### دریافت نشانه دسترسی (JWT)
+# @name login
+POST {{host}}/api/v1/auth/token
+Content-Type: application/json
+
+{
+  "userName": "admin",
+  "password": "Admin@1404"
+}
+
+### اطلاعات کاربر جاری
+GET {{host}}/api/v1/auth/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### فهرست واحدهای سازمانی (صفحه‌بندی‌شده)
+GET {{host}}/api/v1/departments?page=1&pageSize=20
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### درخت ساختار سازمانی
+GET {{host}}/api/v1/departments/tree
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### جزئیات یک واحد (شناسه را جای‌گذاری کنید)
+GET {{host}}/api/v1/departments/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### ایجاد واحد سازمانی
+POST {{host}}/api/v1/departments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "واحد آموزش",
+  "code": "206",
+  "parentId": null,
+  "description": "واحد آموزش و توسعه",
+  "sortOrder": 8,
+  "isActive": true
+}
+
+### ویرایش واحد سازمانی
+PUT {{host}}/api/v1/departments/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "واحد آموزش و توسعه",
+  "code": "206",
+  "parentId": null,
+  "description": "به‌روزرسانی توضیحات",
+  "sortOrder": 9,
+  "isActive": true
+}
+
+### حذف واحد سازمانی
+DELETE {{host}}/api/v1/departments/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}

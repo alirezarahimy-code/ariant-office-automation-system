@@ -1,0 +1,6 @@
+[
+  {"system": "php-ticketing", "external_id": "IT-1042", "subject": "قطعی شبکه طبقه دوم", "status": "in_progress", "priority": "urgent", "service_group": "it", "requester_username": "m.rezaei", "created_label": "۱۴۰۵/۰۷/۱۸", "payload": {"id": 1042}},
+  {"system": "php-ticketing", "external_id": "IT-1039", "subject": "نصب نرم‌افزار حسابداری", "status": "resolved", "priority": "normal", "service_group": "it", "requester_username": "m.rezaei", "created_label": "۱۴۰۵/۰۷/۱۵", "payload": {"id": 1039}},
+  {"system": "php-ticketing", "external_id": "SP-220", "subject": "خرابی پرینتر دبیرخانه", "status": "new", "priority": "normal", "service_group": "support", "requester_username": "s.karimi", "created_label": "۱۴۰۵/۰۷/۲۰", "payload": {"id": 220}},
+  {"system": "php-ticketing", "external_id": "IT-1015", "subject": "بازنشانی رمز عبور", "status": "closed", "priority": "normal", "service_group": "it", "requester_username": "admin", "created_label": "۱۴۰۵/۰۶/۳۰", "payload": {"id": 1015}}
+]

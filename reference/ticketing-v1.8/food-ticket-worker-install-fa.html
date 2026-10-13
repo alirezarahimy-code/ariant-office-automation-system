@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>راهنمای نصب PHP Worker چاپ فیش غذا</title>
+<style>
+:root{--bg:#fff;--subtle:#fafafa;--muted:#f4f4f5;--line:#e4e4e7;--faint:#a1a1aa;--soft:#71717a;--text2:#52525b;--text:#18181b;--good:#15803d;--warn:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.85 Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding:40px 24px 64px}
+h1{font-size:30px;line-height:1.5;margin:0 0 8px;font-weight:700}
+h2{font-size:19px;margin:34px 0 12px;font-weight:700}
+h3{font-size:16px;margin:0 0 8px}
+p{margin:0 0 12px;color:var(--text2)}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px;overflow-wrap:anywhere}
+a:hover{text-decoration-color:var(--text)}
+.meta{font-size:12px;color:var(--soft);margin-bottom:18px}
+.lead{font-size:17px;color:var(--text);max-width:850px}
+.callout{border:1px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:14px 16px;margin:18px 0;color:#78350f}
+.goodbox{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:14px 16px;margin:16px 0;color:#166534}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff;min-width:0}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--muted);color:var(--text2);white-space:nowrap;margin-inline-start:6px}
+.tag.ok{background:#f0fdf4;color:var(--good)}
+.tag.check{background:#fffbeb;color:var(--warn)}
+.card p{font-size:13px;margin:6px 0}
+.card .links{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
+.steps{display:grid;gap:10px;counter-reset:step}
+.step{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
+.step h3:before{counter-increment:step;content:counter(step) ". ";color:var(--soft)}
+.step p:last-child{margin-bottom:0}
+.cmd{direction:ltr;text-align:left;unicode-bidi:plaintext;display:block;white-space:pre-wrap;overflow-wrap:anywhere;background:#18181b;color:#f4f4f5;border-radius:8px;padding:12px 14px;margin:8px 0;font:13px/1.65 Consolas,"Courier New",monospace}
+.path{direction:ltr;unicode-bidi:plaintext;font:13px Consolas,"Courier New",monospace;background:var(--muted);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:580px}
+th,td{padding:9px 11px;text-align:right;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--subtle);font-weight:700;color:var(--soft)}
+tr:last-child td{border-bottom:0}
+ol.sources{padding-right:22px;color:var(--text2);font-size:12px}
+ol.sources li{margin:5px 0;overflow-wrap:anywhere}
+footer{margin-top:32px;font-size:12px;color:var(--faint)}
+@media(max-width:650px){main{padding:24px 15px 42px}h1{font-size:23px}.lead{font-size:15px}.grid{grid-template-columns:1fr}.step,.card{padding:13px}}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>راهنمای نصب Worker چاپ فیش غذا</h1>
+  <div class="meta">ویژهٔ Windows Server · لینک‌ها و صفحات رسمی بررسی‌شده در ۳۰ سپتامبر ۲۰۲۶</div>
+  <p class="lead">اگر سامانهٔ PHP و دیتابیس MySQL/MariaDB شما همین حالا کار می‌کند، آن‌ها را دوباره نصب نکنید. Worker از PHP CLI همان سرور استفاده می‌کند؛ فقط اتصال Access، چاپگر و اجرای خودکار باید آماده شوند.</p>
+
+  <div class="callout"><strong>قبل از شروع:</strong> از دیتابیس نسخهٔ پشتیبان بگیرید، Worker یا سرویس C# قبلی را متوقف کنید و هم‌زمان فقط یک موتور چاپ را فعال نگه دارید. فایل XAMPP جدید را روی سرور فعلی نصب نکنید؛ نصب موازی ممکن است PHP یا MySQL دیگری راه بیندازد.</div>
+
+  <h2>پیش‌نیازها و لینک دریافت</h2>
+  <div class="grid">
+    <section class="card">
+      <h3>۱. PHP CLI و فایل‌های وابسته <span class="tag ok">الزامی</span></h3>
+      <p>PHP باید نسخهٔ ۸٫۱ یا بالاتر باشد. اگر سایت با XAMPP اجرا می‌شود، معمولاً همان فایل <span class="path">C:\xampp\php\php.exe</span> را استفاده کنید؛ PHP جدا لازم نیست.</p>
+      <p>اگر ZIP مستقل Windows x64 NTS را دانلود کرده‌اید، مراحل استخراج و تنظیم آن در بخش بعد آمده است. نصب جداگانه فقط برای CLI است و جای وب‌سرور فعلی را نمی‌گیرد.</p>
+      <div class="links"><a href="https://www.php.net/downloads.php?os=windows&amp;osvariant=windows-downloads&amp;version=8.4" target="_blank" rel="noreferrer">صفحهٔ رسمی PHP 8.4 برای Windows</a><a href="https://downloads.php.net/~windows/releases/archives/php-8.4.26-nts-Win32-vs17-x64.zip" target="_blank" rel="noreferrer">دریافت مستقیم PHP 8.4.26 x64 NTS</a><a href="https://aka.ms/vs/17/release/vc_redist.x64.exe" target="_blank" rel="noreferrer">Visual C++ Runtime x64 (در صورت نیاز)</a></div>
+    </section>
+    <section class="card">
+      <h3>۲. افزونه‌های MySQL و OpenSSL و اجازهٔ اجرای فرمان <span class="tag ok">الزامی</span></h3>
+      <p><span class="path">pdo_mysql</span> برای اتصال PHP به MySQL و <span class="path">openssl</span> برای بازکردن رمز Access ذخیره‌شده لازم‌اند. تابع <span class="path">exec</span> امکان اجرای PowerShell و دستور چاپ را می‌دهد. افزونه‌ها همراه ZIP رسمی PHP هستند و دانلود جداگانه نمی‌خواهند؛ باید در همان PHP CLI فعال باشند و <span class="path">exec</span> در <span class="path">disable_functions</span> مسدود نباشد.</p>
+      <div class="links"><a href="https://www.php.net/manual/en/ref.pdo-mysql.php" target="_blank" rel="noreferrer">راهنمای رسمی PDO_MYSQL</a><a href="https://www.php.net/manual/en/book.openssl.php" target="_blank" rel="noreferrer">راهنمای رسمی OpenSSL</a><a href="https://www.php.net/manual/en/function.exec.php" target="_blank" rel="noreferrer">راهنمای رسمی exec</a></div>
+    </section>
+    <section class="card">
+      <h3>۳. موتور Access (ACE/OLEDB) <span class="tag check">فقط اگر ODBC آماده نیست</span></h3>
+      <p>اگر PHP ODBC و درایور Access روی سرور کار می‌کنند، نصب دیگری لازم نیست. در غیر این صورت Worker از PowerShell و Access Database Engine استفاده می‌کند. Runtime باید با معماری Office نصب‌شده (۳۲ یا ۶۴ بیت) سازگار باشد. Microsoft نصب Runtime را در کنار نسخه‌های Office نصب‌شده با Windows Installer پشتیبانی نمی‌کند؛ در چنین سروری پیش از نصب با مدیر سیستم هماهنگ کنید.</p>
+      <div class="links"><a href="https://support.microsoft.com/en-us/access/download-and-install-microsoft-365-access-runtime" target="_blank" rel="noreferrer">راهنمای رسمی Microsoft 365 Access Runtime</a><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=AccessRuntimeRetail&amp;language=en-us&amp;platform=x64" target="_blank" rel="noreferrer">دریافت مستقیم Runtime انگلیسی x64</a></div>
+    </section>
+    <section class="card">
+      <h3>۴. PowerShell و Task Scheduler <span class="tag ok">داخل Windows</span></h3>
+      <p>در Windows Server 2016 و جدیدتر، Windows PowerShell 5.1 به‌صورت پیش‌فرض موجود است. نصب‌گر از <span class="path">powershell.exe</span> و Task Scheduler ویندوز استفاده می‌کند؛ PowerShell 7 جداگانه لازم نیست.</p>
+      <div class="links"><a href="https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1" target="_blank" rel="noreferrer">توضیح Microsoft دربارهٔ Windows PowerShell 5.1</a></div>
+    </section>
+    <section class="card">
+      <h3>۵. MySQL/MariaDB و phpMyAdmin <span class="tag ok">از سامانهٔ فعلی</span></h3>
+      <p>Migration را روی همان دیتابیسی اجرا کنید که سامانه به آن وصل است. اگر محیط فعلی XAMPP است، معمولاً phpMyAdmin و فرمان <span class="path">mysql.exe</span> از قبل نصب‌اند. دیتابیس دوم نسازید و نصب XAMPP را روی سرور فعلی تکرار نکنید.</p>
+      <div class="links"><a href="https://www.apachefriends.org/download.html" target="_blank" rel="noreferrer">صفحهٔ رسمی دریافت XAMPP (فقط محیط تازه/آزمایشی)</a></div>
+      <p><strong>توجه:</strong> صفحهٔ XAMPP بررسی‌شده نسخه‌های Windows قدیمی‌تری نشان می‌دهد؛ برای سامانهٔ عملیاتی، PHP فعلی سرور را حفظ کنید و فقط اگر مدیر سرور تأیید کرد چیزی نصب کنید.</p>
+    </section>
+    <section class="card">
+      <h3>۶. درایور فیش‌پرینتر <span class="tag check">بر اساس روش چاپ</span></h3>
+      <p>برای چاپ از صف Windows، درایور لازم است. درایور رسمی سازندهٔ چاپگر یا درایور عمومی فیش‌پرینتر ۸۰ میلی‌متری را نصب کنید و تطابق آن با مدل چاپگر را بررسی کنید. برای چاپ شبکه‌ای RAW روی پورت ۹۱۰۰ ممکن است درایور Windows لازم نباشد.</p>
+      
+    </section>
+  </div>
+
+  <h2>تنظیم ZIP مستقل PHP 8.4.26 NTS</h2>
+  <div class="steps">
+    <section class="step">
+      <h3>استخراج و ساخت فایل تنظیمات</h3>
+      <p>اگر PHP را به‌صورت ZIP دانلود کرده‌اید، محتویات آن را در <span class="path">C:\php84</span> استخراج کنید و مطمئن شوید <span class="path">C:\php84\php.exe</span> مستقیم در همان پوشه است. اگر Windows پیام داد DLLهای Visual C++ پیدا نیستند، Visual C++ Runtime x64 موجود در بخش دانلود را نصب کنید. سپس در Command Prompt فایل تنظیمات پیش‌فرض را کپی کنید:</p>
+      <code class="cmd">copy C:\php84\php.ini-production C:\php84\php.ini</code>
+    </section>
+    <section class="step">
+      <h3>فعال‌سازی افزونه‌ها</h3>
+      <p>فایل <span class="path">C:\php84\php.ini</span> را باز کنید. مسیر افزونه‌ها را تنظیم و دو افزونه را فعال کنید. اگر خطوط فعال از قبل وجود دارند، همان‌ها را ویرایش کنید و خط تکراری نسازید:</p>
+      <code class="cmd">extension_dir = "C:\php84\ext"
+extension=pdo_mysql
+extension=openssl</code>
+      <p>تابع <span class="path">exec</span> جزو تابع‌های PHP است، نه افزونه. اگر <span class="path">exec</span> در فهرست <span class="path">disable_functions</span> دیده شد، قبل از تغییر محدودیت با مدیر سرور هماهنگ کنید.</p>
+    </section>
+    <section class="step">
+      <h3>بررسی PHP آماده‌شده</h3>
+      <p>در Command Prompt بررسی کنید که PHP نسخهٔ ۸٫۱ یا جدیدتر است، فایل <span class="path">C:\php84\php.ini</span> بارگذاری شده و هر سه مورد آماده‌اند:</p>
+      <code class="cmd">"C:\php84\php.exe" --ini
+"C:\php84\php.exe" -v
+"C:\php84\php.exe" -r "echo extension_loaded('pdo_mysql') ? 'pdo_mysql OK' : 'pdo_mysql MISSING', PHP_EOL; echo extension_loaded('openssl') ? 'openssl OK' : 'openssl MISSING', PHP_EOL; echo function_exists('exec') ? 'exec OK' : 'exec MISSING', PHP_EOL;"</code>
+      <p>PHP مستقل فقط برای Worker است و تنظیمات PHP داخل XAMPP/Apache را تغییر نمی‌دهد. در مرحلهٔ نصب Worker، مسیر <span class="path">C:\php84\php.exe</span> را به نصب‌گر بدهید.</p>
+    </section>
+  </div>
+
+  <h2>مراحل نصب و اجرا</h2>
+  <div class="steps">
+    <section class="step">
+      <h3>آماده‌سازی و پشتیبان‌گیری</h3>
+      <p>از دیتابیس نسخه بگیرید. در Task Scheduler یا سرویس Windows هر Worker فیش فعلی را متوقف کنید. نام دیتابیس را از تنظیمات محلی برنامه پیدا کنید؛ رمز آن را در فایل راهنما یا پیام‌ها ننویسید. فایل‌های برنامه باید روی همین سرور موجود باشند.</p>
+    </section>
+    <section class="step">
+      <h3>اجرای Migration شمارهٔ ۱٫۱۹</h3>
+      <p>در همان دیتابیس برنامه، از phpMyAdmin وارد تب <strong>Import</strong> شوید، فایل <span class="path">upgrade-1.19-food-ticket-queue.sql</span> را انتخاب کنید و <strong>Go</strong> را بزنید. اگر جدول <span class="path">food_ticket_events</span> وجود ندارد، ابتدا migration ماژول فیش (۱٫۹) و migrationهای قبلی موردنیاز نسخهٔ دیتابیس را اجرا کنید.</p>
+      <p>راه جایگزین: این فرمان را در <strong>Command Prompt</strong> (نه PowerShell) اجرا کنید و نام دیتابیس و مسیرها را عوض کنید. با <span class="path">-p</span> رمز جداگانه پرسیده می‌شود.</p>
+      <code class="cmd">"C:\xampp\mysql\bin\mysql.exe" -u root -p persian_ticketing &lt; "C:\xampp\htdocs\persian-ticketing\upgrade-1.19-food-ticket-queue.sql"</code>
+      <p>در تب SQL همان دیتابیس، این بررسی‌ها را اجرا کنید؛ باید ستون‌های صف و جدول گزارش چاپ را ببینید:</p>
+      <code class="cmd">SHOW COLUMNS FROM food_ticket_events;
+SHOW TABLES LIKE 'food_ticket_print_log';</code>
+    </section>
+    <section class="step">
+      <h3>بررسی PHP CLI و افزونه‌ها</h3>
+      <p>مسیر <span class="path">php.exe</span> را با مسیر واقعی PHP سرور عوض کنید و در Command Prompt اجرا کنید. خروجی باید PHP ۸٫۱ یا جدیدتر، <span class="path">pdo_mysql OK</span>، <span class="path">openssl OK</span> و <span class="path">exec OK</span> نشان دهد. ODBC اختیاری است؛ اگر غایب بود باید مسیر ACE بالا آماده باشد.</p>
+      <code class="cmd">"C:\php84\php.exe" -v
+"C:\php84\php.exe" -r "echo PHP_VERSION, PHP_EOL; echo extension_loaded('pdo_mysql') ? 'pdo_mysql OK' : 'pdo_mysql MISSING', PHP_EOL; echo extension_loaded('openssl') ? 'openssl OK' : 'openssl MISSING', PHP_EOL; echo function_exists('exec') ? 'exec OK' : 'exec MISSING', PHP_EOL; echo extension_loaded('odbc') ? 'odbc OK' : 'odbc missing (ACE fallback)', PHP_EOL;"</code>
+      <p><strong>مسیر PHP و فایل تنظیمات باید یکی باشند:</strong> اگر دستور را با <span class="path">C:\xampp\php\php.exe</span> اجرا می‌کنید، فایل <span class="path">C:\php84\php.ini</span> اثری روی آن ندارد. یا همهٔ آزمون‌ها و نصب Worker را با <span class="path">C:\php84\php.exe</span> انجام دهید، یا افزونه‌ها را در فایل INI که خروجی <span class="path">--ini</span> برای PHP انتخابی نشان می‌دهد فعال کنید. نصب‌گر مسیر PHP و INI را نمایش می‌دهد؛ همان مسیر را مبنای عیب‌یابی بگذارید.</p>
+      <p>برای PHP نشان‌داده‌شده در نمونه، فایل تنظیمات فعال <span class="path">C:\xampp\php\php.ini</span> است. اگر پس از اجرای نصب‌گر به‌روز هنوز <span class="path">pdo_mysql</span> واقعاً کم بود، همین فایل را باز کنید و خط <span class="path">extension=pdo_mysql</span> را فعال کنید؛ اگر ابتدای آن <span class="path">;</span> دارد، فقط همان علامت را بردارید. سپس در Command Prompt فهرست افزونه‌ها را دوباره بررسی کنید:</p>
+      <code class="cmd">"C:\xampp\php\php.exe" -m | findstr /I "pdo_mysql openssl odbc"</code>
+      <p>اگر خطای افزونه دیدید، تنظیمات همان PHP CLI را بررسی کنید. نصب‌گر جدید فهرست افزونه‌ها را با <span class="path">php -m</span> می‌خواند تا نقل‌قول‌های PowerShell نتیجه را تغییر ندهند. پیام <span class="path">Module "openssl" is already loaded</span> یعنی افزونه در INI فعال دوبار بارگذاری می‌شود؛ فقط یک خط فعال <span class="path">extension=openssl</span> نگه دارید. در سرور سازمانی پیش از تغییر محدودیت‌های امنیتی با مدیر سیستم هماهنگ کنید.</p>
+    </section>
+    <section class="step">
+      <h3>تنظیم Access و چاپگر با Worker خاموش</h3>
+      <p>در سامانه، صفحهٔ «چاپ فیش غذا» را باز کنید و مسیر منبع تردد، فایل سفارش، نام جدول سفارش و چاپگر را ذخیره کنید. اگر فایل‌ها روی شبکه‌اند، مسیر UNC مثل <span class="path">\\server\share\file.mdb</span> بدهید؛ درایوهای Map شده ممکن است برای Task دیده نشوند. در این مرحله گزینهٔ فعال‌سازی Worker را خاموش نگه دارید.</p>
+    </section>
+    <section class="step">
+      <h3>اجرای نصب‌گر Windows</h3>
+      <p>با همان حساب Windows که به Access، MySQL و چاپگر دسترسی دارد، Command Prompt را باز کنید. مسیر برنامه و PHP را متناسب با سرور عوض کنید. این آرگومان دقیقاً تعیین می‌کند کدام PHP و کدام فایل INI برای Worker استفاده شود:</p>
+      <code class="cmd">"C:\xampp\htdocs\persian-ticketing\tools\install_food_ticket_worker_windows.bat" "C:\xampp\php\php.exe"</code>
+      <p>اگر PHP مستقل نصب کرده‌اید، مسیر آرگومان دوم را <span class="path">C:\php84\php.exe</span> بگذارید. نصب‌گر افزونه‌های لازم و نحو PHP را بررسی می‌کند، وظیفهٔ زمان‌بندی‌شدهٔ <span class="path">Food Ticket PHP Worker</span> را می‌سازد و بلافاصله شروع می‌کند. اگر PHP در PATH یا مسیر پیش‌فرض XAMPP باشد، آرگومان دوم ممکن است لازم نباشد.</p>
+    </section>
+    <section class="step">
+      <h3>تأیید، فعال‌سازی و چاپ آزمایشی</h3>
+      <p>Task Scheduler را باز کنید و در Task Scheduler Library وضعیت <span class="path">Food Ticket PHP Worker</span> را ببینید. نصب‌گر وظیفه را برای حساب فعلی و هنگام ورود همان حساب تنظیم می‌کند؛ آن حساب باید در Windows وارد بماند. سپس تنظیمات را دوباره بررسی و Worker را از پنل فعال کنید.</p>
+      <p>پیش از فعال‌سازی، ترددهای امروز در SOURCE_TABLE را مرور کنید؛ Worker ممکن است آن‌ها را پردازش کند. دکمهٔ تست اتصال/چاپ یک فیش نمونه به چاپگر می‌فرستد و واقعاً کاغذ چاپ می‌کند. وضعیت Worker را در بخش پایش بررسی کنید.</p>
+    </section>
+  </div>
+
+  <div class="goodbox"><strong>خلاصهٔ دانلود:</strong> روی سروری که سامانه هم‌اکنون فعال است، معمولاً دانلود PHP، MySQL، PowerShell یا XAMPP لازم نیست. فقط در صورت نبودن Access ODBC/ACE، Microsoft 365 Access Runtime را نصب کنید؛ درایور چاپگر هم فقط برای صف چاپ Windows لازم است. برای این روش .NET یا Worker سرویس C# لازم نیست.</div>
+
+  <h2>بستهٔ فایل‌های لازم از پروژه</h2>
+  <p>این بسته فقط شامل Migration و دو فایل نصب‌گر است؛ خود سامانه و کد Worker را جایگزین نمی‌کند. فایل‌ها را در ریشهٔ برنامه با همان ساختار پوشه‌ای قرار دهید.</p>
+  <p>فایل <span class="path">food-ticket-worker-install-files.zip</span> کنار این راهنما قرار دارد؛ فایل‌های آن را با حفظ ساختار پوشه‌ها در ریشهٔ برنامه استخراج کنید.</p>
+
+  <h2>منابع رسمی بررسی‌شده</h2>
+  <ol class="sources">
+    <li><a href="https://www.php.net/downloads.php?os=windows&amp;osvariant=windows-downloads&amp;version=8.4" target="_blank" rel="noreferrer">PHP Windows downloads</a> — نسخهٔ ۸٫۴٫۲۶ و NTS x64؛ صفحه CLI را برای Windows توصیه می‌کند و نیاز Visual C++ Runtime را توضیح می‌دهد.</li>
+    <li><a href="https://www.php.net/manual/en/ref.pdo-mysql.php" target="_blank" rel="noreferrer">PHP PDO_MYSQL</a>، <a href="https://www.php.net/manual/en/book.openssl.php" target="_blank" rel="noreferrer">PHP OpenSSL</a> و <a href="https://www.php.net/manual/en/function.exec.php" target="_blank" rel="noreferrer">PHP exec</a> — مستندات افزونه‌ها و تابع موردنیاز Worker.</li>
+    <li><a href="https://support.microsoft.com/en-us/access/download-and-install-microsoft-365-access-runtime" target="_blank" rel="noreferrer">Microsoft 365 Access Runtime</a> — شامل Access Database Engine و رابط OLEDB/ODBC؛ صفحه نسخه‌های ۳۲ و ۶۴ بیت را توضیح می‌دهد.</li>
+    <li><a href="https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1" target="_blank" rel="noreferrer">Windows PowerShell 5.1</a> — Microsoft می‌گوید روی Windows Server 2016 و نسخه‌های جدیدتر به‌طور پیش‌فرض نصب است.</li>
+    <li> و .</li>
+    <li><a href="https://www.apachefriends.org/download.html" target="_blank" rel="noreferrer">Apache Friends XAMPP</a> — صفحهٔ رسمی دریافت؛ فقط برای محیط تازه، نه نصب موازی روی سرور عملیاتی.</li>
+  </ol>
+  <footer>برای تغییر مسیرها در فرمان‌ها، نام واقعی پوشهٔ سامانه و php.exe سرور خودتان را جایگزین نمونه کنید. رمز دیتابیس را در فرمان، فایل راهنما یا پیام پشتیبانی قرار ندهید.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,100 @@
+@model PagedResult<DepartmentListItemDto>
+@{
+    ViewData["Title"] = "ساختار سازمانی";
+    var query = ViewData["Query"] as DepartmentQuery ?? new DepartmentQuery();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">ساختار سازمانی</h1>
+        <p class="page-head__subtitle">مدیریت واحدهای سازمانی و زیرمجموعه‌ها</p>
+    </div>
+    <div class="page-head__actions">
+        @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Manager))
+        {
+            <a class="btn btn--primary" asp-action="Create">افزودن واحد سازمانی</a>
+        }
+        <a class="btn btn--outline" asp-action="Tree">نمای درختی</a>
+    </div>
+</div>
+
+<div class="card">
+    <form method="get" asp-action="Index" class="filter-bar">
+        <input class="form__input" type="search" name="search" value="@query.Search" placeholder="جست‌وجوی نام یا کد واحد…" />
+        <select class="form__input" name="isActive">
+            <option value="">همه وضعیت‌ها</option>
+            <option value="true" selected="@(query.IsActive == true)">فقط فعال</option>
+            <option value="false" selected="@(query.IsActive == false)">فقط غیرفعال</option>
+        </select>
+        <button type="submit" class="btn btn--outline">جست‌وجو</button>
+        <a class="btn btn--ghost" asp-action="Index">حذف فیلترها</a>
+    </form>
+
+    @if (Model.Items.Count == 0)
+    {
+        <p class="empty-state">واحدی با این مشخصات یافت نشد.</p>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>نام واحد</th>
+                    <th>کد</th>
+                    <th>واحد بالادستی</th>
+                    <th>کارکنان</th>
+                    <th>وضعیت</th>
+                    <th>تاریخ ثبت</th>
+                    <th class="table__actions-col">عملیات</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (DepartmentListItemDto item in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.Id">@item.Title</a>
+                        </td>
+                        <td class="text-nowrap">@(string.IsNullOrWhiteSpace(item.Code) ? "—" : PersianText.ToPersianDigits(item.Code))</td>
+                        <td>@(item.ParentTitle ?? "—")</td>
+                        <td>@PersianText.ToPersianNumber(item.EmployeeCount)</td>
+                        <td>
+                            @if (item.IsActive)
+                            {
+                                <span class="badge badge--success">فعال</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge--warning">غیرفعال</span>
+                            }
+                        </td>
+                        <td class="text-nowrap">@item.CreatedAtDisplay</td>
+                        <td class="table__actions-col">
+                            <div class="table__actions">
+                                <a class="btn btn--outline btn--sm" asp-action="Edit" asp-route-id="@item.Id">ویرایش</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="js-confirm"
+                                      data-confirm="آیا از حذف واحد «@item.Title» مطمئن هستید؟">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn--danger btn--sm">حذف</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pager" model="@(new PagerViewModel
+                                       {
+                                           Page = Model.Page,
+                                           PageSize = Model.PageSize,
+                                           TotalPages = Model.TotalPages,
+                                           TotalCount = Model.TotalCount,
+                                           Action = "Index",
+                                           Search = query.Search,
+                                           FilterState = query.IsActive?.ToString().ToLowerInvariant()
+                                       })" />
+    }
+</div>

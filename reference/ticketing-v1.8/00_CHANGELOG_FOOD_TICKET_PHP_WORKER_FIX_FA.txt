@@ -1,0 +1,23 @@
+====================================================================
+ اصلاح مسیر PHP Worker چاپ فیش — اتصال واقعی، enabled، ACE
+====================================================================
+
+1) settings: ستون key/value درست شد (food-ticket-runtime.php)
+2) printer_mode: windows_queue → windows_share ؛ پیش‌فرض tcp_raw
+3) event_type خارج از ENUM قبل از INSERT نرمال می‌شود
+4) ذخیره مسیر منبع تردد+سفارش → enabled خودکار 1
+5) آزمون اتصال واقعی API test-connections (دیگر نمایشی نیست)
+6) بارگذاری تنظیمات از MySQL هنگام باز شدن پنل
+7) تست چاپ با تنظیمات body چاپگر
+8) خواندن Access: OLEDB دستی + ADODB + ODBC از PowerShell
+9) upgrade-1.27-food-ticket-fixes.sql
+
+ نصب: فایل‌های پچ را جایگزین کنید؛ ACE 2016 را نصب کنید؛
+ config.php یوزر MySQL را پر کنید؛ Task Worker را با enabled=1 اجرا کنید.
+
+ اصلاح نصب Worker ویندوز:
+ 10) پیش از تغییر Task، اتصال MySQL و خواندن یک ردیف SOURCE_TABLE آزمایش می‌شود.
+ 11) مسیر دقیق config.php در اجرای Task با حساب SYSTEM نیز تنظیم می‌شود.
+ 12) آزمون PHP از فایل موقت اجرا می‌شود تا quoting خط فرمان PowerShell/PHP خطا نسازد.
+ 13) در صورت شکست preflight، Task قبلی بدون تغییر باقی می‌ماند.
+     آزمون اولیه با Administrator اجرا می‌شود؛ برای فایل شبکه‌ای، به SYSTEM دسترسی بدهید و مسیر UNC استفاده کنید.

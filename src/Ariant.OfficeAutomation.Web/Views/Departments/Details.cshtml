@@ -1,0 +1,60 @@
+@model DepartmentDetailDto
+@{
+    ViewData["Title"] = "جزئیات واحد سازمانی";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">@Model.Title</h1>
+        <p class="page-head__subtitle">@(string.IsNullOrWhiteSpace(Model.Code) ? "بدون کد" : "کد واحد: " + PersianText.ToPersianDigits(Model.Code!))</p>
+    </div>
+    <div class="page-head__actions">
+        <a class="btn btn--outline" asp-action="Index">بازگشت به فهرست</a>
+        @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Manager))
+        {
+            <a class="btn btn--primary" asp-action="Edit" asp-route-id="@Model.Id">ویرایش</a>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <dl class="detail-list">
+        <div class="detail-list__row">
+            <dt>واحد بالادستی</dt>
+            <dd>@(Model.ParentTitle ?? "— (واحد ریشه)")</dd>
+        </div>
+        <div class="detail-list__row">
+            <dt>تعداد کارکنان</dt>
+            <dd>@PersianText.ToPersianNumber(Model.EmployeeCount) نفر</dd>
+        </div>
+        <div class="detail-list__row">
+            <dt>ترتیب نمایش</dt>
+            <dd>@PersianText.ToPersianNumber(Model.SortOrder)</dd>
+        </div>
+        <div class="detail-list__row">
+            <dt>وضعیت</dt>
+            <dd>
+                @if (Model.IsActive)
+                {
+                    <span class="badge badge--success">فعال</span>
+                }
+                else
+                {
+                    <span class="badge badge--warning">غیرفعال</span>
+                }
+            </dd>
+        </div>
+        <div class="detail-list__row">
+            <dt>تاریخ ثبت</dt>
+            <dd>@Model.CreatedAtDisplay</dd>
+        </div>
+        <div class="detail-list__row">
+            <dt>آخرین ویرایش</dt>
+            <dd>@Model.UpdatedAtDisplay</dd>
+        </div>
+        <div class="detail-list__row detail-list__row--full">
+            <dt>توضیحات</dt>
+            <dd>@(string.IsNullOrWhiteSpace(Model.Description) ? "—" : Model.Description)</dd>
+        </div>
+    </dl>
+</div>

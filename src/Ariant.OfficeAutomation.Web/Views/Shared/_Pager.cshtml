@@ -1,0 +1,48 @@
+@model PagerViewModel
+@{
+    int from = Model.TotalCount == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
+    int to = Math.Min(Model.Page * Model.PageSize, Model.TotalCount);
+
+    int startPage = Math.Max(1, Model.Page - 2);
+    int endPage = Math.Min(Model.TotalPages, startPage + 4);
+    startPage = Math.Max(1, endPage - 4);
+}
+
+@if (Model.TotalCount > 0)
+{
+    <div class="pager">
+        <span class="pager__info">
+            نمایش @PersianText.ToPersianNumber(from) تا @PersianText.ToPersianNumber(to)
+            از @PersianText.ToPersianNumber(Model.TotalCount) رکورد
+        </span>
+
+        <div class="pager__links">
+            @if (Model.Page > 1)
+            {
+                <a class="pager__link"
+                   asp-action="@Model.Action"
+                   asp-route-page="@(Model.Page - 1)"
+                   asp-route-search="@Model.Search"
+                   asp-route-isActive="@Model.FilterState">قبلی</a>
+            }
+
+            @for (int index = startPage; index <= endPage; index++)
+            {
+                <a class="pager__link @(index == Model.Page ? "pager__link--active" : string.Empty)"
+                   asp-action="@Model.Action"
+                   asp-route-page="@index"
+                   asp-route-search="@Model.Search"
+                   asp-route-isActive="@Model.FilterState">@PersianText.ToPersianNumber(index)</a>
+            }
+
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a class="pager__link"
+                   asp-action="@Model.Action"
+                   asp-route-page="@(Model.Page + 1)"
+                   asp-route-search="@Model.Search"
+                   asp-route-isActive="@Model.FilterState">بعدی</a>
+            }
+        </div>
+    </div>
+}

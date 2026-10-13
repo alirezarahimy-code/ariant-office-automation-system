@@ -1,0 +1,217 @@
+/* Custom Styles for Persian Ticketing System */
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.dashboard-grid .card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.dashboard-grid .card h3 {
+    margin: 0 0 0.5rem;
+    color: #333;
+}
+
+.dashboard-grid .card .count {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1a73e8;
+    margin: 0.5rem 0;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* Forms */
+.form {
+    max-width: 600px;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #1a73e8;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn:hover {
+    background: #e0e0e0;
+}
+
+.btn-primary {
+    background: #1a73e8;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #1557b0;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+.badge.new { background: #e3f2fd; color: #1565c0; }
+.badge.open { background: #fff3e0; color: #ef6c00; }
+.badge.closed { background: #e8f5e9; color: #2e7d32; }
+.badge.normal { background: #e8f5e9; color: #2e7d32; }
+.badge.urgent { background: #fff3e0; color: #ef6c00; }
+.badge.critical { background: #ffebee; color: #c62828; }
+
+/* Ticket List */
+.ticket-list {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    padding: 2rem;
+}
+
+/* Ticket Detail */
+.ticket-detail {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ticket-meta {
+    margin: 1rem 0;
+}
+
+.ticket-description {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.ticket-description h3 {
+    margin-top: 0;
+}
+
+/* Ticket Reply */
+.ticket-reply {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ticket-info {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.ticket-info h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+/* Filters */
+.ticket-filters {
+    margin-bottom: 1rem;
+}
+
+.ticket-filters form {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ticket-filters select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 1rem;
+    color: #999;
+    font-size: 0.9rem;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+}

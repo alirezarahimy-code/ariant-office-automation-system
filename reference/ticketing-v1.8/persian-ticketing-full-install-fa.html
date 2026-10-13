@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نصب کامل سامانه و Worker فیش غذا</title>
+<style>
+:root{--bg:#fff;--subtle:#fafafa;--muted:#f4f4f5;--line:#e4e4e7;--faint:#a1a1aa;--soft:#71717a;--text2:#52525b;--text:#18181b;--good:#15803d;--warn:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.85 Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:1020px;margin:0 auto;padding:40px 24px 64px}
+h1{font-size:29px;line-height:1.5;margin:0 0 8px;font-weight:700}
+h2{font-size:19px;margin:34px 0 12px;font-weight:700}
+h3{font-size:16px;margin:0 0 8px}
+p{margin:0 0 11px;color:var(--text2)}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px;overflow-wrap:anywhere}
+a:hover{text-decoration-color:var(--text)}
+.meta{font-size:12px;color:var(--soft);margin-bottom:18px}
+.lead{font-size:17px;color:var(--text);max-width:900px}
+.callout{border:1px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:14px 16px;margin:18px 0;color:#78350f}
+.goodbox{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:14px 16px;margin:16px 0;color:#166534}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card,.step{border:1px solid var(--line);border-radius:12px;padding:15px 16px;background:#fff;min-width:0}
+.card p{font-size:13px;margin:6px 0}
+.card .links{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:9px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--muted);color:var(--text2);white-space:nowrap;margin-inline-start:6px}
+.tag.ok{background:#f0fdf4;color:var(--good)}
+.tag.check{background:#fffbeb;color:var(--warn)}
+.steps{display:grid;gap:10px;counter-reset:step}
+.step h3:before{counter-increment:step;content:counter(step) ". ";color:var(--soft)}
+.step p:last-child{margin-bottom:0}
+.cmd{direction:ltr;text-align:left;unicode-bidi:plaintext;display:block;white-space:pre-wrap;overflow-wrap:anywhere;background:#18181b;color:#f4f4f5;border-radius:8px;padding:11px 13px;margin:8px 0;font:13px/1.65 Consolas,"Courier New",monospace}
+.path{direction:ltr;unicode-bidi:plaintext;font:13px Consolas,"Courier New",monospace;background:var(--muted);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+ol.sources{padding-right:22px;color:var(--text2);font-size:12px}
+ol.sources li{margin:5px 0;overflow-wrap:anywhere}
+footer{margin-top:32px;font-size:12px;color:var(--faint)}
+@media(max-width:820px){main{padding:28px 16px 48px}.grid{grid-template-columns:1fr}}
+@media(max-width:600px){h1{font-size:23px}.lead{font-size:15px}.step,.card{padding:13px}}
+</style>
+</head>
+<body>
+<main>
+<aside role="note" style="border:2px solid #b45309;background:#fff7ed;color:#7c2d12;padding:14px 18px;border-radius:12px;margin:0 0 22px;font-weight:700">سند میراثی برای موتور قدیمی Access/C# است و دستورهای آن برای ماژول جاری قابل اجرا نیست. نسخهٔ جاری سفارش را از MySQL داخلی می‌خواند؛ Access تردد TENTER باقی است. برای نصب و rollback ماژول فعلی، <a href="FOOD-ORDERS-1.38-OPERATIONS-fa.md">راهنمای عملیاتی 1.38</a> را ببینید. Worker قدیمی C# را اجرا نکنید.</aside>
+
+  <h1>نصب کامل سامانه و Worker چاپ فیش غذا</h1>
+  <div class="meta">راهنمای بستهٔ یکپارچه · لینک‌های رسمی بررسی‌شده در ۳۰ سپتامبر ۲۰۲۶</div>
+  <p class="lead">این ZIP شامل کد کامل سامانه، Worker چاپ فیش، migrationها، نصب‌گر Windows و این راهنماست. برنامه‌های خارجی مثل PHP/XAMPP، Access Runtime و درایور چاپگر به‌علت تفاوت نسخه و مجوز، داخل بسته نیستند و لینک رسمی آن‌ها پایین آمده است.</p>
+
+  <div class="callout"><strong>هشدار مهم:</strong> برای راه‌اندازی از صفر، از یک نام دیتابیس جدید و خالی استفاده کنید. گزینهٔ «حذف پایگاه‌دادهٔ موجود» را فعال نکنید مگر عمداً می‌خواهید تمام اطلاعات آن دیتابیس پاک شود. فایل <span class="path">rebuild-final.sql</span> مخرب است؛ در نصب عادی آن را اجرا نکنید.</div>
+
+  <h2>پیش‌نیازها و دانلودها</h2>
+  <div class="grid">
+    <section class="card">
+      <h3>محیط اجرا: XAMPP <span class="tag check">برای تست و شبکهٔ داخلی کوچک</span></h3>
+      <p>XAMPP یکجا Apache، PHP، MariaDB و phpMyAdmin را فراهم می‌کند. اگر این سامانه را روی سرور موجود نصب می‌کنید، XAMPP دوم نصب نکنید. صفحهٔ رسمی هنگام بررسی نسخه‌های قدیمی Windows را نشان می‌داد؛ پیش از نصب، نسخهٔ PHP را بررسی کنید و برای سرور تولیدی از نسخهٔ به‌روز و تأییدشدهٔ سازمان استفاده کنید.</p>
+      <div class="links"><a href="https://www.apachefriends.org/download.html" target="_blank" rel="noreferrer">دانلود رسمی XAMPP</a></div>
+    </section>
+    <section class="card">
+      <h3>PHP CLI <span class="tag ok">الزامی</span></h3>
+      <p>PHP نسخهٔ ۸٫۱ یا جدیدتر لازم است. در XAMPP، فایل CLI معمولاً <span class="path">C:\xampp\php\php.exe</span> است. اگر فقط CLI ندارید، نسخهٔ NTS x64 برای فرمان‌های PHP مناسب است؛ نصب PHP جدا وب‌سرور ایجاد نمی‌کند.</p>
+      <div class="links"><a href="https://www.php.net/downloads.php?os=windows&amp;osvariant=windows-downloads&amp;version=8.4" target="_blank" rel="noreferrer">صفحهٔ رسمی PHP 8.4 Windows</a><a href="https://downloads.php.net/~windows/releases/archives/php-8.4.26-nts-Win32-vs17-x64.zip" target="_blank" rel="noreferrer">دانلود مستقیم PHP 8.4.26 x64 NTS</a><a href="https://aka.ms/vs/17/release/vc_redist.x64.exe" target="_blank" rel="noreferrer">Visual C++ Runtime x64 (اگر درخواست شد)</a></div>
+    </section>
+    <section class="card">
+      <h3>افزونه‌های PHP <span class="tag ok">لازم برای اجرا</span></h3>
+      <p><span class="path">pdo_mysql</span> برای اتصال برنامه به MySQL/MariaDB و <span class="path">openssl</span> برای بازکردن رمز Access ذخیره‌شده لازم‌اند؛ تابع <span class="path">exec</span> نیز نباید در <span class="path">disable_functions</span> مسدود باشد. در همان PHP CLI بررسی کنید. <span class="path">ldap</span> فقط برای ورود/همگام‌سازی Active Directory لازم است. ODBC برای Access اختیاری است اگر ACE/OLEDB از PowerShell استفاده شود.</p>
+      <div class="links"><a href="https://www.php.net/manual/en/ref.pdo-mysql.php" target="_blank" rel="noreferrer">مستند PDO_MYSQL</a><a href="https://www.php.net/manual/en/function.exec.php" target="_blank" rel="noreferrer">مستند exec</a></div>
+    </section>
+    <section class="card">
+      <h3>Microsoft Access Runtime <span class="tag check">فقط اگر Access ODBC آماده نیست</span></h3>
+      <p>Worker می‌تواند از PHP ODBC یا PowerShell همراه Access Database Engine استفاده کند. اگر Runtime نصب می‌کنید، معماری ۳۲/۶۴ بیت را با Office نصب‌شده تطبیق دهید. Microsoft 365 Access Runtime با Office نصب‌شده از Windows Installer سازگار نیست؛ در چنین سروری اول با مدیر سیستم هماهنگ کنید.</p>
+      <div class="links"><a href="https://support.microsoft.com/en-us/access/download-and-install-microsoft-365-access-runtime" target="_blank" rel="noreferrer">راهنمای رسمی Runtime و انتخاب معماری</a><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=AccessRuntimeRetail&amp;language=en-us&amp;platform=x64" target="_blank" rel="noreferrer">دریافت مستقیم Runtime انگلیسی x64</a></div>
+    </section>
+    <section class="card">
+      <h3>PowerShell و Task Scheduler <span class="tag ok">داخل Windows</span></h3>
+      <p>Windows Server 2016 و جدیدتر معمولاً Windows PowerShell 5.1 و Task Scheduler را دارند؛ فایل نصب‌گر PHP Worker به <span class="path">powershell.exe</span> نیاز دارد. PowerShell 7 یا .NET برای مسیر PHP لازم نیست.</p>
+      <div class="links"><a href="https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1" target="_blank" rel="noreferrer">مستند Microsoft دربارهٔ Windows PowerShell 5.1</a></div>
+    </section>
+    <section class="card">
+      <h3>درایور چاپگر <span class="tag check">فقط برای صف Windows</span></h3>
+      <p>اگر چاپ با صف Windows است، درایور را نصب کنید. درایور رسمی سازندهٔ چاپگر یا درایور عمومی فیش‌پرینتر ۸۰ میلی‌متری را نصب کنید و تطابق آن را بررسی کنید. چاپ شبکه‌ای RAW روی پورت ۹۱۰۰ ممکن است بدون درایور Windows انجام شود.</p>
+      
+    </section>
+  </div>
+
+  <h2>راه‌اندازی از ابتدا</h2>
+  <div class="steps">
+    <section class="step">
+      <h3>آماده‌کردن Windows و سرویس‌ها</h3>
+      <p>برای تست، XAMPP را از سایت رسمی نصب کنید و در XAMPP Control Panel، Apache و MySQL را Start کنید. برای تولید، از Windows Server و نسخه‌های به‌روز سازمانی استفاده کنید. در PHP باید <span class="path">pdo_mysql</span> فعال باشد؛ برای Worker، <span class="path">exec</span> نیز فعال باشد.</p>
+    </section>
+    <section class="step">
+      <h3>تنظیم PHP CLI مستقل (فقط اگر PHP سرور را استفاده نمی‌کنید)</h3>
+      <p>اگر PHP 8.4.26 NTS x64 را به‌شکل ZIP دانلود کرده‌اید، آن را در <span class="path">C:\php84</span> استخراج کنید و بررسی کنید <span class="path">C:\php84\php.exe</span> وجود دارد. از <span class="path">php.ini-production</span> کنار آن یک کپی با نام <span class="path">php.ini</span> بسازید:</p>
+      <code class="cmd">copy C:\php84\php.ini-production C:\php84\php.ini</code>
+      <p>در <span class="path">C:\php84\php.ini</span> مسیر افزونه‌ها را تنظیم و افزونه‌های موردنیاز را فعال کنید؛ اگر خطی از قبل هست همان را ویرایش کنید و خط تکراری نسازید:</p>
+      <code class="cmd">extension_dir = "C:\php84\ext"
+extension=pdo_mysql
+extension=openssl</code>
+      <p>در Command Prompt بررسی کنید که فایل تنظیمات همین PHP بارگذاری شده و نیازمندی‌ها آماده‌اند. خروجی باید <span class="path">pdo_mysql OK</span>، <span class="path">openssl OK</span> و <span class="path">exec OK</span> داشته باشد. این PHP مستقل تنظیمات PHP داخل XAMPP/Apache را تغییر نمی‌دهد.</p>
+      <code class="cmd">"C:\php84\php.exe" --ini
+"C:\php84\php.exe" -r "echo extension_loaded('pdo_mysql') ? 'pdo_mysql OK' : 'pdo_mysql MISSING', PHP_EOL; echo extension_loaded('openssl') ? 'openssl OK' : 'openssl MISSING', PHP_EOL; echo function_exists('exec') ? 'exec OK' : 'exec MISSING', PHP_EOL;"</code>
+    </section>
+    <section class="step">
+      <h3>استخراج بسته در محل درست</h3>
+      <p>یک پوشهٔ خالی به نام <span class="path">C:\xampp\htdocs\persian-ticketing</span> بسازید و محتوای ZIP کامل را داخل همان پوشه استخراج کنید؛ فایل <span class="path">install.php</span> باید مستقیماً در ریشهٔ پوشه باشد، نه داخل یک پوشهٔ اضافی. بهتر است مسیر نصب Windows فاقد نام فارسی باشد.</p>
+    </section>
+    <section class="step">
+      <h3>اجرای نصب‌کنندهٔ وب سامانه</h3>
+      <p>روی همان سرور در مرورگر باز کنید:</p>
+      <code class="cmd">http://localhost/persian-ticketing/install.php</code>
+      <p>گام ۱: نام سامانه و اطلاعات MySQL/MariaDB را وارد کنید. برای شروع از دیتابیس جدید و خالی مثل <span class="path">persian_ticketing</span> استفاده کنید، اتصال را تست کنید و ادامه دهید. کاربر دیتابیس باید اجازهٔ ساخت دیتابیس و جدول‌ها را داشته باشد.</p>
+      <p>گام ۲: اگر Active Directory آماده نیست، اتصال LDAP را خاموش بگذارید و ادامه دهید؛ بعداً از تنظیمات قابل تکمیل است. گام ۳: حساب ادمین اصلی و رمز حداقل ۸ کاراکتری بسازید. نصب‌کننده فایل <span class="path">schema.sql</span> را اجرا و <span class="path">config.php</span> و پوشه‌های لازم را می‌سازد.</p>
+    </section>
+    <section class="step">
+      <h3>ایمن‌کردن نصب تازه</h3>
+      <p>پس از ورود، بررسی کنید صفحه‌های سامانه باز می‌شوند. <span class="path">install.php</span> را از دسترس وب خارج یا حذف کنید و سایت عملیاتی را پشت HTTPS نگه دارید. رمز MySQL را در فایل نمونه یا پیام ارسال نکنید.</p>
+    </section>
+    <section class="step">
+      <h3>تکمیل تنظیمات چاپ فیش</h3>
+      <p>در منوی «چاپ فیش غذا»، فایل منبع تردد، فایل سفارش، نام جدول سفارش و روش چاپگر را وارد کنید. اگر فایل Access روی اشتراک شبکه است از مسیر UNC استفاده کنید. Worker را تا پایان نصب و بررسی اولیه خاموش نگه دارید.</p>
+    </section>
+    <section class="step">
+      <h3>نصب Worker PHP</h3>
+      <p>روی همان Windows و با حسابی وارد شوید که به فایل‌های Access، MySQL و چاپگر دسترسی دارد. Command Prompt را باز کنید و مسیرها را مطابق سرور خود عوض کنید:</p>
+      <code class="cmd">"C:\xampp\htdocs\persian-ticketing\tools\install_food_ticket_worker_windows.bat" "C:\xampp\php\php.exe"</code>
+      <p>اگر از PHP مستقل استفاده می‌کنید، آرگومان دوم را <span class="path">C:\php84\php.exe</span> بگذارید. نصب‌گر PHP CLI، افزونه‌های <span class="path">pdo_mysql</span> و <span class="path">openssl</span> و تابع <span class="path">exec</span> را بررسی می‌کند و وظیفهٔ <span class="path">Food Ticket PHP Worker</span> را می‌سازد. در Task Scheduler وجود وظیفه و وضعیت اجرا را بررسی کنید. حساب Windows باید در زمان کار Worker وارد بماند.</p>
+    </section>
+    <section class="step">
+      <h3>آزمون نهایی</h3>
+      <p>ابتدا مسیرها و تنظیمات چاپگر را دوباره مرور کنید، سپس Worker را از پنل فعال کنید. پیش از فعال‌سازی، رکوردهای امروز SOURCE_TABLE را بررسی کنید؛ Worker ممکن است آن‌ها را پردازش کند. تست چاپ، واقعاً یک برگهٔ نمونه چاپ می‌کند. وضعیت آخرین فعالیت را از بخش پایش Worker ببینید.</p>
+    </section>
+  </div>
+
+  <div class="goodbox"><strong>مهم دربارهٔ Migration:</strong> در نصب تازه، <span class="path">install.php</span> از <span class="path">schema.sql</span> استفاده می‌کند و جدول‌های صف ۱٫۱۹ را هم می‌سازد؛ پس Migrationهای قدیمی را دستی اجرا نکنید. فایل ۱٫۱۹ برای ارتقای دیتابیس موجود است. اگر سامانهٔ قبلی دارید، از دیتابیس پشتیبان بگیرید و مسیر ارتقا را طبق نسخهٔ فعلی دنبال کنید؛ نصب تازه را روی دیتابیس حاوی اطلاعات اجرا نکنید.</div>
+
+  <h2>فایل‌های داخل بسته</h2>
+  <p>در ZIP کامل، همهٔ فایل‌های سامانه در ریشه قرار دارند. فایل‌های اصلی Worker در <span class="path">cron\food_ticket_worker.php</span> و <span class="path">tools\install_food_ticket_worker_windows.bat</span> هستند. ZIP کمکی <span class="path">food-ticket-worker-install-files.zip</span> و راهنمای جداگانهٔ Worker نیز در بسته آمده‌اند. سرویس C# قدیمی هم در پوشهٔ <span class="path">food-ticket-web</span> باقی است، اما در این نصب PHP آن را اجرا نکنید؛ دو Worker نباید هم‌زمان فعال شوند.</p>
+
+  <h2>منابع رسمی</h2>
+  <ol class="sources">
+    <li><a href="https://www.apachefriends.org/download.html" target="_blank" rel="noreferrer">Apache Friends XAMPP</a> — صفحهٔ رسمی بستهٔ Apache، PHP و MariaDB.</li>
+    <li><a href="https://www.php.net/downloads.php?os=windows&amp;osvariant=windows-downloads&amp;version=8.4" target="_blank" rel="noreferrer">PHP Windows</a> و <a href="https://www.php.net/manual/en/ref.pdo-mysql.php" target="_blank" rel="noreferrer">PDO_MYSQL</a> / <a href="https://www.php.net/manual/en/function.exec.php" target="_blank" rel="noreferrer">exec</a>.</li>
+    <li><a href="https://support.microsoft.com/en-us/access/download-and-install-microsoft-365-access-runtime" target="_blank" rel="noreferrer">Microsoft 365 Access Runtime</a> — شامل Access Database Engine و پشتیبانی OLEDB/ODBC.</li>
+    <li><a href="https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1" target="_blank" rel="noreferrer">Windows PowerShell 5.1</a> در Microsoft Learn.</li>
+    <li> و .</li>
+  </ol>
+  <footer>این بسته کد و راهنما را فراهم می‌کند؛ دیتابیس واقعی، فایل‌های Access سازمان، اطلاعات Active Directory، رمزها و سخت‌افزار چاپگر باید در محل شما تنظیم شوند.</footer>
+</main>
+</body>
+</html>

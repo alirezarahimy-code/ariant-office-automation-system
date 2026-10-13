@@ -1,0 +1,5 @@
+# نیازمندی‌های تولید PDF سند (tools/build_spec_pdf.py)
+reportlab>=4.0
+arabic-reshaper>=3.0
+python-bidi>=0.4.2
+pypdf>=4.0

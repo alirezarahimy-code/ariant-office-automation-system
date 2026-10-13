@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}تیکت‌های من — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">زیرسامانه‌های متصل</span>
+    <h1>تیکت‌های من</h1>
+    <span class="hint">نمای فقط‌خواندنی از سامانه تیکتینگ — همگام‌سازی با <code>manage.py sync_tickets</code></span>
+  </div>
+  <div class="actions">
+    <a class="btn secondary" href="{% url 'bridge:jump' %}">ورود یکپارچه به سامانه تیکتینگ</a>
+  </div>
+</div>
+
+<div class="card table-wrap" style="padding:0">
+  <table class="table">
+    <thead><tr><th>تیکت</th><th>شناسه</th><th>حوزه</th><th>وضعیت</th><th>اولویت</th><th>تاریخ</th></tr></thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr>
+        <td class="subject"><span>{{ t.subject }}</span></td>
+        <td>{{ t.external_id }}</td>
+        <td>{% if t.service_group == 'support' %}پشتیبانی{% else %}IT{% endif %}</td>
+        <td><span class="pill {{ t.status|status_pill }}">{{ t.status_fa }}</span></td>
+        <td>{% if t.priority == 'critical' %}<span class="pill bad">بحرانی</span>{% elif t.priority == 'urgent' %}<span class="pill warn">فوری</span>{% else %}<span class="pill gray">عادی</span>{% endif %}</td>
+        <td class="tiny">{{ t.created_label }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6"><div class="empty"><span class="big">🎫</span>تیکتی یافت نشد.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

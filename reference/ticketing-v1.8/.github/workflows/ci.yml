@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: pdo_mysql, ldap, mbstring, xml
+        coverage: none
+
+    - name: Check PHP syntax
+      run: git ls-files -z -- '*.php' | xargs -0 -n1 php -l
+
+    - name: Run security tests
+      run: php tests/SecurityTest.php
+
+    - name: Run architecture tests
+      run: php tests/ArchitectureTest.php
+
+    - name: Run standalone worker logic tests
+      run: php tests/test_food_ticket_logic.php

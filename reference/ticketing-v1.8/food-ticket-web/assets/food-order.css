@@ -1,0 +1,147 @@
+/* سفارش غذا — از همان رنگ‌ها، کارت‌ها و فرم‌های assets/style.css سامانه استفاده می‌کند. */
+.food-order-page { color: var(--ink); }
+.food-order-loading { padding:22px; text-align:center; color:var(--muted); }
+.fo-calendar-card { padding:clamp(14px,2.5vw,26px); margin-bottom:22px; }
+.fo-calendar-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+.fo-calendar-toolbar h2 { margin:0; color:var(--navy); font-size:clamp(18px,2.5vw,24px); }
+.fo-calendar-toolbar .fo-month-label { font-weight:800; }
+.fo-calendar-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.fo-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; direction:rtl; }
+.fo-weekday { padding:8px 4px; text-align:center; color:var(--muted); font-weight:700; font-size:12px; }
+.fo-day { position:relative; min-height:116px; border:1px solid #cfe4f2; border-radius:13px; background:rgba(224,242,254,.62); color:var(--ink); padding:9px; text-align:right; display:flex; flex-direction:column; gap:5px; transition:transform .15s,box-shadow .15s,border-color .15s; }
+.fo-day:hover,.fo-day:focus-visible { border-color:var(--teal); transform:translateY(-1px); box-shadow:0 8px 20px rgba(23,79,67,.12); z-index:2; outline:none; }
+.fo-day.is-adjacent { opacity:.48; background:#f3f1e9; }
+.fo-day.is-weekend,.fo-day.is-holiday { background:rgba(254,226,226,.82); border-color:#f2bdbd; }
+.fo-day.is-weekend .fo-day-number,.fo-day.is-holiday .fo-day-number { color:#a3312b; }
+.fo-day.is-today { box-shadow:inset 0 0 0 2px var(--gold); }
+.fo-day.has-order { border:2px solid #d2a315; background:rgba(255,244,194,.9); }
+.fo-day.has-order.is-weekend,.fo-day.has-order.is-holiday { border-color:#c99600; background:rgba(254,226,226,.86); box-shadow:inset 0 0 0 2px rgba(255,224,94,.78); }
+.fo-day.has-order.is-today { box-shadow:inset 0 0 0 2px #d2a315,inset 0 0 0 4px rgba(14,165,233,.4); }
+.fo-day.is-closed { background-image:linear-gradient(135deg,transparent 49%,rgba(148,61,45,.09) 50%,transparent 52%); }
+.fo-day-number-row { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.fo-day-number { font-size:17px; font-weight:800; line-height:1.1; }
+.fo-day-status { display:inline-flex; align-items:center; gap:4px; width:max-content; max-width:100%; padding:2px 7px; border-radius:999px; background:#f2f4f7; color:#475467; font-size:10px; line-height:1.7; }
+.fo-day-status.is-open { background:#ecfdf3; color:#027a48; }
+.fo-day-status.is-closed { background:#fef3f2; color:#b42318; }
+.fo-day-status.is-holiday { background:#fee4e2; color:#912018; }
+.fo-day-order-marker { display:inline-flex; align-items:center; gap:4px; width:max-content; max-width:100%; padding:2px 7px; border:1px solid #e4c44e; border-radius:999px; background:#fff0b3; color:#795b00; font-size:10px; line-height:1.6; font-weight:800; }
+.fo-day-meals { display:flex; flex-direction:column; gap:3px; margin-top:2px; }
+.fo-day-meal { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--navy); }
+.fo-day-my-order { color:#087443; font-weight:700; font-size:10px; }
+.fo-day-count { color:#667085; font-size:10px; }
+.fo-day[data-tooltip]::after { content:attr(data-tooltip); position:absolute; right:8px; top:calc(100% - 3px); z-index:15; width:max-content; max-width:min(280px,80vw); padding:8px 10px; border-radius:9px; background:#203a33; color:#fff; box-shadow:0 8px 22px rgba(12,30,25,.18); font-size:11px; line-height:1.8; white-space:normal; opacity:0; pointer-events:none; transform:translateY(-3px); transition:opacity .12s,transform .12s; }
+.fo-day:hover::after,.fo-day:focus-visible::after { opacity:1; transform:translateY(0); }
+.fo-legend { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:16px; color:var(--muted); font-size:11px; }
+.fo-legend span { display:inline-flex; align-items:center; gap:6px; }
+.fo-legend i { width:11px; height:11px; display:inline-block; border-radius:4px; background:#f2f4f7; border:1px solid var(--line); }
+.fo-legend .legend-open { background:#ecfdf3; border-color:#abefc6; }
+.fo-legend .legend-closed,.fo-legend .legend-holiday { background:#fff0ef; border-color:#f2c9c5; }
+.fo-legend .legend-order { background:#fff0b3; border-color:#d2a315; }
+.fo-legend .legend-today { background:#fff8e7; border-color:var(--gold); }
+.fo-section-title { display:flex; align-items:end; justify-content:space-between; gap:14px; margin:24px 0 12px; }
+.fo-section-title h2 { margin:0; color:var(--navy); font-size:19px; }
+.fo-section-title p { margin:2px 0 0; color:var(--muted); font-size:12px; }
+.fo-my-orders { margin-top:20px; overflow:hidden; }
+.fo-my-orders .table-wrap { overflow-x:auto; overflow-y:hidden; }
+.fo-my-orders .ticket-table { width:100%; min-width:900px; table-layout:fixed; }
+.fo-my-orders .table-head,.fo-my-orders .table-row { grid-template-columns:42px minmax(140px,1.35fr) minmax(110px,1fr) minmax(105px,1fr) minmax(105px,1fr) minmax(82px,.85fr) minmax(72px,.7fr) minmax(100px,.9fr); gap:8px; padding:10px 12px; white-space:nowrap; }
+.fo-my-orders .table-row { min-height:54px; }
+.fo-my-orders .table-head > th,.fo-my-orders .table-row > td { min-width:0; padding:0; border:0; white-space:nowrap; }
+.fo-proxy-orders .ticket-table { min-width:900px; }
+.fo-proxy-orders .table-head,.fo-proxy-orders .table-row { grid-template-columns:42px minmax(140px,1.35fr) minmax(110px,1fr) minmax(105px,1fr) minmax(105px,1fr) minmax(82px,.85fr) minmax(72px,.7fr) minmax(100px,.9fr); gap:8px; padding:10px 12px; white-space:nowrap; }
+.fo-order-state { display:inline-block; padding:3px 8px; border-radius:999px; background:#ecfdf3; color:#027a48; font-size:11px; font-weight:700; }
+.fo-order-state.cancelled { background:#fef3f2; color:#b42318; }
+.fo-proxy-cancel-confirm { display:inline-flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.fo-proxy-cancel-confirm .button { padding:6px 8px; font-size:12px; white-space:nowrap; }
+.fo-modal { border:0; width:min(620px,calc(100vw - 24px)); max-height:min(88vh,820px); overflow:auto; padding:0; border-radius:18px; color:var(--ink); background:var(--white); box-shadow:0 24px 70px rgba(16,42,67,.3); }
+.fo-modal::backdrop { background:rgba(20,42,35,.48); backdrop-filter:blur(2px); }
+.fo-modal-inner { padding:clamp(17px,4vw,26px); }
+.fo-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.fo-modal-head h2 { margin:0; color:var(--navy); font-size:20px; }
+.fo-modal-head p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+.fo-modal-close { flex:0 0 auto; border:1px solid var(--line); background:#fff; color:var(--navy); width:38px; height:38px; border-radius:11px; font-size:21px; }
+.fo-target-choice { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.fo-target-choice button.active { background:var(--navy); color:#fff; }
+.fo-meal-options { display:grid; gap:8px; margin:12px 0; }
+.fo-meal-option { display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--line); border-radius:11px; background:#fff; color:var(--ink); cursor:pointer; }
+.fo-meal-option:has(input:checked) { border-color:var(--teal); background:var(--teal-light); box-shadow:0 0 0 2px rgba(43,149,104,.08); }
+.fo-meal-option input { accent-color:var(--teal); }
+.fo-modal .fo-form-field { display:grid; gap:5px; margin:10px 0; color:var(--muted); font-size:12px; font-weight:600; }
+.fo-modal .fo-form-field input,.fo-modal .fo-form-field select { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; color:var(--ink); }
+.fo-modal-notice { border-radius:10px; padding:10px 12px; margin:10px 0; background:#eff8ff; color:#175cd3; font-size:12px; line-height:1.8; }
+.fo-modal-notice.warn { background:#fff8e7; color:#8a5a00; }
+.fo-modal-notice.error { background:#fef3f2; color:#b42318; }
+.fo-modal-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+.fo-search-results { display:grid; gap:5px; max-height:190px; overflow:auto; margin-top:6px; }
+.fo-search-result { border:1px solid var(--line); background:#fff; color:var(--ink); text-align:right; border-radius:9px; padding:9px 11px; }
+.fo-search-result:hover,.fo-search-result:focus-visible { border-color:var(--teal); background:var(--teal-light); outline:none; }
+.fo-empty { text-align:center; color:var(--muted); padding:25px 14px; }
+.fo-status-msg { min-height:20px; color:var(--danger); font-size:12px; }
+@media(max-width:760px) {
+  .fo-calendar-grid { gap:4px; }
+  .fo-day { min-height:88px; padding:6px 5px; border-radius:9px; }
+  .fo-weekday { font-size:10px; padding:4px 0; }
+  .fo-day-number { font-size:14px; }
+  .fo-day-status { font-size:9px; padding:1px 5px; }
+  .fo-day-meal { font-size:9px; }
+  .fo-day-count,.fo-day-my-order { font-size:9px; }
+  .fo-section-title { align-items:flex-start; flex-direction:column; }
+  .fo-modal { width:min(100vw - 12px, 620px); max-height:92vh; border-radius:14px; }
+}
+@media(max-width:430px) {
+  .fo-day { min-height:72px; }
+  .fo-day-status { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fo-day-meals { display:none; }
+  .fo-day[data-has-food="1"]::before { content:"🍽"; font-size:11px; }
+}
+
+/* تأیید عملیات در DOM پایدار می‌ماند تا بازخوانی تقویم پیام موفقیت را حذف نکند. */
+.fo-page-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; }
+.fo-page-notice > span { flex:1; }
+.fo-page-notice-close { flex:0 0 auto; border:0; padding:2px 6px; background:transparent; color:inherit; font-size:20px; line-height:1; cursor:pointer; }
+
+/* انتخاب شخص پیش از فعال‌شدن تقویم؛ منوی اصلی سامانه بیرون از این لایه می‌ماند. */
+.food-order-page.is-flow-locked { position:relative; }
+.food-order-page.is-flow-locked::after { content:""; position:absolute; inset:0; z-index:20; background:transparent; pointer-events:auto; }
+.food-order-page.is-flow-dismissed::after { content:"برای ادامه، هر جای این صفحه را لمس کنید تا انتخاب شخص سفارش باز شود."; display:grid; place-items:center; padding:28px; background:rgba(248,250,252,.88); color:var(--navy); font-weight:800; line-height:2; text-align:center; cursor:pointer; backdrop-filter:blur(2px); }
+.fo-loading-panel { display:grid; gap:6px; min-height:130px; place-content:center; text-align:center; color:var(--muted); }
+.fo-loading-panel strong { color:var(--navy); }
+.fo-loading-panel span { font-size:12px; }
+.fo-recipient-banner { display:flex; align-items:center; gap:12px; margin:0 0 20px; padding:14px 16px; border:1px solid #b7e5d0; border-radius:14px; background:linear-gradient(110deg,#f0fbf5,#f7fbff); box-shadow:0 6px 18px rgba(23,79,67,.06); }
+.fo-recipient-avatar { display:grid; flex:0 0 42px; width:42px; height:42px; place-items:center; border-radius:13px; background:#d9f3e5; font-size:20px; }
+.fo-recipient-details { display:grid; flex:1; gap:2px; min-width:0; }
+.fo-recipient-details span,.fo-recipient-details small { color:var(--muted); font-size:11px; }
+.fo-recipient-details strong { color:var(--navy); font-size:15px; overflow-wrap:anywhere; }
+.fo-recipient-change { flex:0 0 auto; }
+.fo-recipient-dialog { width:min(540px,calc(100vw - 24px)); }
+.fo-person-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.fo-person-choice { display:grid; justify-items:start; gap:6px; min-height:128px; padding:16px; border:1px solid var(--line); border-radius:14px; background:#fff; color:var(--ink); text-align:right; cursor:pointer; transition:border-color .15s,background .15s,transform .15s; }
+.fo-person-choice:hover,.fo-person-choice:focus-visible { border-color:var(--teal); background:#f4fbf7; transform:translateY(-1px); outline:0; box-shadow:0 0 0 3px rgba(43,149,104,.1); }
+.fo-person-choice strong { color:var(--navy); font-size:15px; }
+.fo-person-choice small { color:var(--muted); line-height:1.8; }
+.fo-person-choice:disabled { cursor:not-allowed; opacity:.56; transform:none; box-shadow:none; }
+.fo-choice-icon { display:grid; width:36px; height:36px; place-items:center; border-radius:11px; background:#e9f5ef; font-size:18px; }
+.fo-person-picker { display:grid; gap:6px; margin:4px 0 12px; }
+.fo-person-select-trigger { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:44px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); font:inherit; text-align:right; cursor:pointer; }
+.fo-person-select-trigger:hover,.fo-person-select-trigger:focus-visible { border-color:var(--teal); outline:0; box-shadow:0 0 0 3px rgba(43,149,104,.11); }
+.fo-person-select-trigger:disabled { opacity:.65; cursor:wait; }
+.fo-select-caret { color:var(--muted); font-weight:900; }
+.fo-person-picker .fo-combobox { position:relative; margin:0; }
+.fo-combobox { position:relative; margin:4px 0 12px; }
+.fo-combobox > input { width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 12px; background:#fff; color:var(--ink); font:inherit; }
+.fo-combobox > input:focus { border-color:var(--teal); outline:0; box-shadow:0 0 0 3px rgba(43,149,104,.11); }
+.fo-combobox .fo-search-results { position:static; z-index:auto; display:grid; max-height:min(260px,40vh); overflow:auto; overscroll-behavior:contain; margin:6px 0 0; padding:6px; border:1px solid var(--line); border-radius:11px; background:#fff; box-shadow:0 14px 30px rgba(16,42,67,.16); }
+.fo-search-results[hidden] { display:none !important; }
+.fo-search-result { width:100%; text-align:right; cursor:pointer; }
+.fo-search-result.is-highlighted,.fo-search-result[aria-selected="true"] { border-color:var(--teal); background:var(--teal-light); }
+.fo-combo-message { padding:11px 9px; color:var(--muted); font-size:12px; line-height:1.8; }
+.fo-proxy-code { margin-top:10px; }
+.fo-day.is-adjacent,.fo-day:disabled { cursor:not-allowed; opacity:.38; filter:saturate(.65); }
+.fo-day.is-adjacent:hover,.fo-day.is-adjacent:focus-visible,.fo-day:disabled:hover { transform:none; box-shadow:none; border-color:var(--line); z-index:auto; outline:none; }
+.fo-day.is-adjacent::after,.fo-day:disabled::after { display:none; }
+@media(max-width:520px) {
+  .fo-person-choices { grid-template-columns:1fr; }
+  .fo-person-choice { min-height:92px; }
+  .fo-recipient-banner { align-items:flex-start; flex-wrap:wrap; }
+  .fo-recipient-change { margin-right:auto; }
+}

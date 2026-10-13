@@ -1,0 +1,17 @@
+@model DepartmentFormRequest
+@{
+    ViewData["Title"] = "ویرایش واحد سازمانی";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">ویرایش واحد سازمانی</h1>
+        <p class="page-head__subtitle">تغییرات پس از ذخیره در گزارش ممیزی ثبت می‌شود</p>
+    </div>
+</div>
+
+<div class="card">
+    <form asp-action="Edit" method="post" class="form">
+        <partial name="_DepartmentForm" model="Model" view-data="ViewData" />
+    </form>
+</div>

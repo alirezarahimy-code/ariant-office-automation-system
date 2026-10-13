@@ -1,0 +1,20 @@
+تغییرات: سفارش غذا فقط از دیتابیس داخلی (food_orders)
+=====================================================
+
+- وابستگی به فایل Access سفارش (food_fish / orders_path / orders_table) از کل سامانه حذف شد.
+- تنها منبع خارجی باقی‌مانده: فایل Access تردد TENTER (SOURCE_TABLE) که Worker هر دقیقه می‌خواند.
+- سرویس .NET (food-ticket-web/Program.cs، FoodTicketServer.csproj، config.example.json،
+  install_prerequisites.bat، start_food_ticket.bat، README-prerequisites-fa.md) حذف شد؛
+  موتور پایش فقط PHP Worker است. پنل index.html همچنان توسط food-ticket-web-host.php سرو می‌شود.
+- در food-ticket.php: حذف food_ticket_orders() (خواننده Access سفارش، بدون فراخواننده)،
+  حذف ستون‌های orders_path/orders_table از INSERT تنظیمات و از خروجی API، حذف کلیدهای ordersPath/ordersTable.
+- schema.sql و install-empty-db.sql: ستون‌های orders_path/orders_table حذف شدند.
+  نصب‌های قبلی همچنان این ستون‌ها را دارند ولی کد به آن‌ها دست نمی‌زند (مقدار پیش‌فرض خالی).
+- تست‌ها به‌روز شدند: test_food_orders_static.py، test_food_ticket_config_paths.php، smoke.php
+  (چک‌های وابسته به Program.cs حذف شدند).
+
+جریان نهایی:
+  TENTER (Access) → Worker → تطبیق کد ملی با food_orders (MySQL) → صف چاپ → پرینتر
+
+یادداشت آزمون: این تغییر در محیط بدون PHP CLI و .NET بررسی شد. تست‌های پایتون اجرا شدند؛
+php -l و smoke.php باید روی سرور اجرا شوند.

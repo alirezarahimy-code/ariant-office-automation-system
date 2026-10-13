@@ -1,0 +1,45 @@
+{% extends 'base_plain.html' %}
+{% load persian_tags %}
+{% block title %}چاپ {{ letter.number_display }}{% endblock %}
+{% block plain %}
+<div style="max-width:820px;margin:20px auto;padding:0 16px">
+  <div class="row-gap no-print" style="margin-bottom:12px">
+    <button class="btn" type="button" onclick="window.print()">چاپ</button>
+    <a class="btn secondary" href="{% url 'secretariat:letter_detail' letter.pk %}">بازگشت به کارت نامه</a>
+  </div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="basmala">بسمه تعالی</div>
+      <div class="org">{{ ORG_NAME }}</div>
+      <div class="motto">{{ ORG_MOTTO }}</div>
+    </div>
+    <div class="sheet-meta">
+      <span class="m-item">شماره<b>{{ letter.number_display }}</b></span>
+      <span class="m-item">تاریخ<b>{% if letter.letter_date %}{{ letter.letter_date|jdate }}{% else %}{{ letter.created_at|jdate }}{% endif %}</b></span>
+      <span class="m-item">پیوست<b>{{ attachments|length|fa }}</b></span>
+      <span class="m-item">درجه<b>{{ letter.get_priority_display }}</b></span>
+    </div>
+    <div class="subject-line">موضوع: {{ letter.subject }}</div>
+    <div class="body-text">{% if letter.body %}{{ letter.body }}{% elif letter.summary %}{{ letter.summary }}{% endif %}</div>
+    {% if letter.letter_type == 'outgoing' %}
+    <div style="display:flex;justify-content:space-between;margin-top:40px">
+      <div>
+        {% for a in approvals %}{% endfor %}
+        {% for a in letter.approvals.all %}
+          {% if a.decision == 'approved' %}
+          <div style="margin-bottom:18px">
+            {% if a.signature_image %}<img src="{{ a.signature_image.url }}" alt="امضا" style="height:44px">{% endif %}
+            <div class="tiny"><b>{{ a.approver_label|default:'امضا' }}</b><br>{{ a.approver.get_full_name|default:a.approver.username }}</div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="tiny muted">{{ ORG_NAME }} — سامانه اتوماسیون اداری</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+  window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 350); });
+</script>
+{% endblock %}

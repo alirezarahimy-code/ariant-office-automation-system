@@ -1,0 +1,32 @@
+گزارش ادغام «بستهٔ گروه غایبین / نمایندهٔ L_UID» روی سورس نهایی (ticket-food-templates)
+=================================================================================
+قانون ادغام: فقط تغییرات گروه‌ها/غیبت/تحویل اعمال شد؛ بخش طراحی فیش و باقی سورس دست‌نخورده ماند.
+
+فایل‌های Designer / چاپ — بدون هیچ تغییری (SHA-256 با سورس شما یکسان):
+  food-ticket-templates.php · food-ticket-netprint.php · food-ticket-web/assets/food-designer.js
+  food-ticket-web/template-bridge.js · tools/test_food_templates.php · upgrade-1.31-food-ticket-templates.sql
+  tools/print_test.php · tools/diag_netprint.php
+  (نسخهٔ food-ticket-templates.php و بخش‌های قالب runtime داخل بستهٔ گروه‌ها عمداً استفاده نشد؛ نسخهٔ قدیمی‌تر و متفاوت از سورس شما بود.)
+
+۱۰ فایل ویرایش‌شده (فقط بخش‌های گروه/غیبت/تحویل/پایش):
+  food-ticket-groups.php        کامل = نسخهٔ بسته (سورس شما نسخهٔ پایه بود؛ ۲۱ hunk)
+  food-ticket-web/assets/food-groups.js  کامل = نسخهٔ بسته (فرم غیبت، ستون L_UID، قفل)
+  food-ticket-engine.php · bootstrap.php · permissions.php · schema.sql · rebuild-final.sql
+  food-ticket-runtime.php       فقط: گارد «فیش تحویل‌شده دوباره چاپ نشود»، activity_log چاپ، توابع تحویل (delivery)،
+                                 status_counts — هیچ تابع قالب/رندر لمس نشد
+  food-ticket.php               فقط: require وب‌هاست، مسیرهای absence-*/delivery، held_absent، پایش امروز،
+                                 لیست غایبین (غایب اعلام‌شده)، و سرو index.html از طریق food-ticket-web-host.php
+  food-ticket-web/index.html    فقط ۵ نقطهٔ MERGE-FA (mapMonitoring، loadMonitoring، ستون تحویل/گروهی، دکمهٔ تحویل،
+                                 سرتیتر پایش). Designer (FoodDesignerUI) و اسکریپت food-designer.js دست‌نخورده.
+  schema.sql                    جدول food_ticket_templates شما حفظ شد؛ فقط مقادیر/جدول‌های گروه افزوده شد.
+
+۸ فایل جدید: food-ticket-web-host.php · upgrade-1.32-food-group-representative-absence.sql ·
+  00_CHANGELOG_GROUP_REPRESENTATIVE_L_UID_FA.txt · 00_INSTALL_1.32_GROUP_L_UID_FA.txt ·
+  tools/test_group_flow_offline.php · test_food_group_logic_offline.php · test_food_group_representative.php · test_web_host_offline.php
+
+نکتهٔ مهم سرو index.html: بستهٔ گروه‌ها زنجیرهٔ str_replace مسیر دارایی‌ها را در render_page با food-ticket-web-host.php عوض می‌کند
+  که نام فایل‌ها را از پوشهٔ assets می‌خواند؛ بنابراین food-designer.js هم خودکار به food-ticket-web/assets/ می‌رود
+  (همان رفتار قبلی). اگر بعد از نصب Designer لود نشد، Ctrl+F5 و بررسی error_log را ببینید.
+
+نصب: پوشهٔ ticket را روی سرور جایگزین کنید (config.php و .htaccess خودتان را نگه دارید) → اجرای
+  upgrade-1.32-food-group-representative-absence.sql (برای مقدار print_status=held_absent) → Worker را ری‌استارت کنید → Ctrl+F5.

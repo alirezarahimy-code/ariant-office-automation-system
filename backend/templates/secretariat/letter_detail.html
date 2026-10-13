@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}{{ letter.number_display }} — {{ letter.subject }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">{{ letter.get_letter_type_display }} — {{ letter.office.name }}</span>
+    <h1>{{ letter.subject }}</h1>
+    <span class="hint">
+      شماره {{ letter.number_display }}
+      <span class="pill {{ letter.status|status_pill }}">{{ letter.get_status_display }}</span>
+      <span class="pill {{ letter.priority|priority_pill }}">{{ letter.get_priority_display }}</span>
+      {% if letter.confidentiality != 'normal' %}<span class="pill {{ letter.confidentiality|conf_pill }}">{{ letter.get_confidentiality_display }}</span>{% endif %}
+    </span>
+  </div>
+  <div class="actions no-print">
+    <button class="btn secondary" type="button" onclick="window.print()">چاپ</button>
+    <a class="btn secondary" href="{% url 'secretariat:letter_list' %}">بازگشت به دفتر</a>
+    {% if can_close %}
+    <form method="post" action="{% url 'secretariat:letter_close' letter.pk %}"
+          onsubmit="return confirm('نامه بایگانی شود؟ پس از آن ارجاع و پاسخ ممکن نیست.')">
+      {% csrf_token %}<button class="btn danger" type="submit">بایگانی</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="letter-grid">
+  <div>
+    <!-- برگه نامه -->
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="basmala">بسمه تعالی</div>
+        <div class="org">{{ ORG_NAME }}</div>
+        <div class="motto">{{ ORG_MOTTO }}</div>
+      </div>
+      <div class="sheet-meta">
+        <span class="m-item">شماره<b>{{ letter.number_display }}</b></span>
+        <span class="m-item">تاریخ<b>{% if letter.letter_date %}{{ letter.letter_date|jdate }}{% else %}—{% endif %}</b></span>
+        <span class="m-item">پیوست<b>{{ attachments|length|fa }}</b></span>
+        <span class="m-item">درجه<b>{{ letter.get_priority_display }}</b></span>
+      </div>
+      {% if letter.sender_org or letter.sender_name %}
+      <p class="muted" style="margin:0 0 10px">
+        از: <b>{{ letter.sender_org }}{% if letter.sender_name %} — {{ letter.sender_name }}{% endif %}</b>
+      </p>
+      {% endif %}
+      <div class="subject-line">موضوع: {{ letter.subject }}</div>
+      <div class="body-text">{% if letter.body %}{{ letter.body }}{% elif letter.summary %}{{ letter.summary }}{% else %}خلاصه/متنی ثبت نشده است.{% endif %}</div>
+
+      <div class="meta-grid">
+        <div class="m-cell">زمان وصول<b>{% if letter.received_at %}{{ letter.received_at|jalali_datetime }}{% else %}—{% endif %}</b></div>
+        <div class="m-cell">مهلت پاسخ<b>{% if letter.deadline %}<span class="pill {{ letter.deadline|deadline_kind }}">{{ letter.deadline|jdate }}</span>{% else %}—{% endif %}</b></div>
+        <div class="m-cell">ثبت‌کننده<b>{{ letter.created_by.get_full_name|default:letter.created_by.username|default:'—' }}</b></div>
+        <div class="m-cell">محرمانگی<b>{{ letter.get_confidentiality_display }}</b></div>
+      </div>
+
+      <!-- استپر گردش کار -->
+      <div class="stepper">
+        {% for step in '۱۲۳۴۵' %}
+        <div class="step {% if forloop.counter0 < step_index %}done{% elif forloop.counter0 == step_index %}current{% endif %}">
+          <div class="bar"></div>
+          <div class="dot-s">{{ forloop.counter|fa }}</div>
+          <div class="s-label">
+            {% if forloop.counter0 == 0 %}ثبت{% elif forloop.counter0 == 1 %}بررسی/ارجاع{% elif forloop.counter0 == 2 %}در جریان{% elif forloop.counter0 == 3 %}پاسخ{% else %}بایگانی{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- پیوست‌ها -->
+    <div class="card no-print">
+      <div class="card-title">پیوست‌ها <span class="pill gray">{{ attachments|length|fa }}</span></div>
+      {% if attachments %}
+      <ul class="attach-list">
+        {% for a in attachments %}
+        <li>
+          <span><span class="a-name">📎 {{ a.original_name }}</span>
+            <span class="a-size"> — {{ a.size_bytes|filesize_mb }}
+            {% if a.uploaded_by %} — {{ a.uploaded_by.get_full_name|default:a.uploaded_by.username }}{% endif %}</span></span>
+          <a class="btn sm secondary" href="{{ a.file.url }}" target="_blank">دریافت</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted tiny">پیوستی ندارد.</p>{% endif %}
+      <form method="post" action="{% url 'secretariat:letter_attach' letter.pk %}" enctype="multipart/form-data" class="row-gap mt">
+        {% csrf_token %}
+        <input type="file" name="file" required style="flex:1">
+        <button class="btn sm" type="submit">افزودن پیوست</button>
+      </form>
+    </div>
+
+    <!-- ارجاع‌ها -->
+    <div class="card">
+      <div class="card-title">گردش ارجاع <span class="pill gray">{{ referrals|length|fa }}</span></div>
+      {% if referrals %}
+      <ul class="timeline">
+        {% for r in referrals %}
+        <li>
+          <div class="t-head">
+            به: {{ r.to_user.get_full_name|default:r.to_user.username|default:'' }}{% if r.to_department %}{{ r.to_department.title }}{% endif %}
+            <span class="pill {{ r.status|status_pill }}">{{ r.get_status_display }}</span>
+          </div>
+          <div class="t-meta">
+            از: {{ r.from_user.get_full_name|default:r.from_user.username|default:'—' }} — {{ r.created_at|jalali_datetime }}
+            {% if r.deadline %} — مهلت: {{ r.deadline|jdate }}{% endif %}
+          </div>
+          {% if r.note %}<div class="t-note">{{ r.note }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted tiny">ارجاعی ثبت نشده است.</p>{% endif %}
+    </div>
+
+    <!-- رونوشت‌ها -->
+    <div class="card no-print">
+      <div class="card-title">رونوشت‌ها <span class="pill gray">{{ copies|length|fa }}</span></div>
+      {% if copies %}
+      <ul class="attach-list">
+        {% for c in copies %}
+        <li><span>{{ c.to_user.get_full_name|default:c.to_user.username|default:'' }}{% if c.to_department %}{{ c.to_department.title }}{% endif %}
+          <span class="a-size">{% if c.viewed_at %}— مشاهده: {{ c.viewed_at|jalali_datetime }}{% else %}— مشاهده نشده{% endif %}</span></span></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted tiny">رونوشتی ندارد.</p>{% endif %}
+      {% if copy_form %}
+      <form method="post" action="{% url 'secretariat:letter_add_copy' letter.pk %}" class="mt">
+        {% csrf_token %}
+        <div class="form-grid">
+          {% include 'partials/_form_fields.html' with form=copy_form %}
+        </div>
+        <div class="form-actions"><button class="btn sm secondary" type="submit">افزودن رونوشت</button></div>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- تاریخچه -->
+    <div class="card">
+      <div class="card-title">تاریخچه رویدادها</div>
+      <ul class="timeline">
+        {% for e in events %}
+        <li>
+          <div class="t-head">{{ e.get_action_display }}
+            {% if e.from_status and e.to_status and e.from_status != e.to_status %}
+            <span class="tiny muted">({{ e.from_status }} ← {{ e.to_status }})</span>{% endif %}
+          </div>
+          <div class="t-meta">{{ e.actor.get_full_name|default:e.actor.username|default:'سامانه' }} — {{ e.created_at|jalali_datetime }}</div>
+          {% if e.note %}<div class="t-note">{{ e.note }}</div>{% endif %}
+        </li>
+        {% empty %}
+        <li><div class="t-meta">رویدادی ثبت نشده.</div></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- ستون اقدام‌ها -->
+  <div class="no-print">
+    {% if letter.letter_type == 'outgoing' %}
+    <div class="card">
+      <div class="card-title">گردش تأیید صادره <span class="pill {{ letter.status|status_pill }}">{{ letter.get_status_display }}</span></div>
+
+      {% if letter.status == 'draft' %}
+        {% if can_submit %}
+        <form method="post" action="{% url 'secretariat:letter_submit' letter.pk %}">{% csrf_token %}
+          <button class="btn" type="submit">ارسال به بازبینی/امضا</button>
+        </form>
+        {% else %}<p class="tiny muted">پیش‌نویس در ویرایش است.</p>{% endif %}
+      {% elif letter.status == 'in_review' %}
+        {% if can_approve %}
+        <form method="post" action="{% url 'secretariat:letter_approve' letter.pk %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="field"><label>سمت امضا</label><input type="text" name="label" placeholder="مثلاً: مدیرکل"></div>
+          <div class="field mt"><label>یادداشت (اختیاری)</label><textarea name="note" rows="2"></textarea></div>
+          <div class="field mt"><label>تصویر امضا (اختیاری)</label><input type="file" name="signature" accept="image/png,image/jpeg"></div>
+          <div class="form-actions">
+            <button class="btn" type="submit">تأیید و امضا</button>
+          </div>
+        </form>
+        <form method="post" action="{% url 'secretariat:letter_reject' letter.pk %}" class="mt"
+              onsubmit="return confirm('نامه رد و به پیش‌نویس برگردانده شود؟')">
+          {% csrf_token %}
+          <div class="field"><label>دلیل رد</label><textarea name="note" rows="2" required></textarea></div>
+          <button class="btn danger" type="submit">رد نامه</button>
+        </form>
+        {% else %}<p class="tiny muted">در انتظار بازبینی/امضا…</p>{% endif %}
+      {% elif letter.status == 'signed' %}
+        <p class="tiny" style="color:var(--ok)">✓ امضا شده</p>
+        {% if can_send %}
+        <form method="post" action="{% url 'secretariat:letter_send' letter.pk %}">{% csrf_token %}
+          <button class="btn navy" type="submit">ثبت ارسال و صدور قطعی</button>
+        </form>
+        {% endif %}
+      {% elif letter.status == 'sent' %}
+        <p class="tiny" style="color:var(--teal-dark)">✓ ارسال و در دفتر صادره ثبت شد</p>
+      {% endif %}
+
+      <div class="form-actions">
+        <a class="btn secondary sm" href="{% url 'secretariat:letter_pdf' letter.pk %}" target="_blank">PDF سربرگ‌دار</a>
+      </div>
+
+      {% if approvals %}
+      <ul class="timeline mt">
+        {% for a in approvals %}
+        <li>
+          <div class="t-head">گام {{ a.step|fa }} — {{ a.get_decision_display }}
+            {% if a.approver %}<span class="tiny muted">({{ a.approver.get_full_name|default:a.approver.username }}{% if a.approver_label %} — {{ a.approver_label }}{% endif %})</span>{% endif %}
+          </div>
+          <div class="t-meta">{% if a.decided_at %}{{ a.decided_at|jalali_datetime }}{% endif %}</div>
+          {% if a.note %}<div class="t-note">{{ a.note }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if referral_form %}
+    <div class="card">
+      <div class="card-title">ارجاع نامه</div>
+      <form method="post" action="{% url 'secretariat:letter_refer' letter.pk %}">
+        {% csrf_token %}
+        <div class="field"><label>گیرنده (شخص)</label>{{ referral_form.to_user }}</div>
+        <div class="field mt"><label>واحد گیرنده</label>{{ referral_form.to_department }}</div>
+        <div class="field mt"><label>مهلت اقدام</label>{{ referral_form.deadline }}
+          <div class="help">شمسی: ۱۴۰۵/۰۷/۲۰</div></div>
+        <div class="field mt"><label>دستور/یادداشت</label>{{ referral_form.note }}</div>
+        {% for e in referral_form.non_field_errors %}<div class="err">{{ e }}</div>{% endfor %}
+        <div class="form-actions"><button class="btn" type="submit">ارجاع بده</button></div>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if answer_form %}
+    <div class="card">
+      <div class="card-title">ثبت پاسخ/اقدام</div>
+      <form method="post" action="{% url 'secretariat:letter_answer' letter.pk %}">
+        {% csrf_token %}
+        <div class="field">{{ answer_form.note }}</div>
+        {% for e in answer_form.note.errors %}<div class="err">{{ e }}</div>{% endfor %}
+        <div class="form-actions"><button class="btn navy" type="submit">ثبت پاسخ</button></div>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-title">اطلاعات</div>
+      <ul class="attach-list" style="display:block">
+        <li style="display:block;border:none;padding:4px 0"><span class="a-size">دبیرخانه</span><br><b>{{ letter.office.name }}</b></li>
+        <li style="display:block;border:none;padding:4px 0"><span class="a-size">نوع</span><br><b>{{ letter.get_letter_type_display }}</b></li>
+        <li style="display:block;border:none;padding:4px 0"><span class="a-size">ثبت</span><br><b>{{ letter.created_at|jalali_datetime }}</b></li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

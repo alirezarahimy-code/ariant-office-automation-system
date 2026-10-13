@@ -1,0 +1,66 @@
+سیستم گزارش فعالیت کاربران (Activity Log) — سامانه تیکتینگ پارسی
+=================================================================
+نسخه: ۱٫۰   |   تاریخ: ۱۴۰۵/۰۷/۰۷
+فایل برنامه: 00_PLAN_ACTIVITY_LOG_FA.txt
+
+خلاصه
+-----
+پیش از این سامانه دو سیستم لاگ ناقص داشت:
+  • system_logs: فقط خطاهای فنی و چند رویداد (اسکن دامنه، پینگ، استخراج شناسنامه).
+  • audit_logs: چند عملیات مهم با کد انگلیسی؛ بدون آی‌پی، نام کامپیوتر و نقش.
+
+اکنون یک جدول واحد `activity_logs` همهٔ عملیات کاربران را با این فیلدها ثبت می‌کند:
+نام کاربر، نام کامل، نقش، تاریخ/ساعت، عنوان فارسی عملیات، کد عملیات، صفحه/ماژول،
+هدف (تیکت/دارایی/CD-DVD/...)، آی‌پی، نام کامپیوتر (hostname از reverse-DNS)،
+جزئیات JSON و مسیر درخواست. جدول audit_logs حذف شد.
+
+تغییرات فنی
+-----------
+1) upgrade-1.23-activity-log.sql
+   - ساخت جدول activity_logs + ایندکس‌ها.
+   - انتقال ردیف‌های audit_logs به activity_logs و سپس DROP TABLE audit_logs.
+   - تنظیم activity_log_retention_days = 60 و activity_log_version.
+2) schema.sql: جدول audit_logs با activity_logs جایگزین شد (نصب تازه).
+3) bootstrap.php:
+   - activity_logs_ensure() — ساخت خودکار جدول برای نصب‌های قدیمی.
+   - activity_client_ip() — آی‌پی واقعی کلاینت با احتساب X-Forwarded-For.
+   - activity_computer_name() — نام کامپیوتر از reverse-DNS (با cache).
+   - activity_action_label() — نگاشت فارسی کد عملیات (~۸۰ کد).
+   - activity_log(array $data) — ثبت یکپارچه؛ اگر نام/نقش ندهیم از users می‌خواند.
+   - activity_log_view(string $page) — ثبت بازدید صفحه با debounce پنج‌دقیقه‌ای.
+   - activity_logs_prune(int $days) / activity_log_retention_days().
+   - save_audit() بازنویسی شد و روی activity_logs می‌نویسد (پرچم activity_audited).
+   - login_user() خودش ورود را لاگ می‌کند؛ record_login_failure() تلاش ناموفق/قفل را.
+4) index.php:
+   - صفحهٔ جدید page=activity-log با فیلتر کاربر/عملیات/ماژول/تاریخ جلالی/آی‌پی/متن.
+   - خروجی Excel: action=export_activity_logs (مجوز logs.activity_export).
+   - activity_log_filters() فیلترهای مشترک صفحه و خروجی.
+   - هوک خودکار POST: هر اکشن موفق که save_audit صدا نزده باشد، خودکار لاگ می‌شود
+     (روی register_shutdown_function؛ AJAX و api و login/logout مستثنا).
+   - هوک بازدید صفحه در ابتدای روتینگ.
+   - خروج (logout) ثبت می‌شود.
+   - صفحهٔ page=audit روی activity_logs خوانده می‌شود (سازگاری).
+   - اکشن prune_activity_logs (فقط primary_admin) + کارت تنظیمات «گزارش فعالیت کاربران».
+   - لینک «فعالیت کاربران» در منوی مدیریتی.
+5) permissions.php: مجوزهای logs.activity و logs.activity_export + پیش‌فرض نقش‌ها
+   (supervisor و support_manager: مشاهده؛ support_manager: خروجی). نسخهٔ seed به rbac3.
+6) cron/prune_activity_logs.php: پاک‌سازی خودکار رکوردهای قدیمی‌تر از ۶۰ روز.
+7) rebuild-final.sql: audit_logs با activity_logs جایگزین شد.
+
+روش بهینه (چرا این‌گونه)
+------------------------
+• همهٔ POSTها: یک هوک واحد در دیسپچر؛ نیازی به دست‌زدن به ده‌ها نقطهٔ کد نیست.
+• بازدید صفحه: با debounce ۵ دقیقه تا رفرش و بارگذاری تکراری لاگ را پر نکند.
+• AJAX/API/کران/خروجی فایل/login/logout مستثنا یا جداگانه ثبت می‌شوند.
+• هنگام POST موفق، اگر save_audit لاگ غنی‌تری نوشته باشد، هوک تکراری ثبت نمی‌کند.
+
+راه‌اندازی
+----------
+1) اجرای upgrade-1.23-activity-log.sql (یا نصب تازه با schema.sql).
+2) افزودن cron/prune_activity_logs.php به کران روزانه (اختیاری؛ دکمهٔ دستی هم در تنظیمات هست).
+3) دسترسی logs.activity را در صفحهٔ «نقش‌ها و دسترسی‌ها» به نقش‌های موردنظر بدهید.
+
+نکتهٔ تست
+---------
+این محیط PHP/MySQL ندارد؛ تست اجرای واقعی انجام نشده و کنترل‌ها ایستا هستند
+(node --check برای JS و بررسی تعادل براکت‌های PHP).

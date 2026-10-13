@@ -1,0 +1,32 @@
+{% extends 'base_plain.html' %}
+{% block title %}ورود — {{ ORG_NAME }}{% endblock %}
+{% block plain %}
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-head">
+      <span class="mark">آ</span>
+      <h1>{{ ORG_NAME }}</h1>
+      <p>{{ ORG_MOTTO }}</p>
+    </div>
+    <div class="login-body">
+      {% if form.errors %}
+      <div class="errors-summary">نام کاربری یا رمز عبور نادرست است.</div>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="field mb">
+          <label for="id_username">نام کاربری <span class="req">*</span></label>
+          <input type="text" name="username" id="id_username" required autofocus autocomplete="username">
+        </div>
+        <div class="field mb">
+          <label for="id_password">رمز عبور <span class="req">*</span></label>
+          <input type="password" name="password" id="id_password" required autocomplete="current-password">
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn" type="submit" style="width:100%">ورود به سامانه</button>
+      </form>
+      <p class="tiny muted mt" style="text-align:center">{{ JALALI_WEEKDAY }} {{ JALALI_TODAY }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

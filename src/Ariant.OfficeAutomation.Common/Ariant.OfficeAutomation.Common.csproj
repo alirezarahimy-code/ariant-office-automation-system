@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    لایه مشترک (Common)
+    ابزارهای پایه و بدون وابستگی: تقویم شمسی، پردازش متن فارسی.
+    هیچ وابستگی بیرونی ندارد تا در همه لایه‌ها قابل استفاده باشد.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Ariant.OfficeAutomation.Common</RootNamespace>
+  </PropertyGroup>
+
+</Project>

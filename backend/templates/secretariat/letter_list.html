@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}دفتر نامه‌ها — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">دبیرخانه</span>
+    <h1>دفتر نامه‌ها</h1>
+    <span class="hint">
+      {% if cur.type == 'incoming' %}دفتر وارده{% elif cur.type == 'outgoing' %}دفتر صادره{% elif cur.type == 'internal' %}نامه‌های داخلی{% else %}همه مکاتبات مرئی برای شما{% endif %}
+      — {{ counts.all|fa }} مورد
+    </span>
+  </div>
+  <div class="actions">
+    <a class="btn secondary" href="?{{ query_base }}{% if query_base %}&amp;{% endif %}export=xlsx">خروجی اکسل</a>
+    <a class="btn" href="{% url 'secretariat:register' %}">ثبت نامه جدید</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab {% if not cur.type %}active{% endif %}" href="{% url 'secretariat:letter_list' %}{% if cur.q %}?q={{ cur.q }}{% endif %}">همه <span class="count">({{ counts.all|fa }})</span></a>
+  <a class="tab {% if cur.type == 'incoming' %}active{% endif %}" href="?type=incoming{% if cur.q %}&amp;q={{ cur.q }}{% endif %}">وارده <span class="count">({{ counts.incoming|fa }})</span></a>
+  <a class="tab {% if cur.type == 'outgoing' %}active{% endif %}" href="?type=outgoing{% if cur.q %}&amp;q={{ cur.q }}{% endif %}">صادره <span class="count">({{ counts.outgoing|fa }})</span></a>
+  <a class="tab {% if cur.type == 'internal' %}active{% endif %}" href="?type=internal{% if cur.q %}&amp;q={{ cur.q }}{% endif %}">داخلی <span class="count">({{ counts.internal|fa }})</span></a>
+</div>
+
+<form class="filters" method="get">
+  {% if cur.type %}<input type="hidden" name="type" value="{{ cur.type }}">{% endif %}
+  <div class="field">
+    <label>جست‌وجو</label>
+    <input type="text" name="q" value="{{ cur.q }}" placeholder="موضوع، فرستنده، سازمان…">
+  </div>
+  <div class="field">
+    <label>وضعیت</label>
+    <select name="status">
+      <option value="">همه</option>
+      {% for value, label in status_choices %}
+      <option value="{{ value }}" {% if cur.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>فوریت</label>
+    <select name="priority">
+      <option value="">همه</option>
+      {% for value, label in priority_choices %}
+      <option value="{{ value }}" {% if cur.priority == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>محرمانگی</label>
+    <select name="conf">
+      <option value="">همه</option>
+      {% for value, label in conf_choices %}
+      <option value="{{ value }}" {% if cur.conf == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>از تاریخ (شمسی)</label>
+    <input type="text" name="date_from" value="{{ cur.date_from }}" placeholder="۱۴۰۵/۰۷/۰۱" dir="ltr" inputmode="numeric">
+  </div>
+  <div class="field">
+    <label>تا تاریخ (شمسی)</label>
+    <input type="text" name="date_to" value="{{ cur.date_to }}" placeholder="۱۴۰۵/۰۷/۳۰" dir="ltr" inputmode="numeric">
+  </div>
+  <div class="row-gap">
+    <button class="btn sm" type="submit">اعمال</button>
+    <a class="btn sm secondary" href="{% url 'secretariat:letter_list' %}{% if cur.type %}?type={{ cur.type }}{% endif %}">پاک‌کردن</a>
+  </div>
+</form>
+
+{% include 'partials/_letter_table.html' %}
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+  <a href="?{{ query_base }}{% if query_base %}&amp;{% endif %}page={{ page_obj.previous_page_number }}">قبلی</a>
+  {% endif %}
+  <span class="cur">صفحه {{ page_obj.number|fa }} از {{ page_obj.paginator.num_pages|fa }}</span>
+  {% if page_obj.has_next %}
+  <a href="?{{ query_base }}{% if query_base %}&amp;{% endif %}page={{ page_obj.next_page_number }}">بعدی</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

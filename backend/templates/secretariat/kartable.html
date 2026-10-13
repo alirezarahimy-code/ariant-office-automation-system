@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}کارتابل من — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">میز کار</span>
+    <h1>کارتابل من</h1>
+    <span class="hint">{{ JALALI_WEEKDAY }} {{ JALALI_TODAY }}</span>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{% url 'secretariat:register' %}">ثبت نامه جدید</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi accent-navy">
+    <div class="k-label">در انتظار اقدام من</div>
+    <div class="k-value">{{ kpi.waiting|fa }}</div>
+    <div class="k-hint">پاسخ در مهلت: {{ kpi.rate }}٪</div>
+  </div>
+  <div class="kpi accent-warn">
+    <div class="k-label">نزدیک مهلت (≤۳ روز)</div>
+    <div class="k-value warn">{{ kpi.near|fa }}</div>
+    <div class="k-hint">اولویت با این‌هاست</div>
+  </div>
+  <div class="kpi accent-bad">
+    <div class="k-label">متأخر</div>
+    <div class="k-value bad">{{ kpi.overdue|fa }}</div>
+    <div class="k-hint">از مهلت گذشته</div>
+  </div>
+  <div class="kpi accent-teal">
+    <div class="k-label">در جریان</div>
+    <div class="k-value">{{ kpi.in_progress|fa }}</div>
+    <div class="k-hint">اقدام‌شده، در انتظار بستن</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab {% if tab == 'waiting' %}active{% endif %}" href="?tab=waiting">در انتظار من <span class="count">({{ waiting|length|fa }})</span></a>
+  <a class="tab {% if tab == 'progress' %}active{% endif %}" href="?tab=progress">در جریان <span class="count">({{ in_progress|length|fa }})</span></a>
+  <a class="tab {% if tab == 'follow' %}active{% endif %}" href="?tab=follow">پیگیری من <span class="count">({{ followups|length|fa }})</span></a>
+  <a class="tab {% if tab == 'sent' %}active{% endif %}" href="?tab=sent">ارسالی‌ها <span class="count">({{ sent|length|fa }})</span></a>
+  <a class="tab {% if tab == 'archive' %}active{% endif %}" href="?tab=archive">بایگانی من</a>
+  <a class="tab {% if tab == 'tickets' %}active{% endif %}" href="?tab=tickets">تیکت‌های من <span class="count">({{ tickets|length|fa }})</span></a>
+</div>
+
+{% if tab == 'waiting' %}
+  {% include 'partials/_letter_table.html' with letters=waiting %}
+{% elif tab == 'progress' %}
+  {% include 'partials/_letter_table.html' with letters=in_progress %}
+{% elif tab == 'follow' %}
+  <div class="card table-wrap" style="padding:0">
+    <table class="table">
+      <thead><tr><th>نامه</th><th>گیرنده</th><th>دستور</th><th>مهلت</th><th>وضعیت</th><th></th></tr></thead>
+      <tbody>
+        {% for r in followups %}
+        <tr>
+          <td class="subject"><a href="{% url 'secretariat:letter_detail' r.letter.pk %}">{{ r.letter.subject }}</a><br>
+            <span class="cell-sub">{{ r.letter.number_display }}</span></td>
+          <td>{{ r.to_user.get_full_name|default:r.to_user.username|default:'' }}{% if r.to_department %}{{ r.to_department.title }}{% endif %}</td>
+          <td class="cell-sub">{{ r.note|truncatechars:60 }}</td>
+          <td>{% if r.deadline %}<b class="tiny">{{ r.deadline|jdate }}</b>{% else %}—{% endif %}</td>
+          <td><span class="pill {{ r.status|status_pill }}">{{ r.get_status_display }}</span></td>
+          <td><a class="btn sm secondary" href="{% url 'secretariat:letter_detail' r.letter.pk %}">مشاهده</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty"><span class="big">🗂</span>مورد پیگیری ندارید.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% elif tab == 'sent' %}
+  {% include 'partials/_letter_table.html' with letters=sent %}
+{% elif tab == 'tickets' %}
+  <div class="card table-wrap" style="padding:0">
+    <table class="table">
+      <thead><tr><th>تیکت</th><th>شناسه</th><th>حوزه</th><th>وضعیت</th><th>اولویت</th><th>تاریخ</th></tr></thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td class="subject"><span>{{ t.subject }}</span><br><span class="cell-sub">از سامانه تیکتینگ (فقط‌خواندنی)</span></td>
+          <td>{{ t.external_id }}</td>
+          <td>{% if t.service_group == 'support' %}پشتیبانی{% else %}IT{% endif %}</td>
+          <td><span class="pill {{ t.status|status_pill }}">{{ t.status_fa }}</span></td>
+          <td>{% if t.priority == 'critical' %}<span class="pill bad">بحرانی</span>{% elif t.priority == 'urgent' %}<span class="pill warn">فوری</span>{% else %}<span class="pill gray">عادی</span>{% endif %}</td>
+          <td class="tiny">{{ t.created_label }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty"><span class="big">🎫</span>تیکتی برای شما یافت نشد. همگام‌سازی: <code>manage.py sync_tickets</code></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="tiny muted mt">ورود یکپارچه به سامانه تیکتینگ: <a href="{% url 'bridge:jump' %}">پرش با توکن امضاشده (SSO)</a></p>
+{% else %}
+  {% include 'partials/_letter_table.html' with letters=archive %}
+{% endif %}
+{% endblock %}

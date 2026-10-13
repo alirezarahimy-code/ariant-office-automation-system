@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    لایه زیرساخت (Infrastructure)
+    پیاده‌سازی فنی: EF Core، هویت (Identity)، ارائه‌دهنده‌های پایگاه‌داده،
+    و در فازهای بعد سرویس‌های بیرونی (پیامک، ایمیل، پل سامانه تیکتینگ).
+  -->
+  <PropertyGroup>
+    <RootNamespace>Ariant.OfficeAutomation.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    چارچوب ASP.NET Core برای دسترسی به Identity، JwtBearer و IHttpContextAccessor
+    در پروژه‌های کتابخانه‌ای (غیر Web) لازم است.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ariant.OfficeAutomation.Application\Ariant.OfficeAutomation.Application.csproj" />
+  </ItemGroup>
+
+</Project>

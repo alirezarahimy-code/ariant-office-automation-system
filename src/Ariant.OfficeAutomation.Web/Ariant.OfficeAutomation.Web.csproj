@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    لایه وب (Web)
+    رابط کاربری فارسی راست‌به‌چپ (MVC + Razor) و وب‌سرویس REST.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Ariant.OfficeAutomation.Web</RootNamespace>
+    <AssemblyName>Ariant.OfficeAutomation.Web</AssemblyName>
+    <UserSecretsId>ariant-office-automation-system</UserSecretsId>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+    <!-- تقویم شمسی و فرهنگ fa-IR به ICU کامل نیاز دارند -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ariant.OfficeAutomation.Application\Ariant.OfficeAutomation.Application.csproj" />
+    <ProjectReference Include="..\Ariant.OfficeAutomation.Infrastructure\Ariant.OfficeAutomation.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

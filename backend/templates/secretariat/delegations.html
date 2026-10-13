@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}جانشینی و تفویض — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">میز کار</span>
+    <h1>جانشینی و تفویض</h1>
+    <span class="hint">در بازه جانشینی، نامه‌های تفویض‌کننده در کارتابل جانشین دیده می‌شود (بدون تغییر مجوز محرمانگی).</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">تعریف جانشینی جدید</div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="field"><label>جانشین <span class="req">*</span></label>{{ form.to_user }}
+        {% for e in form.to_user.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>
+      <div class="form-grid mt">
+        <div class="field"><label>از تاریخ <span class="req">*</span></label>{{ form.start_date }}
+          {% for e in form.start_date.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>
+        <div class="field"><label>تا تاریخ <span class="req">*</span></label>{{ form.end_date }}
+          {% for e in form.end_date.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>
+      </div>
+      <div class="field mt"><label>یادداشت</label>{{ form.note }}</div>
+      {% for e in form.non_field_errors %}<div class="err">{{ e }}</div>{% endfor %}
+      <div class="form-actions"><button class="btn" type="submit">ثبت جانشینی</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">جانشینی‌های دریافتی من</div>
+    {% if received %}
+    <ul class="attach-list">
+      {% for d in received %}
+      <li>
+        <span>از: <b>{{ d.from_user.get_full_name|default:d.from_user.username }}</b>
+          <span class="a-size"> — {{ d.start_date|jdate }} تا {{ d.end_date|jdate }}</span></span>
+        <span class="pill {% if d.is_active %}ok{% else %}gray{% endif %}">{% if d.is_active %}فعال{% else %}غیرفعال{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted tiny">جانشین کسی نیستید.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">تفویض‌های من</div>
+  {% if given %}
+  <div class="table-wrap" style="padding:0">
+    <table class="table">
+      <thead><tr><th>جانشین</th><th>بازه</th><th>یادداشت</th><th>وضعیت</th><th></th></tr></thead>
+      <tbody>
+        {% for d in given %}
+        <tr>
+          <td>{{ d.to_user.get_full_name|default:d.to_user.username }}</td>
+          <td class="tiny">{{ d.start_date|jdate }} تا {{ d.end_date|jdate }}</td>
+          <td class="cell-sub">{{ d.note|truncatechars:50 }}</td>
+          <td><span class="pill {% if d.is_active %}ok{% else %}gray{% endif %}">{% if d.is_active %}فعال{% else %}غیرفعال{% endif %}</span></td>
+          <td>
+            {% if d.is_active %}
+            <form method="post" action="{% url 'secretariat:delegation_deactivate' d.pk %}">{% csrf_token %}
+              <button class="btn sm danger" type="submit">غیرفعال‌سازی</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="muted tiny">تفویضی ثبت نکرده‌اید.</p>{% endif %}
+</div>
+{% endblock %}

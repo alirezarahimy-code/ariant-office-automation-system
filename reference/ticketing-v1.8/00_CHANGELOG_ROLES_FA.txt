@@ -1,0 +1,50 @@
+=== نقش‌ها و سطوح دسترسی (v3.5) ===
+
+نقش‌های سامانه (بعد از upgrade-1.22):
+  primary_admin (ادمین اصلی/مدیر سامانه)، supervisor (سوپروایز)،
+  support_manager (مدیر پشتیبانی)، inspector (بازرسی)، manager (مدیر)،
+  agent (کارشناس)، user (کاربر).
+  - کاربر admin با is_primary_admin=1 به role=primary_admin مهاجرت می‌کند.
+  - ادمین اصلی همیشه همهٔ مجوزها را دارد و قابل محدودشدن نیست.
+
+قاعدهٔ اصلی:
+  هر نقش فقط منوها/بخش‌هایی را می‌بیند که تیک خورده باشد. تیک‌نخورده = پنهان.
+
+رابط کاربری:
+  - تب «نقش‌ها و دسترسی‌ها» در تنظیمات (فقط ادمین اصلی).
+  - درخت گروه‌بندی‌شده: هر گروه یک تیک «انتخاب همه» دارد و شمارندهٔ «n از m».
+    تیک گروه همهٔ فرزندان را تیک می‌زند؛ ولی می‌توان فقط بخشی را تیک نگه داشت
+    (حالت نیمه/indeterminate). هر گروه قابل جمع/باز شدن (details/summary).
+  - برچسب‌ها کاملاً فارسی؛ کد انگلیسی مجوز در فرم نمایش داده نمی‌شود.
+
+فایل‌ها:
+  - permissions.php: permission_catalog() درختی (key/label/items/children)،
+    permission_all_codes، permission_defaults، role_permissions CRUD، و
+    helperها: user_can / user_can_any / require_permission / require_any_permission /
+    is_staff_role / is_admin_role / is_global_ticket_role /
+    is_department_scoped_role / is_assignable_role / user_is_primary_admin.
+    نسخهٔ seed: setting `role_permissions_version` = 2026-09-29-rbac2.
+  - upgrade-1.22-permissions.sql: گسترش ENUM نقش + جدول role_permissions.
+  - bootstrap.php: require_once permissions.php؛ require_* آگاه از نقش‌های جدید.
+  - index.php: منوی بالا از user_can؛ نگاشت page→permission (pagePermissions)؛
+    save_settings بر اساس بخش؛ صفحهٔ تنظیمات فقط کارت‌های مجاز؛ کارت درختی نقش‌ها.
+  - assets/app.js: bindRoleTabs + bindPermissionGroups.
+  - assets/style.css: .role-picker/.perm-group/.perm-items/.perm-note/.perm-children.
+
+CD/DVD (تفکیک‌شده):
+  cddvd.view (دیدن فرم)، cddvd.submit_out (ثبت خروج)، cddvd.submit_in (ثبت ورود —
+  بازرسی)، cddvd.edit (ویرایش/حذف)، cddvd.view_all (دیدن همهٔ ثبت‌ها)،
+  cddvd.history، cddvd.export (خروجی Excel). تب «ثبت رسانه جدید» و دکمهٔ خروجی
+  بر اساس همین مجوزها نشان/پنهان می‌شوند.
+
+چاپ فیش غذا (سه گروه، هر گروه یک مجوز):
+  food.monitor  = نظارت و گزارش (داشبورد، پایش لحظه‌ای، سفارش‌های غذا، گزارش‌ها)
+  food.employees= کارکنان (کارکنان، کارت مهمان)
+  food.settings = تنظیمات سیستم (اتصال پایگاه‌ها، چاپگر سیستم، کارت مهمان،
+                  طراحی فیش، سلامت سیستم)
+  مسیرهای API فیش غذا با food_ticket_route_allowed بر همین سه مجوز نگاشت شد.
+
+نکات نصب:
+  - قبل از اجرا، upgrade-1.22-permissions.sql را اجرا کنید (یا نصب تازه).
+  - اگر جدول role_permissions نباشد، سامانه با پیش‌فرض‌های کد کار می‌کند.
+  - دکمهٔ «بازگرداندن دسترسی‌ها به پیش‌فرض» در پایین کارت نقش‌ها.

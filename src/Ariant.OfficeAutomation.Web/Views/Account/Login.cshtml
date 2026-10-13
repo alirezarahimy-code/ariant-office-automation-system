@@ -1,0 +1,52 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "ورود به سامانه";
+}
+
+<div class="auth-wrapper">
+    <div class="card auth-card">
+        <div class="auth-card__head">
+            <span class="auth-card__mark">آ</span>
+            <h1 class="auth-card__title">ورود به سامانه اتوماسیون اداری</h1>
+            <p class="auth-card__subtitle">@PersianDate.Today.ToFullString()</p>
+        </div>
+
+        <form asp-controller="Account" asp-action="Login" method="post" class="form" autocomplete="off">
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty] is not null)
+            {
+                <div class="alert alert--danger" role="alert">
+                    @foreach (var error in ViewData.ModelState[string.Empty]!.Errors)
+                    {
+                        <div>@error.ErrorMessage</div>
+                    }
+                </div>
+            }
+
+            <div class="form__row">
+                <label class="form__label" asp-for="UserName"></label>
+                <input class="form__input" asp-for="UserName" autofocus dir="ltr" placeholder="admin" />
+                <span class="form__error" asp-validation-for="UserName"></span>
+            </div>
+
+            <div class="form__row">
+                <label class="form__label" asp-for="Password"></label>
+                <input class="form__input" asp-for="Password" type="password" dir="ltr" />
+                <span class="form__error" asp-validation-for="Password"></span>
+            </div>
+
+            <div class="form__row form__row--inline">
+                <input class="form__checkbox" asp-for="RememberMe" type="checkbox" />
+                <label class="form__label form__label--inline" asp-for="RememberMe"></label>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--block">ورود</button>
+        </form>
+
+        <div class="auth-card__hint">
+            <p>نخستین ورود: نام کاربری <code dir="ltr">admin</code> با گذرواژه پیش‌فرض <code dir="ltr">Admin@@1404</code></p>
+            <p>پس از نخستین ورود، گذرواژه را تغییر دهید.</p>
+        </div>
+    </div>
+</div>

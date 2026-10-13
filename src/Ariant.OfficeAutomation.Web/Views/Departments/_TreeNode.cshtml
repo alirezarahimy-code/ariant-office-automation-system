@@ -1,0 +1,29 @@
+@model DepartmentTreeItemDto
+
+<li class="tree__node">
+    <div class="tree__item">
+        <a class="tree__title" asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Code))
+        {
+            <span class="badge badge--muted">کد @PersianText.ToPersianDigits(Model.Code)</span>
+        }
+
+        <span class="badge badge--muted">@PersianText.ToPersianNumber(Model.EmployeeCount) کارمند</span>
+
+        @if (!Model.IsActive)
+        {
+            <span class="badge badge--warning">غیرفعال</span>
+        }
+    </div>
+
+    @if (Model.Children.Count > 0)
+    {
+        <ul class="tree__children">
+            @foreach (DepartmentTreeItemDto child in Model.Children)
+            {
+                <partial name="_TreeNode" model="child" />
+            }
+        </ul>
+    }
+</li>
