@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}موجودی و انبارگردانی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>موجودی و انبارگردانی</h1><p class="sub">موجودی لحظه‌ای و شمارش فیزیکی با اعمال خودکار تعدیل</p></div>
+  <a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a>
+</div>
+
+{% if low %}
+<div class="card">
+  <strong>کالاهای زیر حداقل:</strong>
+  {% for row in low %}<span class="chip chip-danger">{{ row.item.name }} — {{ row.stock|fa }}</span> {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'inventory:count_apply' %}" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="warehouse_id">انبار *</label>
+      <select id="warehouse_id" name="warehouse_id" class="select">
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="date">تاریخ شمارش (شمسی)</label>
+      <input id="date" name="date" class="input num fa" placeholder="مثلاً ۱۴۰۴/۰۷/۲۴" inputmode="numeric" dir="ltr" style="text-align:right">
+    </div>
+  </div>
+  <table class="table">
+    <thead><tr><th>کالا</th><th>موجودی سیستم</th><th>تعداد شمارش‌شده</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.item.code }} — {{ row.item.name }}</td>
+        <td class="num">{{ row.stock|fa }}</td>
+        <td><input class="input num" name="count_{{ row.item.pk }}" dir="ltr" style="text-align:right" placeholder="خالی = بدون شمارش"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">اعمال انبارگردانی</button>
+  </div>
+</form>
+{% endblock %}

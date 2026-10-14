@@ -15,3 +15,6 @@
 
 # واردسازی آینه تیکت‌ها به زیرسامانه بومی — بلافاصله پس از هر همگام‌سازی
 */15 * * * * cd /opt/ariant/backend && set -a && . /etc/ariant.env && set +a && .venv/bin/python manage.py import_mirror_tickets >> /var/log/ariant/sync.log 2>&1
+
+# ارسال گزارش‌های زمان‌بندی‌شده — هر بامداد (۳:۳۰)
+30 3 * * * cd /opt/ariant/backend && set -a && . /etc/ariant.env && set +a && .venv/bin/python manage.py dispatch_scheduled_reports >> /var/log/ariant/reports.log 2>&1

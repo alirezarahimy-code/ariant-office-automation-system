@@ -24,6 +24,7 @@
           کارتابل من
         </a>
         <a class="side-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}" href="{% url 'reports:dashboard' %}">داشبورد</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'builder' %}active{% endif %}" href="{% url 'reports:builder' %}">گزارش‌ساز</a>
         <a class="side-link {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}" href="{% url 'tasks:list' %}">وظایف من</a>
         <a class="side-link" href="{% url 'tasks:calendar' %}">تقویم سازمانی</a>
         <a class="side-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url 'accounts:notifications' %}">
@@ -38,6 +39,9 @@
         <a class="side-link {% if request.resolver_match.app_name == 'meetings' %}active{% endif %}" href="{% url 'meetings:list' %}">جلسات و مصوبات</a>
         <a class="side-link {% if request.resolver_match.app_name == 'archive' %}active{% endif %}" href="{% url 'archive:list' %}">بایگانی و امحا</a>
         <a class="side-link {% if request.resolver_match.app_name == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}">تیکت‌ها</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'attendance' %}active{% endif %}" href="{% url 'attendance:list' %}">کنترل تردد</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:list' %}">انبار</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'commerce' %}active{% endif %}" href="{% url 'commerce:list' %}">امور بازرگانی</a>
         <a class="side-link" href="{% url 'bridge:jump' %}">ورود به سامانه تیکتینگ</a>
         {% if user.is_superuser or perms.registry.manage_platform or perms.secretariat.view_all_letter %}
         <a class="side-link {% if request.resolver_match.app_name == 'registry' %}active{% endif %}" href="{% url 'registry:platform' %}">بستر یکپارچه</a>
@@ -53,6 +57,9 @@
       </div>
       <div class="side-group">
         <div class="label">سازمان</div>
+        <a class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">پروفایل من</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" href="{% url 'accounts:settings' %}">تنظیمات سامانه</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}" href="{% url 'accounts:users' %}">مدیریت کاربران</a>
         <a class="side-link" href="/admin/">پنل مدیریت</a>
       </div>
     </nav>

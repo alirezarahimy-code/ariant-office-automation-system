@@ -46,6 +46,10 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.tickets',
     'apps.registry',
+    # فاز ۳ — زیرسامانه‌های گام-۰
+    'apps.attendance',
+    'apps.inventory',
+    'apps.commerce',
 ]
 
 MIDDLEWARE = [
@@ -265,3 +269,22 @@ SMS_API_KEY = os.environ.get('SMS_API_KEY', '')
 # ===== پل تیکتینگ (فاز ۲) =====
 # bridge = فقط پل به سامانه PHP (پیش‌فرض) | native = زیرسامانه بومی فعال
 TICKET_MODE = os.environ.get('TICKET_MODE', 'bridge')
+
+# ===== پیام‌رسان سازمانی — بله/ایتا (فاز ۳) =====
+NOTIFICATIONS_BALE_ENABLED = os.environ.get('NOTIFICATIONS_BALE_ENABLED', '0') == '1'
+NOTIFICATIONS_ITA_ENABLED = os.environ.get('NOTIFICATIONS_ITA_ENABLED', '0') == '1'
+CHAT_BALE_BACKEND = os.environ.get('CHAT_BALE_BACKEND', 'apps.core.notify_channels.ConsoleChatBackend')
+CHAT_ITA_BACKEND = os.environ.get('CHAT_ITA_BACKEND', 'apps.core.notify_channels.ConsoleChatBackend')
+CHAT_API_URL = os.environ.get('CHAT_API_URL', '')
+CHAT_API_TOKEN = os.environ.get('CHAT_API_TOKEN', '')
+
+# ===== ورود سازمانی LDAP/Active Directory (فاز ۳ — اختیاری) =====
+AUTH_LDAP_ENABLED = os.environ.get('AUTH_LDAP_ENABLED', '0') == '1'
+LDAP_URI = os.environ.get('LDAP_URI', '')
+LDAP_BASE_DN = os.environ.get('LDAP_BASE_DN', '')
+LDAP_USER_DN = os.environ.get('LDAP_USER_DN', 'uid={username},ou=people,{base}')
+# بک‌اند همیشه در زنجیره است؛ دروازه AUTH_LDAP_ENABLED داخل خود بک‌اند است
+AUTHENTICATION_BACKENDS = [
+    'apps.core.ldap_backend.LDAPAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]

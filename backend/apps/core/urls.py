@@ -13,4 +13,8 @@ urlpatterns = [
     path('notifications/', core_views.notifications_list, name='notifications'),
     path('notifications/<int:pk>/read/', core_views.notification_read, name='notification_read'),
     path('notifications/read-all/', core_views.notifications_read_all, name='notifications_read_all'),
+    path('profile/', core_views.profile_view, name='profile'),
+    path('settings/', core_views.settings_view, name='settings'),
+    path('users/', core_views.users_admin, name='users'),
+    path('users/<int:pk>/edit/', core_views.users_admin_edit, name='users_edit'),
 ]

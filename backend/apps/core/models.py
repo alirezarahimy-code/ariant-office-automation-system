@@ -4,6 +4,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django_jalali.db import models as jmodels
 
 
 class SoftDeleteManager(models.Manager):
@@ -95,3 +96,63 @@ class Delegation(TimeStampedModel):
             d.from_user_id for d in cls.objects.filter(
                 to_user=user, is_active=True, start_date__lte=on, end_date__gte=on)
         ]
+
+
+class Holiday(TimeStampedModel):
+    """تعطیل رسمی — تاریخ شمسی؛ پایه محاسبه روزهای کاری و مهلت‌ها."""
+
+    date = jmodels.jDateField('تاریخ', unique=True)
+    title = models.CharField('عنوان', max_length=200)
+
+    class Meta:
+        verbose_name = 'تعطیل رسمی'
+        verbose_name_plural = 'تعطیلات رسمی'
+        ordering = ['-date']
+
+    def __str__(self) -> str:
+        return f'{self.date}: {self.title}'
+
+
+class OrgSettings(TimeStampedModel):
+    """تنظیمات سامانه (تک‌رکوردی): نام سازمان، شعار، سال مالی."""
+
+    org_name = models.CharField('نام سازمان', max_length=200)
+    motto = models.CharField('شعار/زیرنویس', max_length=200, blank=True, default='')
+    fiscal_year = models.CharField('سال مالی', max_length=20, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'تنظیمات سامانه'
+        verbose_name_plural = 'تنظیمات سامانه'
+
+    def __str__(self) -> str:
+        return self.org_name
+
+    @classmethod
+    def load(cls) -> 'OrgSettings':
+        """نمونه تک‌رکوردی — همیشه یک ردیف برمی‌گرداند."""
+        obj, _ = cls.objects.get_or_create(
+            pk=1, defaults={'org_name': 'سازمان آرینت'})
+        return obj
+
+
+class UserProfile(TimeStampedModel):
+    """پروفایل کاربر: شماره تماس و امضای الکترونیک (برای نامه‌ها)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر',
+        on_delete=models.CASCADE, related_name='profile')
+    phone = models.CharField('شماره تماس', max_length=20, blank=True, default='')
+    signature = models.FileField(
+        'امضای الکترونیک', upload_to='signatures/', blank=True, default='')
+
+    class Meta:
+        verbose_name = 'پروفایل کاربر'
+        verbose_name_plural = 'پروفایل‌های کاربران'
+
+    def __str__(self) -> str:
+        return f'پروفایل {self.user}'
+
+    @classmethod
+    def for_user(cls, user) -> 'UserProfile':
+        obj, _ = cls.objects.get_or_create(user=user)
+        return obj

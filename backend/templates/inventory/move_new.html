@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت سند انبار{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت سند انبار</h1><p class="sub">رسید ورود یا حواله خروج — موجودی خودکار کنترل می‌شود</p></div>
+  <a href="{% url 'inventory:list' %}" class="btn">بازگشت</a>
+</div>
+
+<form method="post" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="kind">نوع سند *</label>
+      <select id="kind" name="kind" class="select">
+        <option value="receive">رسید (ورود)</option>
+        <option value="issue">حواله (خروج)</option>
+      </select>
+    </div>
+    <div>
+      <label for="item_id">کالا *</label>
+      <select id="item_id" name="item_id" class="select">
+        {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="warehouse_id">انبار *</label>
+      <select id="warehouse_id" name="warehouse_id" class="select">
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="quantity">تعداد *</label>
+      <input id="quantity" name="quantity" class="input num" required dir="ltr" style="text-align:right" placeholder="مثلاً ۱۰">
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="date">تاریخ (شمسی)</label>
+      <input id="date" name="date" class="input num fa" placeholder="مثلاً ۱۴۰۴/۰۷/۲۴" inputmode="numeric" dir="ltr" style="text-align:right">
+    </div>
+    <div>
+      <label for="reference">شماره مدرک</label>
+      <input id="reference" name="reference" class="input num" maxlength="60" placeholder="اختیاری">
+    </div>
+  </div>
+  <div>
+    <label for="note">شرح</label>
+    <input id="note" name="note" class="input" maxlength="300" placeholder="اختیاری">
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت سند</button>
+    <a href="{% url 'inventory:list' %}" class="btn">انصراف</a>
+  </div>
+</form>
+{% endblock %}

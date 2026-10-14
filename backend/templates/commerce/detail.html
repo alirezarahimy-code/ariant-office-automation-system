@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}درخواست خرید{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ purchase.title }}</h1>
+    <p class="sub">{{ purchase.get_status_display }} — درخواست‌کننده: {{ purchase.requested_by.get_full_name|default:purchase.requested_by.username }}</p></div>
+  <a href="{% url 'commerce:list' %}" class="btn">بازگشت</a>
+</div>
+
+<div class="card">
+  <p>{{ purchase.description|default:'بدون شرح' }}</p>
+  <p class="sub">برآورد هزینه: <span class="num">{{ purchase.estimated_cost|fa }}</span> ریال
+    {% if purchase.needed_by %} — تاریخ نیاز: {{ purchase.needed_by|jalali_datetime:'date' }}{% endif %}
+    {% if purchase.decided_by %} — تصمیم: {{ purchase.decided_by }} ({{ purchase.decision_note }}){% endif %}</p>
+</div>
+
+{% if purchase.status == 'draft' %}
+<form method="post" action="{% url 'commerce:submit' pk=purchase.pk %}">{% csrf_token %}
+  <button class="btn btn-primary" type="submit">ارسال برای تأیید</button>
+</form>
+{% endif %}
+
+{% if can_manage and purchase.status == 'submitted' %}
+<form method="post" action="{% url 'commerce:decide' pk=purchase.pk %}" class="card form">{% csrf_token %}
+  <div>
+    <label for="note">یادداشت تصمیم</label>
+    <input id="note" name="note" class="input" maxlength="300" placeholder="اختیاری">
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" name="decision" value="approve" type="submit">تأیید</button>
+    <button class="btn" name="decision" value="reject" type="submit">رد</button>
+  </div>
+</form>
+{% endif %}
+
+<h2>استعلام‌های قیمت</h2>
+<table class="table">
+  <thead><tr><th>تأمین‌کننده</th><th>مبلغ پیشنهادی</th><th>شرح</th><th></th></tr></thead>
+  <tbody>
+  {% for inquiry in purchase.inquiries.all %}
+    <tr>
+      <td>{{ inquiry.supplier_name }} {% if inquiry.selected %}<span class="chip">انتخاب‌شده</span>{% endif %}</td>
+      <td class="num">{{ inquiry.quote_amount|fa }}</td>
+      <td>{{ inquiry.quote_note|default:'—' }}</td>
+      <td>
+        {% if purchase.status == 'approved' and not inquiry.selected %}
+        <form method="post" action="{% url 'commerce:inquiry_select' pk=purchase.pk inquiry_pk=inquiry.pk %}">{% csrf_token %}
+          <button class="btn" type="submit">انتخاب</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4">هنوز استعلامی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if is_owner or can_manage %}
+<form method="post" action="{% url 'commerce:inquiry_add' pk=purchase.pk %}" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="supplier_name">تأمین‌کننده *</label>
+      <input id="supplier_name" name="supplier_name" class="input" required maxlength="200">
+    </div>
+    <div>
+      <label for="quote_amount">مبلغ پیشنهادی (ریال) *</label>
+      <input id="quote_amount" name="quote_amount" class="input num" required dir="ltr" style="text-align:right">
+    </div>
+  </div>
+  <div>
+    <label for="quote_note">شرح</label>
+    <input id="quote_note" name="quote_note" class="input" maxlength="300" placeholder="اختیاری">
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت استعلام</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

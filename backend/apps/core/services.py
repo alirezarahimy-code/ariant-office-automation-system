@@ -58,6 +58,25 @@ def _send_sms(user, title: str, body: str) -> bool:
     return send_sms(phone, text)
 
 
+def _send_chat(user, title: str, body: str, url: str = '') -> None:
+    """کانال‌های پیام‌رسان سازمانی (بله/ایتا) — هر خطا بی‌صدا لاگ می‌شود."""
+    from apps.core.notify_channels import send_chat
+    employee = getattr(user, 'employee_profile', None)
+    profile = getattr(user, 'profile', None)
+    chat_id = ''
+    if employee is not None and getattr(employee, 'phone', ''):
+        chat_id = employee.phone
+    elif profile is not None and profile.phone:
+        chat_id = profile.phone
+    if not chat_id:
+        return
+    text = f'{title}\n{body}\n{url}'.strip()[:1000]
+    if getattr(settings, 'NOTIFICATIONS_BALE_ENABLED', False):
+        send_chat('CHAT_BALE_BACKEND', chat_id, text)
+    if getattr(settings, 'NOTIFICATIONS_ITA_ENABLED', False):
+        send_chat('CHAT_ITA_BACKEND', chat_id, text)
+
+
 def send_notification(user, title: str, body: str = '', url: str = '') -> Notification:
     """اعلان چندکاناله: درون‌سامانه‌ای (همیشه) + ایمیل/پیامک (بر اساس تنظیمات)."""
     notification = Notification.objects.create(
@@ -67,4 +86,8 @@ def send_notification(user, title: str, body: str = '', url: str = '') -> Notifi
         _send_sms(user, title, body)
     except Exception:  # noqa: BLE001 — خطای پیامک هرگز نباید اعلان را بشکند
         logger.exception('خطای ارسال پیامک اعلان برای کاربر %s', user.pk)
+    try:
+        _send_chat(user, title, body, url)
+    except Exception:  # noqa: BLE001 — خطای پیام‌رسان هرگز نباید اعلان را بشکند
+        logger.exception('خطای ارسال پیام‌رسان اعلان برای کاربر %s', user.pk)
     return notification

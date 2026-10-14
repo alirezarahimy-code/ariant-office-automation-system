@@ -70,3 +70,99 @@ def notifications_read_all(request):
     from django.shortcuts import redirect
     request.user.notifications.filter(is_read=False).update(is_read=True)
     return redirect('accounts:notifications')
+
+
+# ---------------------------------------------------------------------------
+# پروفایل، تنظیمات سامانه و مدیریت کاربران (فاز ۱ — تکمیل)
+# ---------------------------------------------------------------------------
+
+@login_required
+def profile_view(request):
+    """پروفایل کاربر: نام، تماس و امضای الکترونیک."""
+    from django.contrib import messages
+    from django.shortcuts import redirect, render
+    from apps.core.models import UserProfile
+
+    profile = UserProfile.for_user(request.user)
+    if request.method == 'POST':
+        request.user.first_name = request.POST.get('first_name', '').strip()[:150]
+        request.user.last_name = request.POST.get('last_name', '').strip()[:150]
+        request.user.email = request.POST.get('email', '').strip()[:254]
+        request.user.save(update_fields=['first_name', 'last_name', 'email'])
+        profile.phone = request.POST.get('phone', '').strip()[:20]
+        if request.FILES.get('signature'):
+            profile.signature = request.FILES['signature']
+        profile.save()
+        messages.success(request, 'پروفایل به‌روزرسانی شد.')
+        return redirect('accounts:profile')
+    return render(request, 'accounts/profile.html', {'profile': profile})
+
+
+def _is_platform_admin(user) -> bool:
+    return user.is_superuser or user.has_perm('core.manage_platform_settings')
+
+
+@login_required
+def settings_view(request):
+    """تنظیمات سامانه: نام سازمان، شعار و سال مالی."""
+    from django.contrib import messages
+    from django.shortcuts import redirect, render
+    from apps.core.models import OrgSettings
+
+    if not _is_platform_admin(request.user):
+        messages.error(request, 'دسترسی ندارید.')
+        return redirect('secretariat:kartable')
+    settings_obj = OrgSettings.load()
+    if request.method == 'POST':
+        settings_obj.org_name = request.POST.get(
+            'org_name', '').strip()[:200] or settings_obj.org_name
+        settings_obj.motto = request.POST.get('motto', '').strip()[:200]
+        settings_obj.fiscal_year = request.POST.get('fiscal_year', '').strip()[:20]
+        settings_obj.save()
+        messages.success(request, 'تنظیمات سامانه ذخیره شد.')
+        return redirect('accounts:settings')
+    return render(request, 'accounts/settings.html', {'obj': settings_obj})
+
+
+@login_required
+def users_admin(request):
+    """مدیریت کاربران: فهرست، ویرایش هویت و فعال/غیرفعال."""
+    from django.contrib import messages
+    from django.contrib.auth import get_user_model
+    from django.shortcuts import get_object_or_404, redirect, render
+
+    if not _is_platform_admin(request.user):
+        messages.error(request, 'دسترسی ندارید.')
+        return redirect('secretariat:kartable')
+    User = get_user_model()
+    q = request.GET.get('q', '').strip()
+    users = User.objects.all().order_by('username')
+    if q:
+        from django.db.models import Q
+        users = users.filter(Q(username__icontains=q)
+                             | Q(first_name__icontains=q)
+                             | Q(last_name__icontains=q))
+    return render(request, 'accounts/users.html', {
+        'users': users, 'q': q, 'edit_pk': int(request.GET.get('edit', 0) or 0)})
+
+
+@login_required
+@require_POST
+def users_admin_edit(request, pk):
+    """ویرایش هویت/وضعیت کاربر توسط مدیر سامانه."""
+    from django.contrib import messages
+    from django.contrib.auth import get_user_model
+    from django.shortcuts import get_object_or_404, redirect
+
+    if not _is_platform_admin(request.user):
+        messages.error(request, 'دسترسی ندارید.')
+        return redirect('secretariat:kartable')
+    User = get_user_model()
+    user = get_object_or_404(User, pk=pk)
+    user.first_name = request.POST.get('first_name', '').strip()[:150]
+    user.last_name = request.POST.get('last_name', '').strip()[:150]
+    user.email = request.POST.get('email', '').strip()[:254]
+    user.is_active = request.POST.get('is_active') == 'on'
+    user.save(update_fields=['first_name', 'last_name', 'email', 'is_active'])
+    messages.success(request, f'کاربر {user.username} به‌روزرسانی شد.')
+    return redirect('accounts:users')
