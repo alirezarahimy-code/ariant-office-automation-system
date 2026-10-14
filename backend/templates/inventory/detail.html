@@ -6,6 +6,7 @@
   <div><h1>کارت کالا</h1>
     <p class="sub">{{ item.code }} — {{ item.name }} — موجودی فعلی: {{ stock|fa }} {{ item.unit }}</p></div>
   <div style="display:flex;gap:.5rem">
+    <a href="{% url 'inventory:movement' pk=item.pk %}" class="btn">ریزگردش در بازه</a>
     <a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a>
     <a href="{% url 'inventory:move_new' %}" class="btn btn-primary">ثبت سند</a>
   </div>

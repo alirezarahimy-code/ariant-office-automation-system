@@ -107,6 +107,12 @@
             {% if r.deadline %} — مهلت: {{ r.deadline|jdate }}{% endif %}
           </div>
           {% if r.note %}<div class="t-note">{{ r.note }}</div>{% endif %}
+          {% if r.status == 'pending' and r.from_user_id == user.pk %}
+          <form method="post" action="{% url 'secretariat:refer_cancel' letter.pk %}" style="margin-top:4px">{% csrf_token %}
+            <input type="hidden" name="referral_id" value="{{ r.pk }}">
+            <button class="btn sm" type="submit">بازپس‌گیری ارجاع</button>
+          </form>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -309,6 +315,56 @@
       {% elif not letter_tasks %}
       <p class="tiny muted">وظیفه‌ای به این نامه پیوست نیست.</p>
       {% endif %}
+    </div>
+
+    <div class="card no-print">
+      <div class="card-title">نامه‌های مرتبط <span class="pill gray">{{ relations|length|fa }}</span></div>
+      {% if relations %}
+      <ul class="attach-list" style="display:block">
+        {% for rel in relations %}
+        <li style="display:block;padding:6px 0">
+          <span class="pill gray">{{ rel.get_kind_display }}</span>
+          {% if rel.letter.pk == letter.pk %}
+          <a class="tiny" href="{% url 'secretariat:letter_detail' rel.related.pk %}"><b>{{ rel.related.number_display }}</b> — {{ rel.related.subject|truncatechars:60 }}</a>
+          {% else %}
+          <a class="tiny" href="{% url 'secretariat:letter_detail' rel.letter.pk %}"><b>{{ rel.letter.number_display }}</b> — {{ rel.letter.subject|truncatechars:60 }}</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted tiny">نامه مرتبطی ثبت نشده است.</p>
+      {% endif %}
+      <form method="post" action="{% url 'secretariat:letter_relation' letter.pk %}" style="margin-top:8px">{% csrf_token %}
+        {{ relation_form.kind }}
+        {{ relation_form.related_pk }}
+        <button class="btn sm" type="submit">افزودن نامه مرتبط</button>
+      </form>
+    </div>
+
+    <div class="card no-print">
+      <div class="card-title">یادداشت‌ها (هامش) <span class="pill gray">{{ notes|length|fa }}</span></div>
+      {% for n in notes %}
+      <div style="padding:6px 0;border-bottom:1px solid #e3e8ee">
+        <p class="tiny"><b>{{ n.author.get_full_name|default:n.author.username|default:'—' }}</b>
+          <span class="muted">— {{ n.created_at|jdate }}</span></p>
+        <p class="tiny" style="white-space:pre-line">{{ n.text }}</p>
+      </div>
+      {% empty %}
+      <p class="muted tiny">یادداشتی ثبت نشده است.</p>
+      {% endfor %}
+      <form method="post" action="{% url 'secretariat:letter_note' letter.pk %}" style="margin-top:8px">{% csrf_token %}
+        {{ note_form.text }}
+        <button class="btn sm" type="submit">ثبت یادداشت</button>
+      </form>
+    </div>
+
+    <div class="card no-print">
+      <div class="card-title">اقدامات</div>
+      <form method="post" action="{% url 'secretariat:letter_duplicate' letter.pk %}">{% csrf_token %}
+        <button class="btn sm" type="submit">نامه مشابه بساز</button>
+      </form>
+      <p class="tiny muted">کپی متن و مشخصات به‌عنوان پیش‌نویس تازه با پیوند «پیرو».</p>
     </div>
   </div>
 </div>

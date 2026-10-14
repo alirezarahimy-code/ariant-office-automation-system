@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ارزش موجودی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ارزش موجودی</h1>
+    <p class="sub">محاسبه با میانگین موزون قیمت خرید — {% if warehouse %}{{ warehouse }}{% else %}همه انبارها{% endif %}</p></div>
+  <a href="{% url 'inventory:balance' %}" class="btn">موجودی</a>
+</div>
+
+<form class="toolbar" method="get">
+  <label>انبار
+    <select class="select" name="warehouse">
+      <option value="">همه</option>
+      {% for w in warehouses %}<option value="{{ w.pk }}" {% if warehouse.pk == w.pk %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn" type="submit">نمایش</button>
+</form>
+
+<div class="stats">
+  <div class="stat"><span class="label">ارزش کل موجودی (ریال)</span><span class="value num">{{ data.total|fa }}</span></div>
+</div>
+
+<table class="table">
+  <thead><tr><th>کد</th><th>کالا</th><th>موجودی</th><th>میانگین قیمت</th><th>ارزش</th></tr></thead>
+  <tbody>
+  {% for row in data.rows %}
+    <tr>
+      <td class="num">{{ row.item.code }}</td>
+      <td>{{ row.item.name }}</td>
+      <td class="num">{{ row.stock|fa }}</td>
+      <td class="num">{{ row.avg_price|fa }}</td>
+      <td class="num">{{ row.value|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">موجودی‌ای ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

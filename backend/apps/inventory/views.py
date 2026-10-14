@@ -12,7 +12,8 @@ from django.views.decorators.http import require_POST
 
 from .models import Item, StockCount, StockCountLine, StockMove, Warehouse
 from .services import (apply_count, current_stock, issue, item_card,
-                       low_stock_items, receive)
+                       low_stock_items, movement_report, inventory_value,
+                       receive, transfer)
 
 
 def _can_manage(user) -> bool:
@@ -57,17 +58,24 @@ def move_new(request):
     item = get_object_or_404(Item, pk=request.POST.get('item_id'))
     warehouse = get_object_or_404(Warehouse, pk=request.POST.get('warehouse_id'))
     kind = request.POST.get('kind', StockMove.Kind.RECEIVE)
+    category = request.POST.get('category', StockMove.Category.OTHER)
+    if category not in StockMove.Category.values:
+        category = StockMove.Category.OTHER
     jdate = _parse_jalali(request.POST.get('date', '')) or jdatetime.date.today()
     try:
         quantity = Decimal(request.POST.get('quantity', '0').replace(',', ''))
+        unit_price = request.POST.get('unit_price', '').strip().replace(',', '')
+        unit_price = Decimal(unit_price) if unit_price else None
         if kind == StockMove.Kind.ISSUE:
             move = issue(item=item, warehouse=warehouse, quantity=quantity,
                          date=jdate, reference=request.POST.get('reference', ''),
-                         note=request.POST.get('note', ''), created_by=request.user)
+                         note=request.POST.get('note', ''), created_by=request.user,
+                         category=category, unit_price=unit_price)
         elif kind == StockMove.Kind.RECEIVE:
             move = receive(item=item, warehouse=warehouse, quantity=quantity,
                            date=jdate, reference=request.POST.get('reference', ''),
-                           note=request.POST.get('note', ''), created_by=request.user)
+                           note=request.POST.get('note', ''), created_by=request.user,
+                           category=category, unit_price=unit_price)
         else:
             raise ValueError('نوع سند نامعتبر است.')
     except (ValueError, ArithmeticError) as exc:
@@ -117,3 +125,69 @@ def count_apply(request):
     messages.success(request,
                      f'انبارگردانی {warehouse} با {line_count} ردیف اعمال شد.')
     return redirect('inventory:balance')
+
+
+@login_required
+def move_print(request, pk):
+    """چاپ سند رسید/حواله — سربرگ‌دار با شماره مدرک."""
+    move = get_object_or_404(
+        StockMove.objects.select_related('item', 'warehouse', 'created_by'), pk=pk)
+    return render(request, 'inventory/move_print.html', {'move': move})
+
+
+@login_required
+def movement(request, pk):
+    """ریزگردش کالا در بازه شمسی — با موجودی ابتدای بازه و پیوسته."""
+    item = get_object_or_404(Item, pk=pk)
+    from apps.secretariat.views import _parse_jalali_input
+    date_from = _parse_jalali_input(request.GET.get('date_from', ''))
+    date_to = _parse_jalali_input(request.GET.get('date_to', ''))
+    warehouse = None
+    if request.GET.get('warehouse'):
+        warehouse = Warehouse.objects.filter(
+            pk=request.GET.get('warehouse')).first()
+    report = movement_report(item, date_from, date_to, warehouse)
+    return render(request, 'inventory/movement.html', {
+        'item': item, 'report': report,
+        'warehouses': Warehouse.objects.all(),
+        'date_from': request.GET.get('date_from', ''),
+        'date_to': request.GET.get('date_to', ''),
+        'warehouse': warehouse,
+    })
+
+
+@login_required
+@require_POST
+def transfer_new(request):
+    """انتقال کالا بین انبارها — حواله مبدأ + رسید مقصد با یک مدرک."""
+    item = get_object_or_404(Item, pk=request.POST.get('item_id'))
+    from_wh = get_object_or_404(Warehouse, pk=request.POST.get('from_warehouse_id'))
+    to_wh = get_object_or_404(Warehouse, pk=request.POST.get('to_warehouse_id'))
+    jdate = _parse_jalali(request.POST.get('date', '')) or jdatetime.date.today()
+    try:
+        quantity = Decimal(
+            request.POST.get('quantity', '0').replace(',', ''))
+        transfer(item=item, from_warehouse=from_wh, to_warehouse=to_wh,
+                 quantity=quantity, date=jdate,
+                 reference=request.POST.get('reference', ''),
+                 note=request.POST.get('note', ''), created_by=request.user)
+    except (ValueError, ArithmeticError) as exc:
+        messages.error(request, str(exc))
+        return redirect('inventory:move_new')
+    messages.success(request,
+                     f'انتقال {item.code} از {from_wh} به {to_wh} ثبت شد.')
+    return redirect('inventory:detail', pk=item.pk)
+
+
+@login_required
+def value_report(request):
+    """ارزش موجودی انبار — میانگین موزون قیمت خرید."""
+    warehouse = None
+    if request.GET.get('warehouse'):
+        warehouse = Warehouse.objects.filter(
+            pk=request.GET.get('warehouse')).first()
+    data = inventory_value(warehouse)
+    return render(request, 'inventory/value.html', {
+        'data': data, 'warehouses': Warehouse.objects.all(),
+        'warehouse': warehouse,
+    })

@@ -17,10 +17,27 @@
       </select>
     </div>
     <div>
+      <label for="category">دسته سند</label>
+      <select id="category" name="category" class="select">
+        <option value="purchase">خرید</option>
+        <option value="sale">فروش</option>
+        <option value="consumption">مصرف داخلی</option>
+        <option value="return_in">برگشت از فروش/مصرف</option>
+        <option value="return_out">برگشت به تأمین‌کننده</option>
+        <option value="other">سایر</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
       <label for="item_id">کالا *</label>
       <select id="item_id" name="item_id" class="select">
         {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
       </select>
+    </div>
+    <div>
+      <label for="unit_price">قیمت واحد (ریال) — اختیاری</label>
+      <input id="unit_price" name="unit_price" class="input num" dir="ltr" style="text-align:right" placeholder="برای محاسبه ارزش موجودی">
     </div>
   </div>
   <div class="grid-2">
@@ -52,6 +69,49 @@
   <div class="form-actions">
     <button class="btn btn-primary" type="submit">ثبت سند</button>
     <a href="{% url 'inventory:list' %}" class="btn">انصراف</a>
+  </div>
+</form>
+
+<h2>انتقال بین انبارها</h2>
+<form method="post" action="{% url 'inventory:transfer' %}" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="t_item_id">کالا *</label>
+      <select id="t_item_id" name="item_id" class="select">
+        {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="quantity">تعداد *</label>
+      <input id="quantity" name="quantity" class="input num" required dir="ltr" style="text-align:right">
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="from_warehouse_id">انبار مبدأ *</label>
+      <select id="from_warehouse_id" name="from_warehouse_id" class="select">
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="to_warehouse_id">انبار مقصد *</label>
+      <select id="to_warehouse_id" name="to_warehouse_id" class="select">
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="t_date">تاریخ (شمسی)</label>
+      <input id="t_date" name="date" class="input num fa" placeholder="مثلاً ۱۴۰۴/۰۷/۲۴" inputmode="numeric" dir="ltr" style="text-align:right">
+    </div>
+    <div>
+      <label for="t_reference">شماره مدرک</label>
+      <input id="t_reference" name="reference" class="input num" maxlength="60" placeholder="اختیاری">
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت انتقال</button>
   </div>
 </form>
 {% endblock %}

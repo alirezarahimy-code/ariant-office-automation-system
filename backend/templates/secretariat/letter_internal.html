@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}نامه داخلی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>نامه داخلی</h1>
+    <p class="sub">ارسال مکاتبه داخلی بین واحدها و همکاران — تحویل مستقیم به کارتابل گیرنده</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'secretariat:register' %}" class="btn">ثبت وارده/صادره</a>
+    <a href="{% url 'secretariat:letter_list' %}" class="btn">دفتر نامه‌ها</a>
+  </div>
+</div>
+
+{% if templates %}
+<div class="card">
+  <p class="sub">الگوهای نامه — برای پرکردن خودکار متن کلیک کنید:</p>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    {% for t in templates %}
+    <button type="button" class="btn"
+      onclick="document.getElementById('id_int-subject').value='{{ t.subject_pattern|escapejs }}';document.getElementById('id_int-body').value='{{ t.body|escapejs }}'">
+      {{ t.title }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="card form">{% csrf_token %}
+  <input type="hidden" name="form" value="internal">
+  {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="grid-2">
+    <div>
+      <label for="id_int-office">دبیرخانه *</label>
+      {{ form.office }}
+    </div>
+    <div>
+      <label for="id_int-subject">موضوع *</label>
+      {{ form.subject }}
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="id_int-to_user">گیرنده (شخص)</label>
+      {{ form.to_user }}
+    </div>
+    <div>
+      <label for="id_int-to_department">گیرنده (واحد)</label>
+      {{ form.to_department }}
+    </div>
+  </div>
+  <div>
+    <label for="id_int-body">متن نامه</label>
+    {{ form.body }}
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="id_int-letter_date">تاریخ نامه (شمسی)</label>
+      {{ form.letter_date }}
+    </div>
+    <div>
+      <label for="id_int-deadline">مهلت اقدام (شمسی)</label>
+      {{ form.deadline }}
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="id_int-priority">درجه فوریت</label>
+      {{ form.priority }}
+    </div>
+    <div>
+      <label for="id_int-confidentiality">سطح محرمانگی</label>
+      {{ form.confidentiality }}
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="id_int-delivery_method">شیوه ارسال</label>
+      {{ form.delivery_method }}
+    </div>
+    <div>
+      <label for="id_int-attachments">پیوست‌ها</label>
+      {{ form.attachments }}
+    </div>
+  </div>
+  {{ form.template_id }}
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت و ارسال</button>
+    <a href="{% url 'secretariat:kartable' %}" class="btn">انصراف</a>
+  </div>
+</form>
+{% endblock %}
