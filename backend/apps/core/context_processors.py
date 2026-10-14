@@ -7,9 +7,19 @@ from apps.core.persian import to_persian_digits
 
 def platform_context(request):
     today = jdatetime.date.today()
+    org_name = getattr(settings, 'PLATFORM_ORG_NAME', '')
+    motto = getattr(settings, 'PLATFORM_ORG_MOTTO', '')
+    try:
+        from apps.core.models import OrgSettings
+        obj = OrgSettings.objects.filter(pk=1).first()
+        if obj is not None:
+            org_name = obj.org_name or org_name
+            motto = obj.motto or motto
+    except Exception:  # noqa: BLE001 — پیش از مهاجرت یا خطای دیتابیس
+        pass
     ctx = {
-        'ORG_NAME': settings.PLATFORM_ORG_NAME,
-        'ORG_MOTTO': getattr(settings, 'PLATFORM_ORG_MOTTO', ''),
+        'ORG_NAME': org_name,
+        'ORG_MOTTO': motto,
         'JALALI_TODAY': to_persian_digits(today.strftime('%Y/%m/%d')),
         'JALALI_WEEKDAY': today.strftime('%A'),
         'UNREAD_NOTIFICATIONS': 0,

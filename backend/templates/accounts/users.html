@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}مدیریت کاربران{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>مدیریت کاربران</h1><p class="sub">هویت و وضعیت حساب کاربران سامانه</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'accounts:settings' %}" class="btn">تنظیمات سامانه</a>
+    <a href="/admin/" class="btn">پنل پیشرفته</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="جست‌وجوی نام کاربری یا نام…">
+  <button class="btn" type="submit">جست‌وجو</button>
+</form>
+
+<table class="table">
+  <thead><tr><th>نام کاربری</th><th>نام</th><th>رایانامه</th><th>نقش</th><th>وضعیت</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td class="num">{{ u.username }}</td>
+      <td>{{ u.get_full_name|default:'—' }}</td>
+      <td dir="ltr">{{ u.email|default:'—' }}</td>
+      <td>{% if u.is_superuser %}<span class="chip">مدیر سامانه</span>{% else %}کاربر{% endif %}</td>
+      <td>{% if u.is_active %}<span class="chip">فعال</span>{% else %}<span class="chip chip-danger">غیرفعال</span>{% endif %}</td>
+      <td>
+        <a class="btn" href="?edit={{ u.pk }}">ویرایش</a>
+      </td>
+    </tr>
+    {% if edit_pk == u.pk %}
+    <tr>
+      <td colspan="6">
+        <form method="post" action="{% url 'accounts:users_edit' pk=u.pk %}" class="card form">{% csrf_token %}
+          <div class="grid-2">
+            <div><label>نام</label>
+              <input name="first_name" class="input" value="{{ u.first_name }}" maxlength="150"></div>
+            <div><label>نام خانوادگی</label>
+              <input name="last_name" class="input" value="{{ u.last_name }}" maxlength="150"></div>
+          </div>
+          <div class="grid-2">
+            <div><label>رایانامه</label>
+              <input name="email" class="input" value="{{ u.email }}" dir="ltr"></div>
+            <div><label>حساب فعال</label>
+              <input type="checkbox" name="is_active" {% if u.is_active %}checked{% endif %}></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">ذخیره</button>
+          </div>
+        </form>
+      </td>
+    </tr>
+    {% endif %}
+  {% empty %}
+    <tr><td colspan="6">کاربری یافت نشد.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

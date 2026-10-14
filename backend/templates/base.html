@@ -56,6 +56,9 @@
       </div>
       <div class="side-group">
         <div class="label">سازمان</div>
+        <a class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">پروفایل من</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" href="{% url 'accounts:settings' %}">تنظیمات سامانه</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}" href="{% url 'accounts:users' %}">مدیریت کاربران</a>
         <a class="side-link" href="/admin/">پنل مدیریت</a>
       </div>
     </nav>

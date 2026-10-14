@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}تنظیمات سامانه{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>تنظیمات سامانه</h1><p class="sub">نام سازمان، شعار و سال مالی — در همه صفحه‌ها نمایش داده می‌شود</p></div>
+  <a href="{% url 'secretariat:kartable' %}" class="btn">بازگشت</a>
+</div>
+
+<form method="post" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="org_name">نام سازمان *</label>
+      <input id="org_name" name="org_name" class="input" value="{{ obj.org_name }}" required maxlength="200">
+    </div>
+    <div>
+      <label for="motto">شعار / زیرنویس</label>
+      <input id="motto" name="motto" class="input" value="{{ obj.motto }}" maxlength="200">
+    </div>
+  </div>
+  <div>
+    <label for="fiscal_year">سال مالی</label>
+    <input id="fiscal_year" name="fiscal_year" class="input num" value="{{ obj.fiscal_year }}" maxlength="20" dir="ltr" style="text-align:right" placeholder="مثلاً ۱۴۰۴">
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ذخیره تنظیمات</button>
+    <a href="{% url 'accounts:users' %}" class="btn">مدیریت کاربران</a>
+  </div>
+</form>
+{% endblock %}
