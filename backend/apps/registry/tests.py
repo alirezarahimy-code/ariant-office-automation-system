@@ -37,10 +37,10 @@ class ManifestSeedTests(TestCase):
     def test_planned_rows_at_step_zero(self):
         call_command('setup_platform_manifest')
         planned = Subsystem.objects.filter(status=Subsystem.Status.PLANNED)
-        self.assertEqual(planned.count(), 3)
+        self.assertEqual(planned.count(), 2)
         self.assertTrue(all(s.step == 0 for s in planned))
         native = Subsystem.objects.filter(status=Subsystem.Status.NATIVE)
-        self.assertEqual(native.count(), 7)
+        self.assertEqual(native.count(), 8)
         self.assertTrue(all(s.step == 3 for s in native))
 
 

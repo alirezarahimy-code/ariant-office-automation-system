@@ -39,6 +39,7 @@
         <a class="side-link {% if request.resolver_match.app_name == 'archive' %}active{% endif %}" href="{% url 'archive:list' %}">بایگانی و امحا</a>
         <a class="side-link {% if request.resolver_match.app_name == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}">تیکت‌ها</a>
         <a class="side-link {% if request.resolver_match.app_name == 'attendance' %}active{% endif %}" href="{% url 'attendance:list' %}">کنترل تردد</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:list' %}">انبار</a>
         <a class="side-link" href="{% url 'bridge:jump' %}">ورود به سامانه تیکتینگ</a>
         {% if user.is_superuser or perms.registry.manage_platform or perms.secretariat.view_all_letter %}
         <a class="side-link {% if request.resolver_match.app_name == 'registry' %}active{% endif %}" href="{% url 'registry:platform' %}">بستر یکپارچه</a>

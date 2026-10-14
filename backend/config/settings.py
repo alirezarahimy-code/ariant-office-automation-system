@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'apps.registry',
     # فاز ۳ — زیرسامانه‌های گام-۰
     'apps.attendance',
+    'apps.inventory',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}انبار{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>انبار</h1><p class="sub">کالاها و موجودی لحظه‌ای — رسید، حواله و انبارگردانی</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'inventory:balance' %}" class="btn">موجودی و انبارگردانی</a>
+    <a href="{% url 'inventory:move_new' %}" class="btn btn-primary">ثبت سند</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="جست‌وجوی کد، نام یا دسته…">
+  <button class="btn" type="submit">جست‌وجو</button>
+</form>
+
+{% if low %}
+<div class="card">
+  <strong>هشدار موجودی:</strong>
+  {% for row in low %}<span class="chip chip-danger">{{ row.item.name }} — {{ row.stock|fa }}</span> {% endfor %}
+</div>
+{% endif %}
+
+<table class="table">
+  <thead><tr><th>کد</th><th>نام کالا</th><th>دسته</th><th>واحد</th><th>موجودی</th><th>حداقل</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="num">{{ row.item.code }}</td>
+      <td><a class="row-link" href="{% url 'inventory:detail' pk=row.item.pk %}">{{ row.item.name }}</a></td>
+      <td>{{ row.item.category|default:'—' }}</td>
+      <td>{{ row.item.unit }}</td>
+      <td class="num">
+        {{ row.stock|fa }}
+        {% if row.item.min_stock and row.stock < row.item.min_stock %}<span class="chip chip-danger">زیر حداقل</span>{% endif %}
+      </td>
+      <td class="num">{{ row.item.min_stock|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6">کالایی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

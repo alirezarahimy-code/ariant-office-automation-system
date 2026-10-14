@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}کارت کالا{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>کارت کالا</h1>
+    <p class="sub">{{ item.code }} — {{ item.name }} — موجودی فعلی: {{ stock|fa }} {{ item.unit }}</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a>
+    <a href="{% url 'inventory:move_new' %}" class="btn btn-primary">ثبت سند</a>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="label">موجودی فعلی</span><span class="value num">{{ stock|fa }}</span></div>
+  <div class="stat"><span class="label">حداقل موجودی</span><span class="value num">{{ item.min_stock|fa }}</span></div>
+  <div class="stat"><span class="label">تعداد اسناد</span><span class="value num">{{ rows|length|fa }}</span></div>
+</div>
+
+<table class="table">
+  <thead><tr><th>تاریخ</th><th>نوع</th><th>انبار</th><th>تعداد</th><th>موجودی</th><th>مدرک</th><th>ثبت‌کننده</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="num">{{ row.move.date|jalali_datetime:'date' }}</td>
+      <td>
+        {% if row.move.kind == 'receive' %}<span class="chip">رسید</span>
+        {% elif row.move.kind == 'issue' %}<span class="chip chip-warning">حواله</span>
+        {% else %}<span class="chip chip-danger">تعدیل</span>{% endif %}
+      </td>
+      <td>{{ row.move.warehouse }}</td>
+      <td class="num">{{ row.move.quantity|fa }}</td>
+      <td class="num">{{ row.balance|fa }}</td>
+      <td class="num">{{ row.move.reference|default:'—' }}</td>
+      <td>{{ row.move.created_by|default:'—' }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7">سندی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
