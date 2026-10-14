@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}وظیفه تازه{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>وظیفه تازه</h1>
+  <p class="sub">{% if source_letter %}برای نامه «{{ source_letter.subject }}»{% else %}انتساب به کاربر یا همکاران{% endif %}</p></div>
+  <a href="{% url 'tasks:list' %}" class="btn">بازگشت</a>
+</div>
+
+<form method="post" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="title">عنوان وظیفه *</label>
+      <input id="title" name="title" class="input" required maxlength="300" placeholder="مثلاً تهیه گزارش عملکرد مهرماه">
+    </div>
+    <div>
+      <label for="due_date">مهلت (شمسی)</label>
+      <input id="due_date" name="due_date" class="input num fa" placeholder="مثلاً ۱۴۰۴/۰۷/۳۰" inputmode="numeric" dir="ltr" style="text-align:right">
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="responsible">مسئول *</label>
+      <select id="responsible" name="responsible_id" class="select">
+        {% for u in users %}
+        <option value="{{ u.pk }}" {% if u.pk == user.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="priority">فوریت</label>
+      <select id="priority" name="priority" class="select">
+        <option value="normal" selected>عادی</option>
+        <option value="urgent">فوری</option>
+        <option value="immediate">آنی</option>
+      </select>
+    </div>
+  </div>
+  <div>
+    <label>همکاران</label>
+    <select name="collaborators" class="select" multiple size="6">
+      {% for u in users %}
+      <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+      {% endfor %}
+    </select>
+    <p class="hint">با نگه‌داشتن Ctrl چند کاربر را انتخاب کنید.</p>
+  </div>
+  <div>
+    <label for="description">شرح</label>
+    <textarea id="description" name="description" class="textarea" rows="4"></textarea>
+  </div>
+  {% if source_letter %}<input type="hidden" name="source_letter" value="{{ source_letter.pk }}">{% endif %}
+  <div class="actions">
+    <button class="btn btn-primary" type="submit">ایجاد وظیفه</button>
+    <a href="{% url 'tasks:list' %}" class="btn btn-ghost">انصراف</a>
+  </div>
+</form>
+{% endblock %}

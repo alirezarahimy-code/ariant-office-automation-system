@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}جلسات — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">فاز ۲ — جلسات و مصوبات</span>
+    <h1>جلسات</h1>
+    <span class="hint">دعوت، دستور جلسه، صورت‌جلسه با امضا و مصوبات قابل تبدیل</span>
+  </div>
+  <div class="actions"><a class="btn" href="{% url 'meetings:new' %}">جلسه تازه</a></div>
+</div>
+
+<div class="tabs">
+  <a class="tab {% if not status %}active{% endif %}" href="{% url 'meetings:list' %}">همه</a>
+  <a class="tab {% if status == 'scheduled' %}active{% endif %}" href="?status=scheduled">برنامه‌ریزی‌شده</a>
+  <a class="tab {% if status == 'held' %}active{% endif %}" href="?status=held">برگزارشده</a>
+  <a class="tab {% if status == 'cancelled' %}active{% endif %}" href="?status=cancelled">لغوشده</a>
+</div>
+
+<div class="card table-wrap" style="padding:0">
+  <table class="table">
+    <thead><tr><th>عنوان</th><th>تاریخ</th><th>ساعت</th><th>مکان</th><th>دعوت‌شدگان</th><th>وضعیت</th><th></th></tr></thead>
+    <tbody>
+      {% for m in meetings %}
+      <tr>
+        <td class="subject"><a href="{% url 'meetings:detail' m.pk %}">{{ m.title }}</a></td>
+        <td>{{ m.jalali_date|jdate }}</td>
+        <td>{{ m.start_time|time:'H:i'|default:'—' }}</td>
+        <td>{{ m.location|default:'—' }}</td>
+        <td>{{ m.attendees.count|add:1|fa }}</td>
+        <td><span class="pill {% if m.status == 'held' %}ok{% elif m.status == 'cancelled' %}bad{% else %}info{% endif %}">{{ m.get_status_display }}</span></td>
+        <td><a class="btn sm secondary" href="{% url 'meetings:detail' m.pk %}">مشاهده</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7"><div class="empty"><span class="big">📅</span>جلسه‌ای نیست — نخستین جلسه را ثبت کنید.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

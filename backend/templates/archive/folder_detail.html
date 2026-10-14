@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}{{ folder.code }} — بایگانی — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">{{ folder.box.title }}</span>
+    <h1>{{ folder.title }}
+      {% if folder.is_active %}<span class="pill ok">فعال</span>{% else %}<span class="pill gray">امحاشده</span>{% endif %}
+    </h1>
+    <span class="hint">کد بایگانی <code>{{ folder.code }}</code> — رده {{ folder.get_subject_kind_display }} — دوره نگهداری {{ folder.retention_years|fa }} سال</span>
+  </div>
+  <div class="actions"><a class="btn secondary" href="{% url 'archive:box_detail' folder.box.pk %}">بازگشت به زونکن</a></div>
+</div>
+
+<div class="card table-wrap" style="padding:0">
+  <table class="table">
+    <thead><tr><th>سند</th><th>شماره</th><th>بایگانی‌کننده</th><th>یادداشت</th><th>زمان</th></tr></thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td class="subject">{% if item.content_object.get_absolute_url %}<a href="{{ item.content_object.get_absolute_url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</td>
+        <td><code>{{ item.reference|default:'—' }}</code></td>
+        <td>{% if item.archived_by %}{{ item.archived_by.get_full_name|default:item.archived_by.username }}{% else %}سامانه{% endif %}</td>
+        <td class="cell-sub">{{ item.note|truncatechars:60 }}</td>
+        <td>{{ item.created_at|jalali_datetime }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5"><div class="empty"><span class="big">📄</span>سندی در این پوشه نیست.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card no-print">
+  <div class="card-title">امحا <span class="pill gray">نیازمند تأیید</span></div>
+  {% if folder.is_active %}
+    {% if pending %}
+      <p class="tiny muted">درخواست امحا در انتظار تصمیم {{ pending.requested_by.get_full_name|default:pending.requested_by.username }} — ثبت {{ pending.created_at|jalali_datetime }}</p>
+      <p class="tiny">{{ pending.reason }}</p>
+      {% if can_approve %}
+      <form method="post" action="{% url 'archive:disposal_decide' pending.pk %}" class="form">
+        {% csrf_token %}
+        <div class="field"><label>یادداشت تصمیم</label><input type="text" name="note" maxlength="500" placeholder="اختیاری"></div>
+        <div class="form-actions">
+          <button class="btn" type="submit" name="approve" value="1">تأیید امحا</button>
+          <button class="btn danger" type="submit" name="approve" value="0">رد درخواست</button>
+        </div>
+      </form>
+      {% endif %}
+    {% elif approved and can_manage %}
+      <form method="post" action="{% url 'archive:disposal_execute' approved.pk %}">{% csrf_token %}
+        <p class="tiny muted">درخواست تأییدشده — با اجرای امحا پوشه غیرفعال می‌شود (اسناد برای ممیزی باقی می‌مانند).</p>
+        <button class="btn danger" type="submit">اجرای امحا</button>
+      </form>
+    {% elif can_manage %}
+      <form method="post" action="{% url 'archive:disposal_request' folder.pk %}" class="form">
+        {% csrf_token %}
+        <div class="field"><label>دلیل امحا</label>
+          <textarea name="reason" maxlength="1000" required placeholder="مثلاً: پایان دوره نگهداری ۵ ساله طبق جدول رده‌بندی"></textarea></div>
+        <div class="form-actions"><button class="btn danger" type="submit">ثبت درخواست امحا</button></div>
+      </form>
+    {% else %}
+      <p class="tiny muted">برای امحا، مدیر بایگانی درخواست ثبت و مدیر ارشد تأیید می‌کند.</p>
+    {% endif %}
+  {% else %}
+    <p class="tiny muted">این پوشه امحا (غیرفعال) شده است.</p>
+  {% endif %}
+
+  {% if disposals %}
+  <div class="table-wrap" style="padding:0;margin-top:12px">
+    <table class="table">
+      <thead><tr><th>درخواست</th><th>وضعیت</th><th>تصمیم‌گیرنده</th><th>امحا</th></tr></thead>
+      <tbody>
+        {% for d in disposals %}
+        <tr>
+          <td class="cell-sub">{{ d.reason|truncatechars:70 }}</td>
+          <td><span class="pill {% if d.status == 'executed' %}gray{% elif d.status == 'approved' %}ok{% elif d.status == 'rejected' %}bad{% else %}warn{% endif %}">{{ d.get_status_display }}</span></td>
+          <td>{% if d.decided_by %}{{ d.decided_by.get_full_name|default:d.decided_by.username }}{% else %}—{% endif %}</td>
+          <td>{% if d.executed_at %}{{ d.executed_at|jalali_datetime }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}تیکت‌ها{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>تیکت‌ها</h1><p class="sub">زیرسامانه بومی — هم‌واژه با سامانه تیکتینگ</p></div>
+  <a href="{% url 'tickets:new' %}" class="btn btn-primary">تیکت تازه</a>
+</div>
+
+<div class="tabs">
+  <a class="tab{% if tab == 'mine' %} is-active{% endif %}" href="?tab=mine">تیکت‌های من</a>
+  <a class="tab{% if tab == 'assigned' %} is-active{% endif %}" href="?tab=assigned">منتسب به من</a>
+  <a class="tab{% if tab == 'open' %} is-active{% endif %}" href="?tab=open">باز</a>
+  {% if can_view_all %}<a class="tab{% if tab == 'all' %} is-active{% endif %}" href="?tab=all">همه</a>{% endif %}
+</div>
+
+{% if tickets %}
+<div class="table-wrap"><table class="table">
+  <thead><tr>
+    <th>موضوع</th><th>حوزه</th><th>اولویت</th><th>وضعیت</th><th>کارشناس</th><th>ثبت</th>
+  </tr></thead>
+  <tbody>
+  {% for t in tickets %}
+    <tr>
+      <td class="subject">
+        <a href="{% url 'tickets:detail' pk=t.pk %}">{{ t.subject }}</a>
+        {% if t.external_ref %}<span class="chip chip-muted tiny">آینه</span>{% endif %}
+      </td>
+      <td>{{ t.service_group|default:'—' }}</td>
+      <td>
+        {% if t.priority == 'urgent' %}<span class="chip chip-danger">فوری</span>
+        {% elif t.priority == 'high' %}<span class="chip chip-warning">زیاد</span>
+        {% elif t.priority == 'low' %}<span class="chip chip-muted">کم</span>
+        {% else %}<span class="chip">عادی</span>{% endif %}
+      </td>
+      <td>
+        {% if t.status == 'closed' %}<span class="chip chip-muted">بسته</span>
+        {% elif t.status == 'resolved' %}<span class="chip chip-success">حل‌شده</span>
+        {% elif t.status == 'waiting_user' %}<span class="chip chip-warning">در انتظار کاربر</span>
+        {% elif t.status == 'in_progress' %}<span class="chip chip-info">در جریان</span>
+        {% else %}<span class="chip chip-danger">باز</span>{% endif %}
+      </td>
+      <td>{{ t.assignee.get_full_name|default:t.assignee.username|default:'—' }}</td>
+      <td class="num fa">{{ t.created_at|jalali_datetime:'date' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty">
+  <span class="empty-icon">🎫</span>
+  <h2>تیکتی در این نمایه نیست</h2>
+  <a class="btn btn-primary" href="{% url 'tickets:new' %}">ثبت تیکت تازه</a>
+</div>
+{% endif %}
+{% endblock %}

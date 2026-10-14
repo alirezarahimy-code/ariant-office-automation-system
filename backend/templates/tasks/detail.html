@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}{{ task.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ task.title }}</h1>
+  <p class="sub">
+    مسئول: <b>{{ task.responsible.get_full_name|default:task.responsible.username }}</b>
+    {% if task.due_date %} · مهلت: <b class="num fa">{{ task.due_date|jalali_datetime:'date' }}</b>{% endif %}
+    {% if task.is_overdue %}<span class="chip chip-danger">عقب‌افتاده</span>{% endif %}
+  </p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'tasks:list' %}" class="btn">بازگشت</a>
+  </div>
+</div>
+
+{% if task.source_letter %}
+<div class="msg msg-info">برگرفته از نامه
+  <a href="{% url 'secretariat:letter_detail' pk=task.source_letter.pk %}">{{ task.source_letter.subject }}</a>
+</div>
+{% endif %}
+{% if task.source_resolution %}
+<div class="msg msg-info">برگرفته از مصوبه «{{ task.source_resolution.text|truncatechars:60 }}»
+  در جلسه <a href="{% url 'meetings:detail' pk=task.source_resolution.meeting.pk %}">{{ task.source_resolution.meeting.title }}</a>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>وضعیت و پیشرفت</h2>
+      <span class="chip{% if task.status == 'done' %} chip-success{% elif task.status == 'in_progress' %} chip-info{% elif task.status == 'cancelled' %} chip-muted{% endif %}">{{ task.get_status_display }}</span>
+    </div>
+    <div class="card-body">
+      <div class="meter" style="margin-bottom:1rem"><span style="width:{{ task.progress }}%"></span></div>
+      <p class="kv"><span>فوریت</span><b>{{ task.get_priority_display }}</b></p>
+      <p class="kv"><span>همکاران</span><b>{% for c in task.collaborators.all %}{{ c.get_full_name|default:c.username }}{% if not forloop.last %}، {% endif %}{% empty %}—{% endfor %}</b></p>
+      {% if task.description %}<p style="margin-top:.5rem">{{ task.description|linebreaksbr }}</p>{% endif %}
+    </div>
+    {% if can_edit %}
+    <div class="card-foot">
+      <form method="post" action="{% url 'tasks:progress' pk=task.pk %}" class="form-row">{% csrf_token %}
+        <input type="number" name="percent" class="input" min="0" max="100" value="{{ task.progress }}" style="width:6rem">
+        <input type="text" name="note" class="input" placeholder="یادداشت پیشرفت (اختیاری)">
+        <button class="btn btn-primary" type="submit">ثبت پیشرفت</button>
+      </form>
+      <form method="post" action="{% url 'tasks:status' pk=task.pk %}" class="form-row">{% csrf_token %}
+        <select name="status" class="select" style="width:auto">
+          {% for value, label in task.Status.choices %}
+          <option value="{{ value }}" {% if value == task.status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn" type="submit">تغییر وضعیت</button>
+      </form>
+      <form method="post" action="{% url 'tasks:comment' pk=task.pk %}" class="form-row">{% csrf_token %}
+        <input type="text" name="note" class="input" placeholder="گفت‌وگو…" required>
+        <button class="btn" type="submit">ارسال</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>رویدادنامه</h2></div>
+    <div class="card-body">
+      <ul class="timeline">
+        {% for ev in events %}
+        <li>
+          <span class="t-time num fa">{{ ev.created_at|jalali_datetime }}</span>
+          <b>{{ ev.get_action_display }}</b>
+          {% if ev.actor %}— {{ ev.actor.get_full_name|default:ev.actor.username }}{% endif %}
+          {% if ev.note %}<p class="t-note">{{ ev.note }}</p>{% endif %}
+        </li>
+        {% empty %}<li>رویدادی ثبت نشده است.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

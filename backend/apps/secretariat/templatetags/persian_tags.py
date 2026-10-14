@@ -44,13 +44,28 @@ def jdate(value):
 
 
 @register.filter
-def jalali_datetime(value):
-    """نمایش تاریخ‌زمان شمسی: ۱۴۰۵/۰۷/۲۰ — ۱۴:۳۲"""
+def jalali_datetime(value, fmt=''):
+    """نمایش تاریخ‌زمان شمسی: ۱۴۰۵/۰۷/۲۰ — ۱۴:۳۲
+
+    آرگومان اختیاری «date» فقط بخش تاریخ را نشان می‌دهد.
+    مقادیر jdatetime (فیلدهای شمسی django_jalali) مستقیم قالب می‌گیرند؛
+    مقادیر میلادی ابتدا به شمسی تبدیل می‌شوند.
+    """
     if not value:
         return ''
+    if isinstance(value, jdatetime.datetime):
+        pattern = '%Y/%m/%d' if fmt == 'date' else '%Y/%m/%d — %H:%M'
+        return to_persian_digits(value.strftime(pattern))
+    if isinstance(value, jdatetime.date):
+        return to_persian_digits(value.strftime('%Y/%m/%d'))
     if timezone.is_aware(value):
         value = timezone.localtime(value)
-    j = jdatetime.datetime.fromgregorian(datetime=value)
+    if hasattr(value, 'hour'):
+        j = jdatetime.datetime.fromgregorian(datetime=value)
+    else:  # datetime.date میلادی
+        j = jdatetime.date.fromgregorian(date=value)
+    if fmt == 'date' or not hasattr(value, 'hour'):
+        return to_persian_digits(j.strftime('%Y/%m/%d'))
     return to_persian_digits(j.strftime('%Y/%m/%d — %H:%M'))
 
 

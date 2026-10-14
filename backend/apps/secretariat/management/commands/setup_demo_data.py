@@ -1,10 +1,11 @@
-"""داده نمایشی فاز ۱ — سامانه را با طراحی مصوب و داده واقعی‌نما پر می‌کند.
+"""داده نمایشی فاز ۱+۲ — سامانه را با طراحی مصوب و داده واقعی‌نما پر می‌کند.
 
 اجرا: python3 manage.py setup_demo_data [--force]
 کاربران نمونه (رمز یکسان با نام کاربری + 1234):
   dabir (دبیر)، modir (مدیر واحد)، karshenas (کارشناس)، emza (بازبین/امضا)، modir-arshad، karbar
+فاز ۲ افزوده بر فاز ۱: گردش کار، جلسات و مصوبات، وظایف، بایگانی، تیکت بومی و فهرست بستر.
 """
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 import jdatetime
 from django.contrib.auth import get_user_model
@@ -19,6 +20,7 @@ from apps.organization.models import Department, Employee
 from apps.secretariat.models import (Attachment, Copy, Letter, LetterApproval, LetterEvent,
                                      Office, Referral)
 from apps.secretariat.services import register_letter
+from apps.tasks.models import Task
 from apps.ticket_bridge.models import IntegrationUserMap
 
 User = get_user_model()
@@ -29,10 +31,108 @@ def jday(offset: int) -> jdatetime.date:
 
 
 class Command(BaseCommand):
-    help = 'ساخت داده نمایشی فاز ۱ (کاربران، نامه‌ها، ارجاع‌ها، تیکت‌ها)'
+    help = 'ساخت داده نمایشی فاز ۱+۲ (کاربران، نامه‌ها، جلسات، وظایف، بایگانی، تیکت‌ها)'
 
     def add_arguments(self, parser):
         parser.add_argument('--force', action='store_true', help='بازسازی حتی اگر داده هست')
+
+    def _seed_phase2(self, users: dict, letters: list, answered) -> None:
+        """زیرسامانه‌های فاز ۲ — همه فرمان‌ها/سرویس‌ها ایدِمپوتنت‌اند."""
+        dabir, modir = users['dabir'], users['modir']
+        karshenas, karbar = users['karshenas'], users['karbar']
+        arshad, emza = users['arshad'], users['emza']
+
+        # شماره همراه نمونه برای اعلان پیامکی
+        for u, phone in ((dabir, '09121110001'), (karshenas, '09121110002'),
+                         (arshad, '09121110003')):
+            Employee.objects.filter(user=u).update(phone=phone)
+
+        # ۱) گردش کار — کاشت + اتصال به سه نامه نخست
+        call_command('setup_default_workflow')
+        from apps.workflow.models import Workflow
+        from apps.workflow.services import bind_workflow
+        wf = Workflow.objects.filter(code='letter-default').first()
+        if wf:
+            for letter in letters[:3]:
+                bind_workflow(letter, wf, dabir)
+
+        # ۲) جلسات — یک جلسه برگزارشده کامل و یک جلسه پیش‌رو
+        from apps.meetings.models import AgendaItem, Attendee, Meeting, Resolution
+        from apps.meetings.services import (convert_resolution_to_task, finalize_minutes,
+                                            get_or_create_minutes, sign_minutes)
+        held, created = Meeting.objects.get_or_create(
+            title='شورای فناوری اطلاعات',
+            defaults={
+                'jalali_date': jday(-2), 'start_time': time(10, 0),
+                'location': 'اتاق جلسات — طبقه ۲',
+                'description': 'بررسی خرابی سرور پایگاه‌داده و بودجه تجهیزات',
+                'status': Meeting.Status.HELD, 'organizer': arshad})
+        if created:
+            for u, role in ((arshad, Attendee.Role.CHAIR), (dabir, Attendee.Role.SECRETARY),
+                            (karshenas, Attendee.Role.MEMBER), (modir, Attendee.Role.MEMBER)):
+                Attendee.objects.create(meeting=held, user=u, role=role,
+                                        attendance=Attendee.Attendance.PRESENT)
+            AgendaItem.objects.create(meeting=held, order=1, presenter=karshenas,
+                                      title='گزارش ریشه‌ای خرابی سرور پایگاه‌داده')
+            item2 = AgendaItem.objects.create(meeting=held, order=2, presenter=modir,
+                                              title='تصمیم‌گیری درباره خرید تجهیزات رایانه‌ای')
+            minutes = get_or_create_minutes(held)
+            minutes.body = (
+                'جلسه با نام خدا آغاز شد. گزارش خرابی سرور قرائت و مقرر شد پیمانکار '
+                'پشتیبانی پاسخ‌گو باشد. در خصوص خرید تجهیزات، استعلام از سه تأمین‌کننده '
+                'تصویب شد.')
+            minutes.save(update_fields=['body'])
+            sign_minutes(minutes, arshad, 'رئیس جلسه')
+            sign_minutes(minutes, dabir, 'دبیر جلسه')
+            finalize_minutes(minutes, dabir)
+            r1 = Resolution.objects.create(
+                meeting=held, agenda_item=item2, number=1,
+                title='استعلام قیمت تجهیزات از سه تأمین‌کننده',
+                description='فهرست تجهیزات پیوست بخشنامه بودجه مبنا است.',
+                responsible=karshenas, due_date=jday(5))
+            Resolution.objects.create(
+                meeting=held, number=2, title='ارائه گزارش ریشه‌ای خرابی سرور',
+                responsible=karshenas, due_date=jday(3))
+            convert_resolution_to_task(r1, dabir)
+        Meeting.objects.get_or_create(
+            title='کمیته فنی پروژه اتوماسیون',
+            defaults={
+                'jalali_date': jday(3), 'start_time': time(14, 0),
+                'location': 'سالن کنفرانس', 'organizer': dabir,
+                'description': 'هم‌اندیشی فاز ۲ و بازخورد کاربران',
+                'status': Meeting.Status.SCHEDULED})
+        sched = Meeting.objects.get(title='کمیته فنی پروژه اتوماسیون')
+        for u in (modir, karshenas, karbar):
+            Attendee.objects.get_or_create(meeting=sched, user=u,
+                                           defaults={'role': Attendee.Role.MEMBER})
+
+        # ۳) وظایف — مستقیم و از نامه
+        from apps.tasks.services import create_task, update_progress
+        if not Task.objects.filter(title='تمدید قرارداد پشتیبانی شبکه').exists():
+            t1 = create_task(
+                title='تمدید قرارداد پشتیبانی شبکه',
+                description='پیش‌نویس تمدید برای شرکت رایان‌پشتیبان آماده شود.',
+                responsible=karshenas, due_jalali=jday(4), priority=Task.Priority.URGENT,
+                created_by=modir, source_letter=letters[7])
+            update_progress(t1, karshenas, 40, 'استعلام اول دریافت شد')
+        if not Task.objects.filter(title='به‌روزرسانی فهرست کالاهای رسوبی').exists():
+            create_task(
+                title='به‌روزرسانی فهرست کالاهای رسوبی',
+                responsible=karbar, due_jalali=jday(-1), created_by=modir,
+                source_letter=letters[6])
+
+        # ۴) بایگانی — بستن نامه پاسخ‌شده و بایگانی دسته‌ای
+        if answered.status != Letter.Status.CLOSED:
+            answered.status = Letter.Status.CLOSED
+            answered.save(update_fields=['status'])
+            LetterEvent.objects.create(letter=answered, actor=dabir,
+                                       action=LetterEvent.Action.CLOSED,
+                                       to_status=answered.status, note='بایگانی نمونه')
+        call_command('archive_closed_letters')
+
+        # ۵) تیکت بومی از آینه + ۶) manifest بستر
+        call_command('import_mirror_tickets')
+        call_command('setup_platform_manifest')
 
     def handle(self, *args, **options):
         if Letter.objects.count() > 0 and not options['force']:
@@ -173,9 +273,17 @@ class Command(BaseCommand):
         except Exception as exc:  # در نبود fixture
             self.stdout.write(self.style.WARNING(f'همگام‌سازی تیکت انجام نشد: {exc}'))
 
+        # فاز ۲ — گردش کار، جلسات، وظایف، بایگانی، تیکت بومی و فهرست بستر
+        self._seed_phase2(
+            {'dabir': dabir, 'modir': modir, 'karshenas': karshenas, 'emza': emza,
+             'arshad': arshad, 'karbar': karbar},
+            letters, answered)
+
         call_command('check_deadlines')
         self.stdout.write(self.style.SUCCESS(
-            'داده نمایشی آماده است.\n'
+            'داده نمایشی آماده است (فاز ۱+۲).\n'
             '  ورود: dabir/dabir1234 | modir/modir1234 | karshenas/karshenas1234 |\n'
             '        emza/emza1234 | modir-arshad/modir-arshad1234 | karbar/karbar1234\n'
+            '  زیرسامانه‌ها: /reports/ /tasks/ /tasks/calendar/ /meetings/ /archive/\n'
+            '                /workflow/ /tickets/ /platform/\n'
             '  سپس: python3 manage.py runserver  →  http://127.0.0.1:8000/'))

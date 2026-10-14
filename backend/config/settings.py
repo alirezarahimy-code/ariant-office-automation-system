@@ -38,6 +38,14 @@ INSTALLED_APPS = [
     'apps.organization',
     'apps.secretariat',
     'apps.ticket_bridge',
+    # فاز ۲ — زیرسامانه‌های بستر
+    'apps.workflow',
+    'apps.archive',
+    'apps.meetings',
+    'apps.tasks',
+    'apps.reports',
+    'apps.tickets',
+    'apps.registry',
 ]
 
 MIDDLEWARE = [
@@ -245,3 +253,15 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', '0') == '1'
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', 'automation@localhost')
+
+# ===== اعلان چندکاناله (فاز ۲) =====
+PLATFORM_NAME = os.environ.get('PLATFORM_NAME', 'سامانه اتوماسیون اداری آرینت')
+SMS_ENABLED = os.environ.get('SMS_ENABLED', '0') == '1'
+SMS_BACKEND = os.environ.get('SMS_BACKEND', 'apps.core.sms.ConsoleSMSBackend')
+SMS_FROM = os.environ.get('SMS_FROM', '')
+SMS_API_URL = os.environ.get('SMS_API_URL', '')
+SMS_API_KEY = os.environ.get('SMS_API_KEY', '')
+
+# ===== پل تیکتینگ (فاز ۲) =====
+# bridge = فقط پل به سامانه PHP (پیش‌فرض) | native = زیرسامانه بومی فعال
+TICKET_MODE = os.environ.get('TICKET_MODE', 'bridge')

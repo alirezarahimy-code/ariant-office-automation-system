@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}{{ workflow.name }} — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">موتور گردش کار</span>
+    <h1>{{ workflow.name }}</h1>
+    <span class="hint"><code>{{ workflow.code }}</code> — {{ instances_count|fa }} نمونه فعال</span>
+  </div>
+  <div class="actions"><a class="btn secondary" href="{% url 'workflow:list' %}">بازگشت</a></div>
+</div>
+
+<div class="card">
+  <div class="card-title">مراحل</div>
+  <div class="stepper">
+    {% for stage in stages %}
+    <div class="step {% if stage.is_start %}done{% endif %}">
+      <div class="bar"></div>
+      <div class="dot-s">{{ forloop.counter|fa }}</div>
+      <div class="s-label">{{ stage.title }}
+        {% if stage.is_start %}<span class="pill teal">آغاز</span>{% endif %}
+        {% if stage.is_final %}<span class="pill gray">پایان</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">گذارها</div>
+  <div class="table-wrap" style="padding:0">
+    <table class="table">
+      <thead><tr><th>از</th><th>به</th><th>عنوان</th><th>مجوز لازم</th><th>شرط</th></tr></thead>
+      <tbody>
+        {% for t in transitions %}
+        <tr>
+          <td>{{ t.from_stage.title }}</td>
+          <td>{{ t.to_stage.title }}</td>
+          <td>{{ t.title }}</td>
+          <td>{% if t.permission_codename %}<code>{{ t.permission_codename }}</code>{% else %}<span class="muted tiny">همه مجاز</span>{% endif %}</td>
+          <td>{% if t.condition_field %}<code>{{ t.condition_field }} = {{ t.condition_value }}</code>{% else %}—{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5"><div class="empty">گذاری تعریف نشده.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

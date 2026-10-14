@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}{{ ticket.subject }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ ticket.subject }}</h1>
+    <p class="sub">
+      درخواست‌دهنده: <b>{{ ticket.requester.get_full_name|default:ticket.requester.username|default:'—' }}</b>
+      · ثبت <span class="num fa">{{ ticket.created_at|jalali_datetime }}</span>
+      {% if ticket.external_ref %}· آینه <b class="num">{{ ticket.external_ref }}</b>{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'tickets:list' %}" class="btn">بازگشت</a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>وضعیت</h2>
+      {% if ticket.status == 'closed' %}<span class="chip chip-muted">بسته</span>
+      {% elif ticket.status == 'resolved' %}<span class="chip chip-success">حل‌شده</span>
+      {% elif ticket.status == 'waiting_user' %}<span class="chip chip-warning">در انتظار کاربر</span>
+      {% elif ticket.status == 'in_progress' %}<span class="chip chip-info">در جریان</span>
+      {% else %}<span class="chip chip-danger">باز</span>{% endif %}
+    </div>
+    <div class="card-body">
+      <p class="kv"><span>حوزه خدمت</span><b>{{ ticket.service_group|default:'—' }}</b></p>
+      <p class="kv"><span>اولویت</span><b>{{ ticket.get_priority_display }}</b></p>
+      <p class="kv"><span>کارشناس مسئول</span><b>{{ ticket.assignee.get_full_name|default:ticket.assignee.username|default:'—' }}</b></p>
+      {% if ticket.body %}<p style="margin-top:.6rem">{{ ticket.body|linebreaksbr }}</p>{% endif %}
+    </div>
+    {% if is_participant or can_assign %}
+    <div class="card-foot">
+      <form method="post" action="{% url 'tickets:status' pk=ticket.pk %}" class="form-row">{% csrf_token %}
+        <select name="status" class="select" style="width:auto">
+          {% for value, label in ticket.Status.choices %}
+          <option value="{{ value }}" {% if value == ticket.status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="note" class="input" placeholder="یادداشت (اختیاری)">
+        <button class="btn" type="submit">تغییر وضعیت</button>
+      </form>
+      {% if can_assign %}
+      <form method="post" action="{% url 'tickets:assign' pk=ticket.pk %}" class="form-row">{% csrf_token %}
+        <select name="assignee_id" class="select" style="width:auto">
+          {% for u in users %}<option value="{{ u.pk }}" {% if u.pk == ticket.assignee_id %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">انتساب کارشناس</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>گفت‌وگو</h2><span class="chip">{{ msgs|length }} پیام</span></div>
+    <div class="card-body">
+      <ul class="timeline">
+        {% for m in msgs %}
+        <li>
+          <span class="t-time num fa">{{ m.created_at|jalali_datetime }}</span>
+          <b>{{ m.author.get_full_name|default:m.author.username|default:'سامانه' }}</b>
+          <p class="t-note">{{ m.body|linebreaksbr }}</p>
+        </li>
+        {% empty %}<li>پیامی رد و بدل نشده است.</li>{% endfor %}
+      </ul>
+    </div>
+    {% if is_participant or can_assign %}
+    <div class="card-foot">
+      <form method="post" action="{% url 'tickets:message' pk=ticket.pk %}" class="form-row">{% csrf_token %}
+        <input type="text" name="body" class="input" placeholder="پاسخ یا پیگیری…" required>
+        <button class="btn btn-primary" type="submit">ارسال پیام</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>رویدادنامه</h2></div>
+  <ul class="timeline">
+    {% for e in events %}
+    <li>
+      <span class="t-time num fa">{{ e.created_at|jalali_datetime }}</span>
+      <b>{{ e.get_action_display }}</b>{% if e.actor %} — {{ e.actor.get_full_name|default:e.actor.username }}{% endif %}
+      {% if e.note %}<p class="t-note">{{ e.note }}</p>{% endif %}
+    </li>
+    {% empty %}<li>رویدادی ثبت نشده است.</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}
