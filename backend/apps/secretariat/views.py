@@ -6,7 +6,6 @@ from datetime import date, timedelta
 from urllib.parse import quote
 
 import jdatetime
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -19,7 +18,6 @@ from django.views.decorators.http import require_POST
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from apps.core.models import Notification
 from apps.core.persian import to_persian_digits
 from .forms import (AnswerActionForm, CopyForm, DelegationForm, IncomingLetterForm,
                     OutgoingDraftForm, ReferralActionForm)
@@ -55,13 +53,15 @@ def _parse_jalali_input(raw: str):
 
 
 def _notify(user, title, body='', url=''):
+    """اعلان یکپارچه — واگذاری به سرویس مرکزی چندکاناله (فاز ۲).
+
+    کانال‌ها (درون‌سامانه‌ای/ایمیل/پیامک) در apps.core.services تصمیم
+    گرفته می‌شوند؛ این تابع فقط سازگاری با امضای قدیمی را نگه می‌دارد.
+    """
     if user is None:
-        return
-    Notification.objects.create(user=user, title=title, body=body[:300], url=url)
-    if settings.NOTIFICATIONS_EMAIL_ENABLED and user.email:
-        from django.core.mail import send_mail
-        message = (body or '') + (f'\n\n{url}' if url else '')
-        send_mail(title, message, None, [user.email], fail_silently=True)
+        return None
+    from apps.core.services import send_notification
+    return send_notification(user, title, body, url)
 
 
 def _form_errors_message(form):
@@ -248,8 +248,24 @@ def letter_detail(request, pk):
                 and (letter.created_by_id == user.pk or user.is_superuser
                      or user.has_perm('secretariat.manage_secretariat')
                      or user.has_perm('secretariat.approve_letter')))
+    # فاز ۲ — کارت‌های گردش کار، بایگانی و وظایف روی صفحه نامه
+    from django.contrib.contenttypes.models import ContentType
+    from apps.archive.models import ArchiveItem
+    from apps.workflow.services import instance_for
+    ct_letter = ContentType.objects.get_for_model(Letter)
+    archive_item = ArchiveItem.objects.filter(
+        content_type=ct_letter, object_id=letter.pk,
+    ).select_related('folder', 'folder__box').first()
     return render(request, 'secretariat/letter_detail.html', {
         'letter': letter,
+        'wf_instance': instance_for(letter),
+        'can_bind_workflow': user.is_superuser
+                             or user.has_perm('secretariat.manage_secretariat'),
+        'archive_item': archive_item,
+        'can_archive': letter.status in (Letter.Status.CLOSED, Letter.Status.ARCHIVED)
+                       and (user.is_superuser or user.has_perm('archive.manage_archive')),
+        'letter_tasks': letter.tasks.select_related('responsible')[:10],
+        'can_task_from_letter': can_refer and is_open,
         'approvals': letter.approvals.select_related('approver'),
         'can_submit': can_submit,
         'can_approve': can_approve,

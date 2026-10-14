@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}داشبورد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">گزارش‌ها</span>
+    <h1>داشبورد</h1>
+    <p class="sub">امروز <b class="num fa">{{ today|jalali_datetime:'date' }}</b> — {{ month_name }} <span class="num fa">{{ today.year }}</span></p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{% url 'tasks:calendar' %}">تقویم سازمانی</a>
+    <a class="btn" href="{% url 'secretariat:kartable' %}">کارتابل من</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <a class="kpi accent-teal" href="{% url 'secretariat:kartable' %}">
+    <div class="k-label">اقدام‌های در انتظار من</div>
+    <div class="k-value num fa">{{ my_pending|fa }}</div>
+    <div class="k-hint">ارجاع‌های باز در کارتابل</div>
+  </a>
+  <a class="kpi accent-navy" href="{% url 'tasks:list' %}?tab=mine">
+    <div class="k-label">وظایف باز من</div>
+    <div class="k-value num fa">{{ open_tasks|fa }}</div>
+    <div class="k-hint">در جریان یا شروع‌نشده</div>
+  </a>
+  <a class="kpi accent-bad" href="{% url 'tasks:list' %}?tab=overdue">
+    <div class="k-label">عقب‌افتاده</div>
+    <div class="k-value num fa">{{ overdue_tasks|fa }}</div>
+    <div class="k-hint">وظایف گذشته از مهلت</div>
+  </a>
+  <a class="kpi accent-warn" href="{% url 'meetings:list' %}">
+    <div class="k-label">جلسات {{ month_name }}</div>
+    <div class="k-value num fa">{{ month_meetings|fa }}</div>
+    <div class="k-hint">از ابتدای ماه تا امروز</div>
+  </a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>نامه‌های من بر اساس وضعیت</h2>
+      <a class="tiny" href="{% url 'secretariat:letter_list' %}">همه نامه‌ها</a>
+    </div>
+    <div class="chart">
+      {% for b in letter_bars %}
+      <div class="row">
+        <span class="c-label">{{ b.label }}</span>
+        <span class="track"><i style="width:{{ b.pct }}%"></i></span>
+        <b class="num fa">{{ b.count|fa }}</b>
+      </div>
+      {% empty %}
+      <p class="tiny muted">نامه‌ای در دید شما نیست.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>وظایف بر اساس وضعیت</h2>
+      <a class="tiny" href="{% url 'tasks:list' %}?tab=all">جزئیات</a>
+    </div>
+    <div class="chart">
+      {% for b in task_bars %}
+      <div class="row">
+        <span class="c-label">{{ b.label }}</span>
+        <span class="track"><i style="width:{{ b.pct }}%"></i></span>
+        <b class="num fa">{{ b.count|fa }}</b>
+      </div>
+      {% empty %}
+      <p class="tiny muted">وظیفه‌ای ثبت نشده است.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>نامه‌های عقب‌افتاده</h2>
+    <span class="chip chip-danger">گذشته از مهلت</span>
+  </div>
+  {% if overdue_letters %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>شماره</th><th>موضوع</th><th>وضعیت</th><th>مهلت</th></tr></thead>
+    <tbody>
+      {% for letter in overdue_letters %}
+      <tr>
+        <td class="num fa"><a class="row-link" href="{% url 'secretariat:letter_detail' pk=letter.pk %}">{{ letter.number_display }}</a></td>
+        <td>{{ letter.subject|truncatechars:50 }}</td>
+        <td><span class="chip chip-info">{{ letter.get_status_display }}</span></td>
+        <td class="num fa">{{ letter.deadline|jalali_datetime:'date' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <p class="tiny muted" style="margin:0">نامه عقب‌افتاده‌ای ندارید — آفرین!</p>
+  {% endif %}
+</div>
+
+{% if is_manager %}
+<div class="card">
+  <div class="card-head"><h2>نمای سازمانی</h2>
+    <span class="chip chip-info">دسترسی مدیر</span>
+  </div>
+  <div class="kpis" style="margin-bottom:14px">
+    <div class="kpi"><div class="k-label">کل نامه‌ها</div><div class="k-value num fa">{{ org_letters_total|fa }}</div></div>
+    <div class="kpi accent-teal"><div class="k-label">در جریان اقدام</div><div class="k-value num fa">{{ org_in_progress|fa }}</div></div>
+    <div class="kpi accent-bad"><div class="k-label">عقب‌افتاده</div><div class="k-value num fa">{{ org_overdue|fa }}</div></div>
+    <div class="kpi accent-navy"><div class="k-label">بایگانی‌شده</div><div class="k-value num fa">{{ org_archived|fa }}</div></div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <h3 class="tiny" style="margin-bottom:8px">نامه‌های این ماه بر اساس نوع</h3>
+      <div class="chart">
+        {% for t in org_month_by_type %}
+        <div class="row">
+          <span class="c-label">{{ t.label }}</span>
+          <span class="track"><i style="width:{% widthratio t.count org_letters_total 100 %}%"></i></span>
+          <b class="num fa">{{ t.count|fa }}</b>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <h3 class="tiny" style="margin-bottom:8px">وظایف عقب‌افتاده سازمان</h3>
+      <p class="kv"><span>وظایف گذشته از مهلت</span><b class="num fa">{{ org_tasks_overdue|fa }}</b></p>
+      <p class="kv"><span>بایگانی فیزیکی</span><b><a href="{% url 'archive:list' %}">صندوق‌ها و پوشه‌ها</a></b></p>
+      <p class="kv"><span>جلسات</span><b><a href="{% url 'meetings:list' %}">فهرست جلسات</a></b></p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

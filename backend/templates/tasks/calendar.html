@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}تقویم سازمانی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>تقویم سازمانی</h1>
+  <p class="sub">{{ month_name }} <span class="num fa">{{ year }}</span> — جلسات، مهلت وظایف و مهلت نامه‌ها</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a class="btn" href="?y={{ prev.y }}&m={{ prev.m }}">&#8594; ماه قبل</a>
+    <a class="btn" href="?y={{ today.year }}&m={{ today.month }}">امروز</a>
+    <a class="btn" href="?y={{ next.y }}&m={{ next.m }}">ماه بعد &#8592;</a>
+    <a href="{% url 'tasks:list' %}" class="btn btn-ghost">وظایف</a>
+  </div>
+</div>
+
+<div class="card cal">
+  <div class="cal-head">
+    {% for wd in weekdays %}<div>{{ wd }}</div>{% endfor %}
+  </div>
+  {% for week in weeks %}
+  <div class="cal-row">
+    {% for cell in week %}
+      {% if cell %}
+      <div class="cal-cell{% if cell.is_today %} cal-today{% endif %}">
+        <span class="cal-day num fa">{{ cell.day }}</span>
+        {% for item in cell.items %}
+        <a class="cal-item cal-{{ item.key }}" href="{{ item.url }}" title="{{ item.title }}">
+          {{ item.kind }}: {{ item.title|truncatechars:22 }}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="cal-cell cal-blank"></div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="cal-legend">
+  <span><i class="cal-dot cal-meeting"></i> جلسه</span>
+  <span><i class="cal-dot cal-task"></i> مهلت وظیفه</span>
+  <span><i class="cal-dot cal-letter"></i> مهلت نامه</span>
+</div>
+{% endblock %}

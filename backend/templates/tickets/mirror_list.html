@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}تیکت‌های من (آینه){% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>تیکت‌ها</h1><p class="sub">نمای آینه — سامانه تیکتینگ فعلی همچنان مرجع رسیدگی است</p></div>
+  <a class="btn btn-primary" href="{{ bridge_url }}">ورود به سامانه تیکتینگ</a>
+</div>
+
+<div class="msg msg-info">
+  زیرسامانه بومی تیکت‌ها در حال گذار است (بند ۴ — پل). تا فعال‌شدن حالت بومی،
+  فهرست زیر فقط <b>آینه خواندنی</b> تیکت‌های سامانه PHP است؛ ثبت و پیگیری از طریق
+  همان سامانه انجام می‌شود.
+</div>
+
+{% if external_tickets %}
+<div class="table-wrap"><table class="table">
+  <thead><tr>
+    <th>شناسه</th><th>موضوع</th><th>حوزه</th><th>وضعیت</th><th>اولویت</th><th>تاریخ ثبت</th>
+  </tr></thead>
+  <tbody>
+  {% for t in external_tickets %}
+    <tr>
+      <td class="num">{{ t.external_id }}</td>
+      <td class="subject">{{ t.subject }}</td>
+      <td>{{ t.service_group|default:'—' }}</td>
+      <td><span class="chip chip-info">{{ t.status_fa }}</span></td>
+      <td>{{ t.priority|default:'—' }}</td>
+      <td class="num fa">{{ t.created_label }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty">
+  <span class="empty-icon">🎫</span>
+  <h2>تیکت آینه‌شده‌ای موجود نیست</h2>
+  <p class="tiny">همگام‌سازی: <code>python manage.py sync_tickets</code></p>
+</div>
+{% endif %}
+{% endblock %}

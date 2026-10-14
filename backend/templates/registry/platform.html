@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}بستر یکپارچه{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">ثبت بستر — docs/08</span>
+    <h1>یک سامانه، چند زیرسامانه</h1>
+    <p class="sub">نقشه زنده بستر پایان‌باز (بند ۸) — آنچه هست، آنچه در گذار است و آنچه خواهد آمد</p>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi accent-teal"><div class="k-label">بومی روی بستر</div>
+    <div class="k-value num fa">{{ native|length|fa }}</div>
+    <div class="k-hint">کاملاً یکپارچه با دبیرخانه</div></div>
+  <div class="kpi accent-warn"><div class="k-label">در گذار</div>
+    <div class="k-value num fa">{{ migrating|length|fa }}</div>
+    <div class="k-hint">از طریق پل به سامانه فعلی</div></div>
+  <div class="kpi accent-navy"><div class="k-label">برنامه‌ریزی‌شده</div>
+    <div class="k-value num fa">{{ planned|length|fa }}</div>
+    <div class="k-hint">ثبت‌شده در نقشه راه</div></div>
+  <div class="kpi"><div class="k-label">مجموع ردیف‌ها</div>
+    <div class="k-value num fa">{{ subsystems|length|fa }}</div>
+    <div class="k-hint">manifest بستر</div></div>
+</div>
+
+<div class="table-wrap"><table class="table">
+  <thead><tr>
+    <th>زیرسامانه</th><th>وضعیت</th><th>گام بلوغ</th><th>برنامه</th><th>منو</th><th>شرح</th>
+  </tr></thead>
+  <tbody>
+  {% for s in subsystems %}
+    <tr>
+      <td class="subject"><b>{{ s.title }}</b><div class="cell-sub num">{{ s.key }}</div></td>
+      <td>
+        {% if s.status == 'native' %}<span class="chip chip-success">بومی</span>
+        {% elif s.status == 'migrating' %}<span class="chip chip-warning">در گذار</span>
+        {% else %}<span class="chip chip-muted">برنامه‌ریزی‌شده</span>{% endif %}
+      </td>
+      <td><span class="num fa">{{ s.step|fa }}</span> از ۳</td>
+      <td class="num">{{ s.app_label|default:'—' }}</td>
+      <td>{% if s.menu_url %}<a href="{{ s.menu_url }}">ورود</a>{% else %}—{% endif %}</td>
+      <td class="cell-sub">{{ s.description }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+{% if can_manage %}
+<p class="hint">ویرایش ردیف‌ها: <a href="/admin/registry/subsystem/">پنل مدیریت → زیرسامانه‌ها</a>
+  · کاشت مجدد manifest: <code>python manage.py setup_platform_manifest</code></p>
+{% endif %}
+{% endblock %}

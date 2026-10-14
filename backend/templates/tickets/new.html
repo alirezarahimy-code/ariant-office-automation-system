@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}تیکت تازه{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>تیکت تازه</h1><p class="sub">درخواست خود را ثبت کنید تا کارشناسان رسیدگی کنند</p></div>
+  <a href="{% url 'tickets:list' %}" class="btn">بازگشت</a>
+</div>
+
+<form method="post" class="card form">{% csrf_token %}
+  <div>
+    <label for="subject">موضوع *</label>
+    <input id="subject" name="subject" class="input" required maxlength="300" placeholder="مثلاً قطعی شبکه طبقه دوم">
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="service_group">حوزه خدمت</label>
+      <select id="service_group" name="service_group" class="select">
+        <option value="it" selected>فناوری اطلاعات</option>
+        <option value="support">پشتیبانی</option>
+        <option value="facility">تدارکات و امکانات</option>
+        <option value="hr">منابع انسانی</option>
+        <option value="finance">امور مالی</option>
+      </select>
+    </div>
+    <div>
+      <label for="priority">اولویت</label>
+      <select id="priority" name="priority" class="select">
+        {% for value, label in groups %}
+        <option value="{{ value }}" {% if value == 'normal' %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {% if can_assign %}
+  <div>
+    <label for="assignee">کارشناس مسئول (اختیاری)</label>
+    <select id="assignee" name="assignee_id" class="select">
+      <option value="">— بدون انتساب —</option>
+      {% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div>
+    <label for="body">شرح درخواست</label>
+    <textarea id="body" name="body" class="textarea" rows="5"></textarea>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" type="submit">ثبت تیکت</button>
+    <a href="{% url 'tickets:list' %}" class="btn btn-ghost">انصراف</a>
+  </div>
+</form>
+{% endblock %}

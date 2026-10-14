@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}{{ meeting.title }} — جلسات — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">جلسات و مصوبات</span>
+    <h1>{{ meeting.title }}
+      <span class="pill {% if meeting.status == 'held' %}ok{% elif meeting.status == 'cancelled' %}bad{% else %}info{% endif %}">{{ meeting.get_status_display }}</span>
+    </h1>
+    <span class="hint">{{ meeting.jalali_date|jdate }}
+      {% if meeting.start_time %}— ساعت {{ meeting.start_time|time:'H:i' }}{% endif %}
+      {% if meeting.location %}— {{ meeting.location }}{% endif %}
+      {% if meeting.organizer %}— برگزارکننده: {{ meeting.organizer.get_full_name|default:meeting.organizer.username }}{% endif %}
+    </span>
+  </div>
+  <div class="actions">
+    {% if can_edit %}
+      {% if meeting.status == 'scheduled' %}
+      <form method="post" action="{% url 'meetings:status' meeting.pk %}">{% csrf_token %}
+        <button class="btn" type="submit" name="status" value="held">برگزارشده</button>
+        <button class="btn danger" type="submit" name="status" value="cancelled">لغو</button>
+      </form>
+      {% endif %}
+    {% endif %}
+    <a class="btn secondary" href="{% url 'meetings:list' %}">بازگشت</a>
+  </div>
+</div>
+
+{% if meeting.description %}<div class="card"><p>{{ meeting.description|linebreaksbr }}</p></div>{% endif %}
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">دعوت‌شدگان <span class="pill gray">{{ attendees|length|fa }}</span></div>
+    <div class="table-wrap" style="padding:0">
+      <table class="table">
+        <tbody>
+          {% for a in attendees %}
+          <tr>
+            <td>{{ a.user.get_full_name|default:a.user.username }}</td>
+            <td><span class="pill violet">{{ a.get_role_display }}</span></td>
+            <td>
+              {% if can_edit %}
+              <form method="post" action="{% url 'meetings:attendee_status' meeting.pk a.pk %}" style="display:flex;gap:4px">
+                {% csrf_token %}
+                <select name="attendance" onchange="this.form.submit()">
+                  {% for value, label in a.Attendance.choices %}
+                  <option value="{{ value }}" {% if a.attendance == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+              {% else %}
+              <span class="pill {% if a.attendance == 'present' %}ok{% elif a.attendance == 'absent' %}bad{% else %}gray{% endif %}">{{ a.get_attendance_display }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td><div class="empty">دعوت‌شده‌ای نیست.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if can_edit %}
+    <form method="post" action="{% url 'meetings:attendee_add' meeting.pk %}" class="filters" style="margin-top:10px">
+      {% csrf_token %}
+      <div class="field"><label>کاربر</label>
+        <select name="user_id" required>
+          {% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label>نقش</label>
+        <select name="role">
+          <option value="member">عضو</option>
+          <option value="chair">رئیس جلسه</option>
+          <option value="secretary">دبیر جلسه</option>
+          <option value="guest">مهمان</option>
+        </select></div>
+      <div class="form-actions"><button class="btn secondary" type="submit">افزودن</button></div>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">دستور جلسه</div>
+    <ol style="margin:0;padding-inline-start:20px">
+      {% for item in agenda %}
+      <li style="margin-bottom:8px">
+        <b>{{ item.title }}</b>
+        {% if item.presenter %}<span class="tiny muted">— {{ item.presenter.get_full_name|default:item.presenter.username }}</span>{% endif %}
+        {% if item.description %}<div class="tiny muted">{{ item.description|truncatechars:120 }}</div>{% endif %}
+      </li>
+      {% empty %}
+      <li class="muted tiny" style="list-style:none">بندی ثبت نشده.</li>
+      {% endfor %}
+    </ol>
+    {% if can_edit %}
+    <form method="post" action="{% url 'meetings:agenda_add' meeting.pk %}" class="form" style="margin-top:10px">
+      {% csrf_token %}
+      <div class="field"><label>بند تازه</label>
+        <input type="text" name="title" maxlength="300" required placeholder="عنوان بند دستور"></div>
+      <div class="field"><label>توضیح</label>
+        <input type="text" name="description" placeholder="اختیاری"></div>
+      <div class="form-actions"><button class="btn secondary" type="submit">افزودن بند</button></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">صورت‌جلسه
+    {% if minutes.is_final %}<span class="pill ok">نهایی</span>{% else %}<span class="pill warn">پیش‌نویس</span>{% endif %}
+    <span class="pill gray">{{ minutes.signatures.count|fa }} امضا</span>
+  </div>
+  {% if can_edit and not minutes.is_final %}
+  <form method="post" action="{% url 'meetings:minutes_save' meeting.pk %}" class="form">
+    {% csrf_token %}
+    <div class="field"><label>متن صورت‌جلسه</label>
+      <textarea name="body" rows="6" placeholder="خلاصه مذاکرات و تصمیم‌ها…">{{ minutes.body }}</textarea></div>
+    <div class="form-actions">
+      <button class="btn secondary" type="submit">ذخیره</button>
+      <button class="btn" type="submit" formaction="{% url 'meetings:minutes_finalize' meeting.pk %}"
+        onclick="return confirm('صورت‌جلسه نهایی و برای همه دعوت‌شدگان ارسال شود؟')">ذخیره و نهایی‌سازی</button>
+    </div>
+  </form>
+  {% else %}
+  <div class="sheet"><p>{{ minutes.body|default:'—'|linebreaksbr }}</p></div>
+  {% endif %}
+
+  {% if signatures %}
+  <div class="table-wrap" style="padding:0;margin-top:10px">
+    <table class="table">
+      <thead><tr><th>امضاکننده</th><th>سمت</th><th>زمان</th></tr></thead>
+      <tbody>
+        {% for s in signatures %}
+        <tr><td>{{ s.user.get_full_name|default:s.user.username }}</td><td>{{ s.position|default:'—' }}</td>
+          <td>{{ s.created_at|jalali_datetime }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if is_attendee and not my_signature and minutes.body %}
+  <form method="post" action="{% url 'meetings:minutes_sign' meeting.pk %}" style="margin-top:10px">
+    {% csrf_token %}
+    <button class="btn" type="submit">امضای صورت‌جلسه</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-title">مصوبات <span class="pill gray">{{ resolutions|length|fa }}</span></div>
+  <div class="table-wrap" style="padding:0">
+    <table class="table">
+      <thead><tr><th>#</th><th>مصوبه</th><th>مسئول</th><th>مهلت</th><th>وضعیت</th><th>تبدیل</th></tr></thead>
+      <tbody>
+        {% for r in resolutions %}
+        <tr>
+          <td>{{ r.number|fa }}</td>
+          <td class="subject">{{ r.title }}<br><span class="cell-sub">{{ r.description|truncatechars:90 }}</span></td>
+          <td>{% if r.responsible %}{{ r.responsible.get_full_name|default:r.responsible.username }}{% else %}—{% endif %}</td>
+          <td>{{ r.due_date|jdate|default:'—' }}</td>
+          <td><span class="pill {% if r.status == 'done' %}ok{% elif r.status == 'cancelled' %}gray{% elif r.status == 'converted' %}violet{% else %}warn{% endif %}">{{ r.get_status_display }}</span></td>
+          <td>
+            {% if r.converted_letter %}<a class="pill info" href="{% url 'secretariat:letter_detail' r.converted_letter.pk %}">نامه {{ r.converted_letter.number_display }}</a>{% endif %}
+            {% if r.converted_task_id %}<span class="pill info">وظیفه #{{ r.converted_task_id|fa }}</span>{% endif %}
+            {% if can_edit and not r.converted_letter %}
+            <form method="post" action="{% url 'meetings:resolution_convert' meeting.pk r.pk %}" style="display:inline">
+              {% csrf_token %}
+              <button class="btn sm secondary" type="submit" name="target" value="letter">→ نامه صادره</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty">مصوبه‌ای ثبت نشده.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if can_edit %}
+  <form method="post" action="{% url 'meetings:resolution_add' meeting.pk %}" class="filters" style="margin-top:10px">
+    {% csrf_token %}
+    <div class="field"><label>عنوان مصوبه <span class="req">*</span></label>
+      <input type="text" name="title" maxlength="300" required></div>
+    <div class="field"><label>شرح</label>
+      <input type="text" name="description"></div>
+    <div class="field"><label>مسئول اجرا</label>
+      <select name="responsible_id">
+        <option value="">—</option>
+        {% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>مهلت (شمسی)</label>
+      <input type="text" name="due_date" placeholder="۱۴۰۵-۰۸-۰۱" dir="ltr" style="text-align:left"></div>
+    <div class="form-actions"><button class="btn" type="submit">ثبت مصوبه</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -9,3 +9,9 @@
 
 # پشتیبان‌گیری روزانه پایگاه‌داده (۲ بامداد)
 0 2 * * * set -a && . /etc/ariant.env && set +a && pg_dump "$DJANGO_DB_NAME" | gzip > /var/backups/ariant/db-$(date +\%F).sql.gz && find /var/backups/ariant -mtime +30 -delete
+
+# بایگانی خودکار نامه‌های بسته‌شده — هر بامداد (ایدِمپوتنت)
+30 2 * * * cd /opt/ariant/backend && set -a && . /etc/ariant.env && set +a && .venv/bin/python manage.py archive_closed_letters >> /var/log/ariant/archive.log 2>&1
+
+# واردسازی آینه تیکت‌ها به زیرسامانه بومی — بلافاصله پس از هر همگام‌سازی
+*/15 * * * * cd /opt/ariant/backend && set -a && . /etc/ariant.env && set +a && .venv/bin/python manage.py import_mirror_tickets >> /var/log/ariant/sync.log 2>&1

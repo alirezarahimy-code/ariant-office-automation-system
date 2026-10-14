@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}وظایف{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>وظایف</h1><p class="sub">وظایف من، همکاران و تقویم سازمانی</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'tasks:calendar' %}" class="btn">تقویم سازمانی</a>
+    <a href="{% url 'tasks:new' %}" class="btn btn-primary">وظیفه تازه</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab{% if tab == 'mine' %} is-active{% endif %}" href="?tab=mine">وظایف من</a>
+  <a class="tab{% if tab == 'collab' %} is-active{% endif %}" href="?tab=collab">همکاری</a>
+  <a class="tab{% if tab == 'created' %} is-active{% endif %}" href="?tab=created">ایجادشده توسط من</a>
+  {% if can_manage %}<a class="tab{% if tab == 'all' %} is-active{% endif %}" href="?tab=all">همه</a>{% endif %}
+  <a class="tab{% if tab == 'done' %} is-active{% endif %}" href="?tab=done">انجام‌شده</a>
+  <a class="tab{% if tab == 'overdue' %} is-active{% endif %}" href="?tab=overdue">عقب‌افتاده</a>
+</div>
+
+<form class="toolbar" method="get">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input type="search" name="q" value="{{ q }}" placeholder="جست‌وجوی عنوان یا شرح…">
+  <button class="btn" type="submit">جست‌وجو</button>
+</form>
+
+{% if tasks %}
+<table class="table">
+  <thead><tr>
+    <th>عنوان</th><th>مسئول</th><th>مهلت</th><th>فوریت</th><th>پیشرفت</th><th>وضعیت</th>
+  </tr></thead>
+  <tbody>
+  {% for task in tasks %}
+    <tr>
+      <td><a href="{% url 'tasks:detail' pk=task.pk %}" class="row-link">{{ task.title }}</a></td>
+      <td>{{ task.responsible.first_name|default:'' }} {{ task.responsible.last_name|default:task.responsible.username }}</td>
+      <td>
+        {% if task.due_date %}{{ task.due_date|jalali_datetime:'date' }}{% else %}—{% endif %}
+        {% if task.is_overdue %}<span class="chip chip-danger">عقب‌افتاده</span>{% endif %}
+      </td>
+      <td>
+        {% if task.priority == 'immediate' %}<span class="chip chip-danger">آنی</span>
+        {% elif task.priority == 'urgent' %}<span class="chip chip-warning">فوری</span>
+        {% else %}<span class="chip">عادی</span>{% endif %}
+      </td>
+      <td><div class="meter"><span style="width:{{ task.progress }}%"></span></div><span class="num fa" style="font-size:.8rem">{{ task.progress }}٪</span></td>
+      <td><span class="chip{% if task.status == 'done' %} chip-success{% elif task.status == 'in_progress' %} chip-info{% elif task.status == 'cancelled' %} chip-muted{% endif %}">{{ task.get_status_display }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">
+  <div class="empty-icon">☑</div>
+  <h2>وظیفه‌ای در این نمایه نیست</h2>
+  <a class="btn btn-primary" href="{% url 'tasks:new' %}">ایجاد وظیفه تازه</a>
+</div>
+{% endif %}
+{% endblock %}

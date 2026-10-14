@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load persian_tags %}
+{% block title %}جلسه تازه — {{ ORG_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">جلسات و مصوبات</span>
+    <h1>جلسه تازه</h1>
+    <span class="hint">تاریخ به شمسی نوشته شود — مانند ۱۴۰۵-۰۷-۲۲</span>
+  </div>
+  <div class="actions"><a class="btn secondary" href="{% url 'meetings:list' %}">بازگشت</a></div>
+</div>
+
+<div class="card">
+  <form method="post" class="form">
+    {% csrf_token %}
+    <div class="field"><label>عنوان جلسه <span class="req">*</span></label>
+      <input type="text" name="title" maxlength="200" required placeholder="مثلاً: جلسه شورای مدیران — مهر ۱۴۰۵"></div>
+    <div class="grid-2">
+      <div class="field"><label>تاریخ شمسی <span class="req">*</span></label>
+        <input type="text" name="jalali_date" required placeholder="۱۴۰۵-۰۷-۲۲" dir="ltr" style="text-align:left"></div>
+      <div class="field"><label>ساعت شروع</label>
+        <input type="text" name="start_time" placeholder="۱۰:۰۰" dir="ltr" style="text-align:left"></div>
+    </div>
+    <div class="field"><label>مکان</label>
+      <input type="text" name="location" maxlength="200" placeholder="مثلاً: سالن جلسات طبقه دوم"></div>
+    <div class="field"><label>توضیح / دستور اولیه</label>
+      <textarea name="description" rows="3" placeholder="خلاصه اهداف جلسه"></textarea></div>
+    <div class="field"><label>دعوت‌شدگان</label>
+      <select name="attendees" multiple size="8">
+        {% for u in users %}
+        <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+      <span class="help">با نگه‌داشتن Ctrl/Command چند کاربر انتخاب کنید.</span></div>
+    <div class="form-actions">
+      <button class="btn" type="submit">ثبت جلسه و ارسال دعوت</button>
+      <a class="btn secondary" href="{% url 'meetings:list' %}">انصراف</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

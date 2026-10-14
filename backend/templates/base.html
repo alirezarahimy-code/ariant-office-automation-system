@@ -23,6 +23,9 @@
         <a class="side-link {% if request.resolver_match.url_name == 'kartable' %}active{% endif %}" href="{% url 'secretariat:kartable' %}">
           کارتابل من
         </a>
+        <a class="side-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}" href="{% url 'reports:dashboard' %}">داشبورد</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}" href="{% url 'tasks:list' %}">وظایف من</a>
+        <a class="side-link" href="{% url 'tasks:calendar' %}">تقویم سازمانی</a>
         <a class="side-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url 'accounts:notifications' %}">
           اعلان‌ها
           {% if UNREAD_NOTIFICATIONS %}<span class="badge">{{ UNREAD_NOTIFICATIONS }}</span>{% endif %}
@@ -30,9 +33,15 @@
         <a class="side-link {% if request.resolver_match.url_name == 'delegations' %}active{% endif %}" href="{% url 'secretariat:delegations' %}">جانشینی و تفویض</a>
       </div>
       <div class="side-group">
-        <div class="label">زیرسامانه‌های متصل</div>
-        <a class="side-link" href="{% url 'secretariat:kartable' %}?tab=tickets">تیکت‌های من</a>
+        <div class="label">زیرسامانه‌های بستر</div>
+        <a class="side-link {% if request.resolver_match.app_name == 'workflow' %}active{% endif %}" href="{% url 'workflow:list' %}">گردش کار</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'meetings' %}active{% endif %}" href="{% url 'meetings:list' %}">جلسات و مصوبات</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'archive' %}active{% endif %}" href="{% url 'archive:list' %}">بایگانی و امحا</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}">تیکت‌ها</a>
         <a class="side-link" href="{% url 'bridge:jump' %}">ورود به سامانه تیکتینگ</a>
+        {% if user.is_superuser or perms.registry.manage_platform or perms.secretariat.view_all_letter %}
+        <a class="side-link {% if request.resolver_match.app_name == 'registry' %}active{% endif %}" href="{% url 'registry:platform' %}">بستر یکپارچه</a>
+        {% endif %}
       </div>
       <div class="side-group">
         <div class="label">دبیرخانه</div>
@@ -48,7 +57,7 @@
       </div>
     </nav>
     <div class="side-foot">
-      نسخه ۱٫۰ — فاز ۱<br>{{ JALALI_WEEKDAY }} {{ JALALI_TODAY }}
+      نسخه ۲٫۰ — فاز ۲ (بستر یکپارچه)<br>{{ JALALI_WEEKDAY }} {{ JALALI_TODAY }}
     </div>
   </aside>
 

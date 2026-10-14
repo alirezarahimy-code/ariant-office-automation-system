@@ -72,6 +72,9 @@ class Employee(TimeStampedModel, SoftDeleteModel):
         help_text='پیوند حساب ورود به رکورد کارمند — مبنای سطح دسترسی «واحد و زیرمجموعه»',
     )
     job_title = models.CharField('سمت', max_length=150, blank=True, default='')
+    phone = models.CharField(
+        'شماره همراه', max_length=15, blank=True, default='',
+        help_text='مقصد پیامک اعلان‌ها — نمونه: 09121234567')
     hire_date = jmodels.jDateField('تاریخ استخدام', null=True, blank=True)
     is_active = models.BooleanField('فعال', default=True)
 

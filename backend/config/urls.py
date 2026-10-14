@@ -14,6 +14,14 @@ urlpatterns = [
     path('accounts/', include('apps.core.urls')),
     path('', include('apps.secretariat.urls')),
     path('bridge/', include('apps.ticket_bridge.urls')),
+    # فاز ۲ — زیرسامانه‌های بستر
+    path('workflow/', include('apps.workflow.urls')),
+    path('archive/', include('apps.archive.urls')),
+    path('meetings/', include('apps.meetings.urls')),
+    path('tasks/', include('apps.tasks.urls')),
+    path('reports/', include('apps.reports.urls')),
+    path('tickets/', include('apps.tickets.urls')),
+    path('platform/', include('apps.registry.urls')),
     # وب‌سرویس نسخه ۱ — قرارداد پل تیکتینگ (docs/04)
     path('api/v1/health', HealthView.as_view(), name='api-health'),
     path('api/v1/auth/token', TokenObtainPairView.as_view(), name='api-token'),

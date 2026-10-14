@@ -51,7 +51,7 @@
       <div class="meta-grid">
         <div class="m-cell">زمان وصول<b>{% if letter.received_at %}{{ letter.received_at|jalali_datetime }}{% else %}—{% endif %}</b></div>
         <div class="m-cell">مهلت پاسخ<b>{% if letter.deadline %}<span class="pill {{ letter.deadline|deadline_kind }}">{{ letter.deadline|jdate }}</span>{% else %}—{% endif %}</b></div>
-        <div class="m-cell">ثبت‌کننده<b>{{ letter.created_by.get_full_name|default:letter.created_by.username|default:'—' }}</b></div>
+        <div class="m-cell">ثبت‌کننده<b>{% if letter.created_by %}{{ letter.created_by.get_full_name|default:letter.created_by.username }}{% else %}—{% endif %}</b></div>
         <div class="m-cell">محرمانگی<b>{{ letter.get_confidentiality_display }}</b></div>
       </div>
 
@@ -99,11 +99,11 @@
         {% for r in referrals %}
         <li>
           <div class="t-head">
-            به: {{ r.to_user.get_full_name|default:r.to_user.username|default:'' }}{% if r.to_department %}{{ r.to_department.title }}{% endif %}
+            به: {% if r.to_user %}{{ r.to_user.get_full_name|default:r.to_user.username }}{% endif %}{% if r.to_department %}{{ r.to_department.title }}{% endif %}
             <span class="pill {{ r.status|status_pill }}">{{ r.get_status_display }}</span>
           </div>
           <div class="t-meta">
-            از: {{ r.from_user.get_full_name|default:r.from_user.username|default:'—' }} — {{ r.created_at|jalali_datetime }}
+            از: {% if r.from_user %}{{ r.from_user.get_full_name|default:r.from_user.username }}{% else %}—{% endif %} — {{ r.created_at|jalali_datetime }}
             {% if r.deadline %} — مهلت: {{ r.deadline|jdate }}{% endif %}
           </div>
           {% if r.note %}<div class="t-note">{{ r.note }}</div>{% endif %}
@@ -119,7 +119,7 @@
       {% if copies %}
       <ul class="attach-list">
         {% for c in copies %}
-        <li><span>{{ c.to_user.get_full_name|default:c.to_user.username|default:'' }}{% if c.to_department %}{{ c.to_department.title }}{% endif %}
+        <li><span>{% if c.to_user %}{{ c.to_user.get_full_name|default:c.to_user.username }}{% endif %}{% if c.to_department %}{{ c.to_department.title }}{% endif %}
           <span class="a-size">{% if c.viewed_at %}— مشاهده: {{ c.viewed_at|jalali_datetime }}{% else %}— مشاهده نشده{% endif %}</span></span></li>
         {% endfor %}
       </ul>
@@ -145,7 +145,7 @@
             {% if e.from_status and e.to_status and e.from_status != e.to_status %}
             <span class="tiny muted">({{ e.from_status }} ← {{ e.to_status }})</span>{% endif %}
           </div>
-          <div class="t-meta">{{ e.actor.get_full_name|default:e.actor.username|default:'سامانه' }} — {{ e.created_at|jalali_datetime }}</div>
+          <div class="t-meta">{% if e.actor %}{{ e.actor.get_full_name|default:e.actor.username }}{% else %}سامانه{% endif %} — {{ e.created_at|jalali_datetime }}</div>
           {% if e.note %}<div class="t-note">{{ e.note }}</div>{% endif %}
         </li>
         {% empty %}
@@ -251,6 +251,64 @@
         <li style="display:block;border:none;padding:4px 0"><span class="a-size">نوع</span><br><b>{{ letter.get_letter_type_display }}</b></li>
         <li style="display:block;border:none;padding:4px 0"><span class="a-size">ثبت</span><br><b>{{ letter.created_at|jalali_datetime }}</b></li>
       </ul>
+    </div>
+
+    <div class="card no-print">
+      <div class="card-title">گردش کار
+        {% if wf_instance %}<span class="pill teal">{{ wf_instance.current_stage.title }}</span>{% endif %}
+      </div>
+      {% if wf_instance %}
+      <p class="tiny muted">گردش «{{ wf_instance.workflow.title }}» روی این نامه فعال است.</p>
+      <a class="btn sm secondary" href="{% url 'workflow:detail' pk=wf_instance.workflow.pk %}">مشاهده گردش</a>
+      {% elif can_bind_workflow %}
+      <form method="post" action="{% url 'workflow:bind_letter' letter_pk=letter.pk %}">{% csrf_token %}
+        <p class="tiny muted">با اتصال به گردش پیش‌فرض، نامه مرحله‌به‌مرحله پیش می‌رود.</p>
+        <button class="btn sm" type="submit">اتصال به گردش کار</button>
+      </form>
+      {% else %}
+      <p class="tiny muted">گردش کاری به این نامه متصل نیست.</p>
+      {% endif %}
+    </div>
+
+    <div class="card no-print">
+      <div class="card-title">بایگانی
+        {% if archive_item %}<span class="pill ok">بایگانی‌شده</span>{% endif %}
+      </div>
+      {% if archive_item %}
+      <p class="tiny muted">پوشه <b class="num">{{ archive_item.folder.code }}</b> — صندوق «{{ archive_item.folder.box.title }}»</p>
+      <a class="btn sm secondary" href="{% url 'archive:folder_detail' pk=archive_item.folder.pk %}">مشاهده پوشه</a>
+      {% elif can_archive %}
+      <form method="post" action="{% url 'archive:archive_letter' letter_pk=letter.pk %}">{% csrf_token %}
+        <input type="text" name="note" class="input" placeholder="یادداشت بایگانی (اختیاری)" style="margin-bottom:8px">
+        <button class="btn sm" type="submit">بایگانی فیزیکی نامه</button>
+      </form>
+      {% else %}
+      <p class="tiny muted">پس از بسته‌شدن نامه، بایگانی فعال می‌شود.</p>
+      {% endif %}
+    </div>
+
+    <div class="card no-print">
+      <div class="card-title">وظایف نامه <span class="pill gray">{{ letter_tasks|length|fa }}</span></div>
+      {% if letter_tasks %}
+      <ul class="attach-list" style="display:block">
+        {% for t in letter_tasks %}
+        <li style="display:block;padding:6px 0">
+          <a class="tiny" href="{% url 'tasks:detail' pk=t.pk %}"><b>{{ t.title }}</b></a>
+          <span class="a-size"> — {{ t.responsible.get_full_name|default:t.responsible.username }}
+            · {{ t.get_status_display }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if can_task_from_letter %}
+      <form method="post" action="{% url 'tasks:from_letter' letter_pk=letter.pk %}">{% csrf_token %}
+        <input type="text" name="title" class="input" placeholder="عنوان وظیفه…" required
+               style="margin-bottom:8px" maxlength="300">
+        <button class="btn sm" type="submit">ساخت وظیفه از این نامه</button>
+      </form>
+      {% elif not letter_tasks %}
+      <p class="tiny muted">وظیفه‌ای به این نامه پیوست نیست.</p>
+      {% endif %}
     </div>
   </div>
 </div>
