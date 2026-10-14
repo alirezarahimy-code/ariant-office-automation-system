@@ -39,8 +39,9 @@ class Command(BaseCommand):
                     continue
                 if rng.random() < 0.08:  # غیبت پراکنده
                     continue
-                check_in = datetime.time(
-                    ih, im + (rng.choice([0, 5, 10, 25, 40]) if rng.random() < 0.3 else 0))
+                extra = rng.choice([0, 5, 10, 25, 40]) if rng.random() < 0.3 else 0
+                check_in = (datetime.datetime(2000, 1, 1, ih, im)
+                            + datetime.timedelta(minutes=extra)).time()
                 check_out = datetime.time(oh, om)
                 _, was_created = AttendanceRecord.objects.get_or_create(
                     user=user, date=jdate,
