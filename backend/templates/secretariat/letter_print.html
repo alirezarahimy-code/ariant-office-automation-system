@@ -20,7 +20,27 @@
       <span class="m-item">درجه<b>{{ letter.get_priority_display }}</b></span>
     </div>
     <div class="subject-line">موضوع: {{ letter.subject }}</div>
+    {% if letter.letter_type == 'internal' %}
+    <div class="sheet-meta" style="margin-bottom:10px">
+      <span class="m-item">فرستنده<b>{% if letter.sender_name %}{{ letter.sender_name }}{% else %}{{ letter.created_by.get_full_name|default:letter.created_by.username|default:'—' }}{% endif %}</b></span>
+      <span class="m-item">گیرنده<b>{% if letter.to_user %}{{ letter.to_user.get_full_name|default:letter.to_user.username }}{% endif %}{% if letter.to_department %}{{ letter.to_department.title }}{% endif %}</b></span>
+      <span class="m-item">شیوه ارسال<b>{{ letter.get_delivery_method_display }}</b></span>
+    </div>
+    {% endif %}
+    {% if related_in or related_out %}
+    <div class="tiny muted" style="margin-bottom:8px">
+      نامه‌های مرتبط:
+      {% for rel in related_in %}<span>{{ rel.get_kind_display }}: {{ rel.letter.number_display }}</span> {% endfor %}
+      {% for rel in related_out %}<span>{{ rel.get_kind_display }}: {{ rel.related.number_display }}</span> {% endfor %}
+    </div>
+    {% endif %}
     <div class="body-text">{% if letter.body %}{{ letter.body }}{% elif letter.summary %}{{ letter.summary }}{% endif %}</div>
+    {% if copies %}
+    <div class="tiny" style="margin-top:24px">
+      <b>رونوشت:</b>
+      {% for c in copies %}<span>{{ c.to_user.get_full_name|default:c.to_user.username|default:c.to_department.title|default:'—' }}، </span>{% endfor %}
+    </div>
+    {% endif %}
     {% if letter.letter_type == 'outgoing' %}
     <div style="display:flex;justify-content:space-between;margin-top:40px">
       <div>

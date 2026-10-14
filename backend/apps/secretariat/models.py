@@ -78,6 +78,14 @@ class Letter(TimeStampedModel, SoftDeleteModel):
         CONFIDENTIAL = 'confidential', 'محرمانه'
         SECRET = 'secret', 'سری'
 
+    class DeliveryMethod(models.TextChoices):
+        SYSTEM = 'system', 'کارتابل سیستم'
+        MANUAL = 'manual', 'دستی'
+        COURIER = 'courier', 'پیک'
+        POST = 'post', 'پستی'
+        FAX = 'fax', 'فاکس'
+        EMAIL = 'email', 'رایانامه'
+
     class Status(models.TextChoices):
         DRAFT = 'draft', 'پیش‌نویس'
         REGISTERED = 'registered', 'ثبت‌شده'
@@ -109,6 +117,12 @@ class Letter(TimeStampedModel, SoftDeleteModel):
 
     sender_name = models.CharField('فرستنده (شخص)', max_length=150, blank=True, default='')
     sender_org = models.CharField('سازمان فرستنده', max_length=200, blank=True, default='')
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='گیرنده (شخص)', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='received_letters')
+    to_department = models.ForeignKey(
+        'organization.Department', verbose_name='گیرنده (واحد)', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='received_letters')
     letter_date = jmodels.jDateField('تاریخ نامه', null=True, blank=True)
     received_at = models.DateTimeField('زمان وصول', null=True, blank=True)
 
@@ -117,6 +131,9 @@ class Letter(TimeStampedModel, SoftDeleteModel):
     confidentiality = models.CharField(
         'سطح محرمانگی', max_length=12, choices=Confidentiality.choices,
         default=Confidentiality.NORMAL)
+    delivery_method = models.CharField(
+        'شیوه ارسال', max_length=12, choices=DeliveryMethod.choices,
+        default=DeliveryMethod.SYSTEM)
     status = models.CharField(
         'وضعیت', max_length=12, choices=Status.choices,
         default=Status.REGISTERED, db_index=True)
@@ -168,6 +185,7 @@ class Referral(TimeStampedModel):
         ACTED = 'acted', 'اقدام‌شده'
         RETURNED = 'returned', 'بازگشت‌داده‌شده'
         CLOSED = 'closed', 'بسته‌شده'
+        CANCELLED = 'cancelled', 'بازپس‌گرفته‌شده'
 
     letter = models.ForeignKey(
         Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='referrals')
@@ -281,6 +299,7 @@ class LetterEvent(TimeStampedModel):
         PRINTED = 'printed', 'چاپ'
         CLOSED = 'closed', 'بستن'
         ARCHIVED = 'archived', 'بایگانی'
+        NOTE = 'note', 'یادداشت'
 
     letter = models.ForeignKey(
         Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='events')
@@ -331,3 +350,70 @@ class LetterApproval(TimeStampedModel):
 
     def __str__(self) -> str:
         return f'{self.letter_id} — گام {self.step}: {self.decision}'
+
+
+class LetterRelation(TimeStampedModel):
+    """نامه مرتبط — پیرو، عطف یا بازگشت (الگوی دبیرخانه‌های حرفه‌ای)."""
+
+    class Kind(models.TextChoices):
+        FOLLOW = 'follow', 'پیرو'
+        REF = 'ref', 'عطف'
+        RETURN = 'return', 'بازگشت'
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE,
+        related_name='outgoing_relations')
+    related = models.ForeignKey(
+        Letter, verbose_name='نامه مرتبط', on_delete=models.CASCADE,
+        related_name='incoming_relations')
+    kind = models.CharField('نوع رابطه', max_length=8, choices=Kind.choices)
+
+    class Meta:
+        verbose_name = 'نامه مرتبط'
+        verbose_name_plural = 'نامه‌های مرتبط'
+        unique_together = [('letter', 'related', 'kind')]
+
+    def __str__(self) -> str:
+        return f'{self.get_kind_display()} → {self.related.number_display}'
+
+
+class LetterNote(TimeStampedModel):
+    """هامش/یادداشت روی نامه — دیدگاه‌ها و پیگیری‌های غیررسمی."""
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='notes')
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='نویسنده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+')
+    text = models.TextField('متن یادداشت')
+
+    class Meta:
+        verbose_name = 'یادداشت نامه'
+        verbose_name_plural = 'یادداشت‌های نامه'
+        ordering = ['created_at']
+
+    def __str__(self) -> str:
+        return f'یادداشت روی {self.letter_id}'
+
+
+class LetterTemplate(TimeStampedModel):
+    """الگوی نامه — متن‌های آماده پرکاربرد برای ثبت سریع."""
+
+    title = models.CharField('عنوان الگو', max_length=200)
+    letter_type = models.CharField(
+        'نوع نامه', max_length=10, choices=Letter.LetterType.choices,
+        default=Letter.LetterType.INTERNAL)
+    subject_pattern = models.CharField(
+        'الگوی موضوع', max_length=300, blank=True, default='')
+    body = models.TextField('متن الگو')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ایجادکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+')
+
+    class Meta:
+        verbose_name = 'الگوی نامه'
+        verbose_name_plural = 'الگوهای نامه'
+        ordering = ['title']
+
+    def __str__(self) -> str:
+        return self.title

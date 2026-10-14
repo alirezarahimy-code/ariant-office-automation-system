@@ -51,12 +51,28 @@ class StockMove(TimeStampedModel):
         ISSUE = 'issue', 'حواله'
         ADJUST = 'adjust', 'تعدیل'
 
+    class Category(models.TextChoices):
+        PURCHASE = 'purchase', 'خرید'
+        SALE = 'sale', 'فروش'
+        CONSUMPTION = 'consumption', 'مصرف داخلی'
+        RETURN_IN = 'return_in', 'برگشت از فروش/مصرف'
+        RETURN_OUT = 'return_out', 'برگشت به تأمین‌کننده'
+        TRANSFER = 'transfer', 'انتقال بین انبارها'
+        ADJUSTMENT = 'adjustment', 'تعدیل انبارگردانی'
+        OTHER = 'other', 'سایر'
+
     item = models.ForeignKey(Item, verbose_name='کالا', on_delete=models.PROTECT,
                              related_name='moves')
     warehouse = models.ForeignKey(Warehouse, verbose_name='انبار', on_delete=models.PROTECT,
                                   related_name='moves')
     kind = models.CharField('نوع', max_length=8, choices=Kind.choices)
+    category = models.CharField(
+        'دسته سند', max_length=12, choices=Category.choices,
+        default=Category.OTHER, db_index=True)
     quantity = models.DecimalField('تعداد', max_digits=14, decimal_places=2)
+    unit_price = models.DecimalField(
+        'قیمت واحد (ریال)', max_digits=18, decimal_places=0,
+        null=True, blank=True)
     date = jmodels.jDateField('تاریخ', db_index=True)
     reference = models.CharField('شماره مدرک', max_length=60, blank=True, default='')
     note = models.CharField('شرح', max_length=300, blank=True, default='')

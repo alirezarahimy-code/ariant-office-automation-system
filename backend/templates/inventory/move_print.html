@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+{% load persian_tags %}
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>سند انبار {{ move.get_kind_display }}</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; margin: 24px; color: #1a2b3c; }
+    .sheet { max-width: 760px; margin: 0 auto; border: 1px solid #c9d2da; padding: 24px; }
+    .head { text-align: center; border-bottom: 2px solid #1a2b3c; padding-bottom: 12px; }
+    .meta { display: flex; justify-content: space-between; margin: 14px 0; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #c9d2da; padding: 8px 12px; font-size: 13px; text-align: right; }
+    th { background: #eef2f5; }
+    .sign { display: flex; justify-content: space-between; margin-top: 48px; font-size: 12px; }
+    .no-print { margin-bottom: 12px; }
+    @media print { .no-print { display: none; } body { margin: 8px; } }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="no-print">
+    <button onclick="window.print()">چاپ</button>
+    <a href="/inventory/{{ move.item.pk }}/">بازگشت به کارت کالا</a>
+  </div>
+  <div class="sheet">
+    <div class="head">
+      <div style="font-size:15px">بسمه تعالی</div>
+      <div style="font-size:17px;font-weight:bold">{{ ORG_NAME }}</div>
+      <div style="font-size:14px;margin-top:6px">سند {{ move.get_kind_display }} انبار — {{ move.get_category_display }}</div>
+    </div>
+    <div class="meta">
+      <span>شماره مدرک: <b>{{ move.reference|default:'—' }}</b></span>
+      <span>تاریخ: <b>{{ move.date|jdate }}</b></span>
+      <span>انبار: <b>{{ move.warehouse }}</b></span>
+    </div>
+    <table>
+      <thead><tr><th>کد کالا</th><th>نام کالا</th><th>واحد</th><th>تعداد</th><th>قیمت واحد</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>{{ move.item.code }}</td>
+          <td>{{ move.item.name }}</td>
+          <td>{{ move.item.unit }}</td>
+          <td>{{ move.quantity|fa }}</td>
+          <td>{% if move.unit_price %}{{ move.unit_price|fa }}{% else %}—{% endif %}</td>
+        </tr>
+      </tbody>
+    </table>
+    {% if move.note %}<p style="margin-top:12px;font-size:12px">شرح: {{ move.note }}</p>{% endif %}
+    <div class="sign">
+      <span>تحویل‌دهنده: ....................</span>
+      <span>انباردار: ....................</span>
+      <span>تحویل‌گیرنده: ....................</span>
+    </div>
+  </div>
+</body>
+</html>

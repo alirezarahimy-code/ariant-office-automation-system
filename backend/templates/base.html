@@ -50,6 +50,7 @@
       <div class="side-group">
         <div class="label">دبیرخانه</div>
         <a class="side-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'secretariat:register' %}">ثبت نامه جدید</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'internal' %}active{% endif %}" href="{% url 'secretariat:internal' %}">نامه داخلی</a>
         <a class="side-link" href="{% url 'secretariat:letter_list' %}?type=incoming">دفتر وارده</a>
         <a class="side-link" href="{% url 'secretariat:letter_list' %}?type=outgoing">دفتر صادره</a>
         <a class="side-link" href="{% url 'secretariat:letter_list' %}?type=internal">نامه‌های داخلی</a>

@@ -20,8 +20,10 @@ from openpyxl.styles import Alignment, Font, PatternFill
 
 from apps.core.persian import to_persian_digits
 from .forms import (AnswerActionForm, CopyForm, DelegationForm, IncomingLetterForm,
+                    InternalLetterForm, LetterNoteForm, LetterRelationForm,
                     OutgoingDraftForm, ReferralActionForm)
-from .models import Attachment, Copy, Letter, LetterApproval, LetterEvent, Office, Referral
+from .models import (Attachment, Copy, Letter, LetterApproval, LetterEvent,
+                     LetterNote, LetterRelation, LetterTemplate, Office, Referral)
 from .services import (apply_confidentiality, current_jalali_year, register_letter,
                        visible_letters)
 
@@ -282,6 +284,12 @@ def letter_detail(request, pk):
         'answer_form': AnswerActionForm() if can_answer and is_open else None,
         'copy_form': CopyForm() if can_refer and is_open else None,
         'deadline_g': deadline_gregorian(letter),
+        'relations': LetterRelation.objects.filter(
+            Q(letter=letter) | Q(related=letter)
+        ).select_related('letter', 'related'),
+        'notes': letter.notes.select_related('author'),
+        'relation_form': LetterRelationForm(),
+        'note_form': LetterNoteForm(),
     })
 
 
@@ -432,7 +440,15 @@ def kartable(request):
     waiting_ids = [r.letter_id for r in my_referrals_pending]
     waiting_letters = list(apply_confidentiality(
         Letter.objects.filter(pk__in=waiting_ids), user).select_related('office'))
-    visible_ids = {letter.pk for letter in waiting_letters}
+    # نامه‌های داخلی تحویل‌شده به کارتابل این کاربر
+    have_ids = {letter.pk for letter in waiting_letters}
+    for letter in apply_confidentiality(
+            Letter.objects.filter(to_user=user).exclude(
+                status__in=CLOSED_STATUSES), user).select_related('office'):
+        if letter.pk not in have_ids:
+            waiting_letters.append(letter)
+            have_ids.add(letter.pk)
+    visible_ids = have_ids
     referral_map = {r.letter_id: r for r in my_referrals_pending if r.letter_id in visible_ids}
 
     in_progress = Referral.objects.filter(
@@ -449,7 +465,8 @@ def kartable(request):
 
     archive = apply_confidentiality(
         Letter.objects.filter(
-            Q(created_by=user) | Q(referrals__to_user=user) | Q(copies__to_user=user),
+            Q(created_by=user) | Q(referrals__to_user=user) | Q(copies__to_user=user)
+            | Q(to_user=user),
             status__in=CLOSED_STATUSES,
         ).distinct(), user).select_related('office')[:50]
 
@@ -639,14 +656,118 @@ def letter_pdf(request, pk):
 @login_required
 def letter_print(request, pk):
     letter = get_object_or_404(
-        visible_letters(request.user).select_related('office', 'created_by'), pk=pk)
+        visible_letters(request.user).select_related(
+            'office', 'created_by', 'to_user', 'to_department'), pk=pk)
+    from .models import LetterRelation
+    from django.db.models import Q
     return render(request, 'secretariat/letter_print.html', {
         'letter': letter,
         'attachments': letter.attachments.all(),
+        'copies': letter.copies.select_related('to_user', 'to_department'),
+        'related_in': LetterRelation.objects.filter(
+            related=letter).select_related('letter'),
+        'related_out': LetterRelation.objects.filter(
+            letter=letter).select_related('related'),
     })
 
 
-# ---------- جانشینی/تفویض ----------
+# ---------- نامه داخلی، نامه‌های مرتبط و یادداشت‌ها ----------
+
+@login_required
+def letter_internal(request):
+    """ثبت و ارسال نامه داخلی — تحویل مستقیم به کارتابل گیرنده."""
+    form = InternalLetterForm(request.POST or None, request.FILES or None,
+                              prefix='int')
+    if request.method == 'POST':
+        if form.is_valid():
+            letter = form.save(request.user)
+            messages.success(
+                request, f'نامه داخلی {letter.number_display} ثبت و ارسال شد.')
+            for name in form.invalid_attachments:
+                messages.warning(request, f'پیوست «{name}» پذیرفته نشد.')
+            return redirect('secretariat:letter_detail', pk=letter.pk)
+        messages.error(request, _form_errors_message(form))
+    templates = LetterTemplate.objects.all()
+    return render(request, 'secretariat/letter_internal.html', {
+        'form': form, 'templates': templates,
+    })
+
+
+@login_required
+@require_POST
+def letter_duplicate(request, pk):
+    """نامه مشابه — کپی متن و مشخصات به‌عنوان پیش‌نویس تازه (الگوی دیدگاه)."""
+    source = get_object_or_404(visible_letters(request.user), pk=pk)
+    office = source.office
+    letter = register_letter(
+        office, source.letter_type, source.subject, created_by=request.user,
+        status=Letter.Status.DRAFT,
+        summary=source.summary, body=source.body,
+        to_user=source.to_user, to_department=source.to_department,
+        priority=source.priority, confidentiality=source.confidentiality,
+        delivery_method=source.delivery_method)
+    LetterRelation.objects.get_or_create(
+        letter=letter, related=source, kind=LetterRelation.Kind.FOLLOW)
+    LetterEvent.objects.create(
+        letter=letter, actor=request.user, action=LetterEvent.Action.REGISTERED,
+        note=f'نامه مشابه {source.number_display} ساخته شد')
+    messages.success(request, f'نامه مشابه با شماره {letter.number_display} ساخته شد.')
+    return redirect('secretariat:letter_detail', pk=letter.pk)
+
+
+@login_required
+@require_POST
+def letter_relation_add(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    form = LetterRelationForm(request.POST)
+    if form.is_valid():
+        related = Letter.objects.get(pk=form.cleaned_data['related_pk'])
+        if related.pk == letter.pk:
+            messages.error(request, 'نامه نمی‌تواند به خودش مرتبط باشد.')
+        else:
+            LetterRelation.objects.get_or_create(
+                letter=letter, related=related,
+                kind=form.cleaned_data['kind'])
+            LetterEvent.objects.create(
+                letter=letter, actor=request.user, action=LetterEvent.Action.NOTE,
+                note=f'نامه مرتبط ({form.cleaned_data["kind"]}): '
+                     f'{related.number_display}')
+            messages.success(request, 'نامه مرتبط ثبت شد.')
+    else:
+        messages.error(request, _form_errors_message(form))
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def letter_note_add(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    form = LetterNoteForm(request.POST)
+    if form.is_valid():
+        LetterNote.objects.create(
+            letter=letter, author=request.user, text=form.cleaned_data['text'][:2000])
+        messages.success(request, 'یادداشت ثبت شد.')
+    else:
+        messages.error(request, _form_errors_message(form))
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def refer_cancel(request, pk):
+    """بازپس‌گیری ارجاع — فقط ارجاع‌دهنده، پیش از اقدام گیرنده."""
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    referral = get_object_or_404(
+        Referral, pk=request.POST.get('referral_id'),
+        letter=letter, from_user=request.user,
+        status=Referral.Status.PENDING)
+    referral.status = Referral.Status.CANCELLED
+    referral.save(update_fields=['status', 'updated_at'])
+    LetterEvent.objects.create(
+        letter=letter, actor=request.user, action=LetterEvent.Action.NOTE,
+        note=f'ارجاع به {referral.to_user or referral.to_department} بازپس گرفته شد')
+    messages.success(request, 'ارجاع بازپس گرفته شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
 
 @login_required
 def delegations(request):

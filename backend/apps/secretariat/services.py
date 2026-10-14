@@ -89,7 +89,8 @@ def visible_letters(user):
     if user.is_superuser or user.has_perm('secretariat.view_all_letter'):
         return apply_confidentiality(qs, user)
 
-    own = Q(created_by=user) | Q(referrals__to_user=user) | Q(copies__to_user=user)
+    own = (Q(created_by=user) | Q(referrals__to_user=user) | Q(copies__to_user=user)
+           | Q(to_user=user))
     # جانشینی فعال: نامه‌های تفویض‌کننده نیز در سطح «خود» دیده می‌شود
     from apps.core.models import Delegation
     delegator_ids = Delegation.active_delegators(user)

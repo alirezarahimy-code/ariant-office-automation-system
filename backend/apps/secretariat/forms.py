@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from apps.core.models import Delegation, Notification
 from apps.core.persian import to_english_digits
 from apps.organization.models import Department
-from .models import Attachment, Letter, LetterEvent, Office
+from .models import (Attachment, Letter, LetterEvent, LetterRelation, Office)
 from .services import register_letter
 
 User = get_user_model()
@@ -142,6 +142,94 @@ class OutgoingDraftForm(_StyledForm):
             d['office'], Letter.LetterType.OUTGOING, d['subject'], created_by=user,
             summary=d['summary'], body=d['body'], letter_date=d['letter_date'],
             priority=d['priority'], confidentiality=d['confidentiality'])
+
+
+class InternalLetterForm(_StyledForm):
+    """ثبت و ارسال نامه داخلی — از شخص/واحد به شخص/واحد با تحویل کارتابل."""
+
+    office = forms.ModelChoiceField(
+        label='دبیرخانه', queryset=Office.objects.filter(is_active=True), empty_label='— انتخاب کنید —')
+    subject = forms.CharField(label='موضوع', max_length=300)
+    body = forms.CharField(label='متن نامه', required=False, widget=forms.Textarea)
+    to_user = forms.ModelChoiceField(
+        label='گیرنده (شخص)', required=False,
+        queryset=get_user_model().objects.filter(is_active=True),
+        empty_label='— انتخاب کنید —')
+    to_department = forms.ModelChoiceField(
+        label='گیرنده (واحد)', required=False,
+        queryset=Department.objects.all(), empty_label='— انتخاب کنید —')
+    letter_date = JalaliDateField(label='تاریخ نامه')
+    priority = forms.ChoiceField(label='درجه فوریت', choices=Letter.Priority.choices, initial='normal')
+    confidentiality = forms.ChoiceField(
+        label='سطح محرمانگی', choices=Letter.Confidentiality.choices, initial='normal')
+    delivery_method = forms.ChoiceField(
+        label='شیوه ارسال', choices=Letter.DeliveryMethod.choices, initial='system')
+    deadline = JalaliDateField(label='مهلت اقدام')
+    template_id = forms.IntegerField(label='الگوی نامه', required=False,
+                                     widget=forms.HiddenInput)
+    attachments = MultipleFileField(label='پیوست‌ها', required=False)
+
+    invalid_attachments: list[str] = []
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get('to_user') and not cleaned.get('to_department'):
+            raise forms.ValidationError('برای نامه داخلی حداقل یک گیرنده (شخص یا واحد) لازم است.')
+        return cleaned
+
+    def clean_subject(self):
+        subject = self.cleaned_data['subject'].strip()
+        if len(subject) < 3:
+            raise forms.ValidationError('موضوع نامه را کامل‌تر وارد کنید.')
+        return subject
+
+    def save(self, user) -> Letter:
+        d = self.cleaned_data
+        letter = register_letter(
+            d['office'], Letter.LetterType.INTERNAL, d['subject'], created_by=user,
+            body=d['body'], to_user=d.get('to_user'), to_department=d.get('to_department'),
+            letter_date=d['letter_date'], priority=d['priority'],
+            confidentiality=d['confidentiality'],
+            delivery_method=d['delivery_method'], deadline=d['deadline'])
+        self.invalid_attachments = []
+        for f in self.files.getlist('attachments'):
+            attachment = Attachment(letter=letter, file=f, uploaded_by=user)
+            try:
+                attachment.full_clean()
+                attachment.save()
+                LetterEvent.objects.create(
+                    letter=letter, actor=user, action=LetterEvent.Action.ATTACHED,
+                    note=attachment.original_name)
+            except DjangoValidationError:
+                self.invalid_attachments.append(f.name)
+        # تحویل به کارتابل گیرنده شخصی + اعلان
+        if letter.to_user_id and letter.delivery_method == Letter.DeliveryMethod.SYSTEM:
+            from apps.core.services import send_notification
+            send_notification(
+                letter.to_user,
+                f'نامه داخلی تازه: {letter.subject}',
+                f'از {user.get_full_name() or user.username}',
+                f'/letters/{letter.pk}/')
+        return letter
+
+
+class LetterRelationForm(_StyledForm):
+    """افزودن نامه مرتبط (پیرو/عطف/بازگشت)."""
+
+    related_pk = forms.IntegerField(label='شماره کارت نامه مرتبط')
+    kind = forms.ChoiceField(label='نوع رابطه', choices=LetterRelation.Kind.choices)
+
+    def clean_related_pk(self):
+        pk = self.cleaned_data['related_pk']
+        if not Letter.objects.filter(pk=pk).exists():
+            raise forms.ValidationError('نامه‌ای با این شماره یافت نشد.')
+        return pk
+
+
+class LetterNoteForm(_StyledForm):
+    """افزودن هامش/یادداشت روی نامه."""
+
+    text = forms.CharField(label='متن یادداشت', widget=forms.Textarea)
 
 
 class ReferralActionForm(_StyledForm):

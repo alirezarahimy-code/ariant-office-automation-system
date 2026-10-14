@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ریزگردش کالا{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ریزگردش کالا</h1>
+    <p class="sub">{{ item.code }} — {{ item.name }} — موجودی ابتدای بازه: {{ report.opening|fa }}</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'inventory:detail' pk=item.pk %}" class="btn">کارت کالا</a>
+    <a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get">
+  <label>از تاریخ <input class="input num fa" name="date_from" value="{{ date_from }}" placeholder="۱۴۰۴/۰۱/۰۱" dir="ltr" style="text-align:right"></label>
+  <label>تا تاریخ <input class="input num fa" name="date_to" value="{{ date_to }}" placeholder="۱۴۰۴/۱۲/۲۹" dir="ltr" style="text-align:right"></label>
+  <label>انبار
+    <select class="select" name="warehouse">
+      <option value="">همه</option>
+      {% for w in warehouses %}<option value="{{ w.pk }}" {% if warehouse.pk == w.pk %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn" type="submit">نمایش</button>
+</form>
+
+<table class="table">
+  <thead><tr><th>تاریخ</th><th>نوع</th><th>دسته سند</th><th>انبار</th><th>تعداد</th><th>موجودی</th><th>مدرک</th><th></th></tr></thead>
+  <tbody>
+  {% for row in report.rows %}
+    <tr>
+      <td class="num">{{ row.move.date|jalali_datetime:'date' }}</td>
+      <td>
+        {% if row.move.kind == 'receive' %}<span class="chip">رسید</span>
+        {% elif row.move.kind == 'issue' %}<span class="chip chip-warning">حواله</span>
+        {% else %}<span class="chip chip-danger">تعدیل</span>{% endif %}
+      </td>
+      <td>{{ row.move.get_category_display }}</td>
+      <td>{{ row.move.warehouse }}</td>
+      <td class="num">{{ row.move.quantity|fa }}</td>
+      <td class="num">{{ row.balance|fa }}</td>
+      <td class="num">{{ row.move.reference|default:'—' }}</td>
+      <td><a class="btn sm" href="{% url 'inventory:move_print' pk=row.move.pk %}" target="_blank">چاپ</a></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="8">سندی در این بازه نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
