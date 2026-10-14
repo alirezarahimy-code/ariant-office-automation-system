@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}قراردادها{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>قراردادها</h1><p class="sub">قراردادهای خرید بازرگانی</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'commerce:list' %}" class="btn">درخواست‌ها</a>
+  </div>
+</div>
+
+<form method="post" action="{% url 'commerce:contract_new' %}" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="title">عنوان قرارداد *</label>
+      <input id="title" name="title" class="input" required maxlength="300">
+    </div>
+    <div>
+      <label for="party">طرف قرارداد *</label>
+      <input id="party" name="party" class="input" required maxlength="200">
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="amount">مبلغ (ریال) *</label>
+      <input id="amount" name="amount" class="input num" required dir="ltr" style="text-align:right">
+    </div>
+    <div>
+      <label for="purchase_id">درخواست مبدأ</label>
+      <input id="purchase_id" name="purchase_id" class="input num" dir="ltr" style="text-align:right" placeholder="اختیاری">
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="start_date">تاریخ شروع (شمسی) *</label>
+      <input id="start_date" name="start_date" class="input num fa" required inputmode="numeric" dir="ltr" style="text-align:right">
+    </div>
+    <div>
+      <label for="end_date">تاریخ پایان (شمسی)</label>
+      <input id="end_date" name="end_date" class="input num fa" inputmode="numeric" dir="ltr" style="text-align:right">
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت قرارداد</button>
+  </div>
+</form>
+
+<table class="table">
+  <thead><tr><th>عنوان</th><th>طرف قرارداد</th><th>مبلغ</th><th>شروع</th><th>پایان</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for c in contracts %}
+    <tr>
+      <td>{{ c.title }}</td>
+      <td>{{ c.party }}</td>
+      <td class="num">{{ c.amount|fa }}</td>
+      <td class="num">{{ c.start_date|jalali_datetime:'date' }}</td>
+      <td class="num">{% if c.end_date %}{{ c.end_date|jalali_datetime:'date' }}{% else %}—{% endif %}</td>
+      <td>
+        {% if c.status == 'active' %}<span class="chip">جاری</span>
+        {% elif c.status == 'finished' %}<span class="chip">خاتمه‌یافته</span>
+        {% else %}<span class="chip chip-danger">لغوشده</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6">قراردادی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

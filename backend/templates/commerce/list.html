@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}امور بازرگانی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>امور بازرگانی</h1><p class="sub">درخواست خرید، استعلام قیمت و قراردادها</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'commerce:contract_list' %}" class="btn">قراردادها</a>
+    <a href="{% url 'commerce:new' %}" class="btn btn-primary">درخواست خرید</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab{% if tab == 'mine' %} is-active{% endif %}" href="?tab=mine">درخواست‌های من</a>
+  {% if can_manage %}<a class="tab{% if tab == 'pending' %} is-active{% endif %}" href="?tab=pending">در انتظار تأیید</a>
+  <a class="tab{% if tab == 'all' %} is-active{% endif %}" href="?tab=all">همه</a>{% endif %}
+</div>
+
+<table class="table">
+  <thead><tr><th>عنوان</th><th>درخواست‌کننده</th><th>برآورد هزینه</th><th>تاریخ نیاز</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for p in requests %}
+    <tr>
+      <td><a class="row-link" href="{% url 'commerce:detail' pk=p.pk %}">{{ p.title }}</a></td>
+      <td>{{ p.requested_by.get_full_name|default:p.requested_by.username }}</td>
+      <td class="num">{{ p.estimated_cost|fa }}</td>
+      <td class="num">{% if p.needed_by %}{{ p.needed_by|jalali_datetime:'date' }}{% else %}—{% endif %}</td>
+      <td>
+        {% if p.status == 'approved' %}<span class="chip">تأییدشده</span>
+        {% elif p.status == 'rejected' %}<span class="chip chip-danger">ردشده</span>
+        {% elif p.status == 'submitted' %}<span class="chip chip-warning">در انتظار تأیید</span>
+        {% elif p.status == 'done' %}<span class="chip">انجام‌شده</span>
+        {% else %}<span class="chip">پیش‌نویس</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">درخواستی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

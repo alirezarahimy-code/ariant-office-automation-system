@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}درخواست خرید{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>درخواست خرید</h1><p class="sub">ثبت نیاز خرید — پس از تأیید، استعلام و قرارداد ثبت می‌شود</p></div>
+  <a href="{% url 'commerce:list' %}" class="btn">بازگشت</a>
+</div>
+
+<form method="post" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="title">عنوان خرید *</label>
+      <input id="title" name="title" class="input" required maxlength="300" placeholder="مثلاً خرید کاغذ A4 سالانه">
+    </div>
+    <div>
+      <label for="estimated_cost">برآورد هزینه (ریال)</label>
+      <input id="estimated_cost" name="estimated_cost" class="input num" dir="ltr" style="text-align:right" placeholder="مثلاً ۵۰۰۰۰۰۰۰">
+    </div>
+  </div>
+  <div>
+    <label for="needed_by">تاریخ نیاز (شمسی)</label>
+    <input id="needed_by" name="needed_by" class="input num fa" value="{{ today }}" inputmode="numeric" dir="ltr" style="text-align:right">
+  </div>
+  <div>
+    <label for="description">شرح نیاز</label>
+    <textarea id="description" name="description" class="input" rows="4" placeholder="دلیل و جزئیات خرید"></textarea>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit" name="action" value="submit">ارسال برای تأیید</button>
+    <button class="btn" type="submit" name="action" value="draft">ذخیره پیش‌نویس</button>
+    <a href="{% url 'commerce:list' %}" class="btn">انصراف</a>
+  </div>
+</form>
+{% endblock %}
