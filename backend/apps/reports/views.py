@@ -104,3 +104,56 @@ def dashboard(request):
                 due_date__lt=today).count(),
         })
     return render(request, 'reports/dashboard.html', ctx)
+
+
+# ---------------------------------------------------------------------------
+# گزارش‌ساز پیشرفته (فاز ۳): فیلتر تاریخ شمسی، خروجی CSV/XLSX/PDF و چاپ
+# ---------------------------------------------------------------------------
+
+def _builder_params(request):
+    from apps.secretariat.views import _parse_jalali_input
+    slug = request.GET.get('report', 'letters')
+    date_from = _parse_jalali_input(request.GET.get('date_from', ''))
+    date_to = _parse_jalali_input(request.GET.get('date_to', ''))
+    return slug, date_from, date_to
+
+
+@login_required
+def builder(request):
+    """گزارش‌ساز: انتخاب گزارش و بازه شمسی + پیش‌نمایش جدول."""
+    from apps.reports.datasets import REPORTS, report_titles, run_report
+
+    slug, date_from, date_to = _builder_params(request)
+    if slug not in REPORTS:
+        slug = 'letters'
+    title, headers, rows = run_report(slug, date_from, date_to)
+    return render(request, 'reports/builder.html', {
+        'slug': slug, 'title': title, 'headers': headers,
+        'rows': rows[:200], 'row_count': len(rows),
+        'reports': report_titles(),
+        'date_from': request.GET.get('date_from', ''),
+        'date_to': request.GET.get('date_to', ''),
+    })
+
+
+@login_required
+def export(request):
+    """خروجی گزارش: csv | xlsx | pdf | print."""
+    from django.http import HttpResponseBadRequest
+    from apps.reports.datasets import run_report
+    from apps.reports.export import csv_response, pdf_response, xlsx_response
+
+    slug, date_from, date_to = _builder_params(request)
+    fmt = request.GET.get('format', 'csv')
+    try:
+        title, headers, rows = run_report(slug, date_from, date_to)
+    except ValueError as exc:
+        return HttpResponseBadRequest(str(exc))
+    if fmt == 'xlsx':
+        return xlsx_response(title, headers, rows)
+    if fmt == 'pdf':
+        return pdf_response(title, headers, rows)
+    if fmt == 'print':
+        return render(request, 'reports/print.html', {
+            'title': title, 'headers': headers, 'rows': rows})
+    return csv_response(title, headers, rows)

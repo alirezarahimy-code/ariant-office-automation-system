@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}گزارش‌ساز{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گزارش‌ساز</h1><p class="sub">فیلتر بازه شمسی و خروجی Excel/CSV/PDF یا نسخه چاپی</p></div>
+  <a href="{% url 'reports:dashboard' %}" class="btn">داشبورد</a>
+</div>
+
+<form class="toolbar" method="get">
+  <label>گزارش
+    <select class="select" name="report">
+      {% for s, t in reports %}<option value="{{ s }}" {% if s == slug %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>از تاریخ <input class="input num fa" name="date_from" value="{{ date_from }}" placeholder="۱۴۰۴/۰۱/۰۱" dir="ltr" style="text-align:right"></label>
+  <label>تا تاریخ <input class="input num fa" name="date_to" value="{{ date_to }}" placeholder="۱۴۰۴/۱۲/۲۹" dir="ltr" style="text-align:right"></label>
+  <button class="btn" type="submit">نمایش</button>
+</form>
+
+<div class="toolbar">
+  <a class="btn" href="{% url 'reports:export' %}?report={{ slug }}&date_from={{ date_from }}&date_to={{ date_to }}&format=csv">خروجی CSV</a>
+  <a class="btn" href="{% url 'reports:export' %}?report={{ slug }}&date_from={{ date_from }}&date_to={{ date_to }}&format=xlsx">خروجی Excel</a>
+  <a class="btn" href="{% url 'reports:export' %}?report={{ slug }}&date_from={{ date_from }}&date_to={{ date_to }}&format=pdf">خروجی PDF</a>
+  <a class="btn btn-primary" href="{% url 'reports:export' %}?report={{ slug }}&date_from={{ date_from }}&date_to={{ date_to }}&format=print" target="_blank">نسخه چاپی</a>
+</div>
+
+<p class="sub">{{ title }} — {{ row_count|fa }} ردیف{% if rows|length < row_count %} (نمایش {{ rows|length|fa }} مورد نخست){% endif %}</p>
+
+<table class="table">
+  <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>{% for cell in row %}<td>{% if forloop.first %}<span class="num">{{ cell }}</span>{% else %}{{ cell }}{% endif %}</td>{% endfor %}</tr>
+  {% empty %}
+    <tr><td colspan="{{ headers|length }}">داده‌ای در این بازه نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

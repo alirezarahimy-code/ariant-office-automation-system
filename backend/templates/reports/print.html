@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; margin: 24px; color: #1a2b3c; }
+    h1 { font-size: 18px; border-bottom: 2px solid #1a2b3c; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #c9d2da; padding: 6px 10px; font-size: 12px; text-align: right; }
+    th { background: #eef2f5; }
+    @media print { body { margin: 12px; } }
+  </style>
+</head>
+<body onload="window.print()">
+  <h1>{{ title }}</h1>
+  <table>
+    <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
