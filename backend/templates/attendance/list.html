@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}کنترل تردد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>کنترل تردد</h1>
+    <p class="sub">ثبت ورود و خروج — {{ target.get_full_name|default:target.username }} — {{ month_name }} {{ year|fa }}</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'attendance:month' %}?year={{ year }}&month={{ month }}{% if can_manage %}&user={{ target.pk }}{% endif %}" class="btn">گزارش ماهانه</a>
+    <a href="{% url 'attendance:new' %}" class="btn btn-primary">ثبت تردد</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get">
+  <label>سال <input class="input num" name="year" value="{{ year }}" size="5" dir="ltr" style="text-align:right"></label>
+  <label>ماه <input class="input num" name="month" value="{{ month }}" size="3" dir="ltr" style="text-align:right"></label>
+  {% if can_manage %}
+  <label>کاربر
+    <select class="select" name="user">
+      {% for u in users %}<option value="{{ u.pk }}" {% if u.pk == target.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  <button class="btn" type="submit">نمایش</button>
+</form>
+
+<div class="stats">
+  <div class="stat"><span class="label">روز حاضر</span><span class="value num">{{ summary.present_days|fa }}</span></div>
+  <div class="stat"><span class="label">با تأخیر</span><span class="value num">{{ summary.late_days|fa }}</span></div>
+  <div class="stat"><span class="label">غیبت</span><span class="value num">{{ summary.absent_days|fa }}</span></div>
+  <div class="stat"><span class="label">اضافه‌کاری (دقیقه)</span><span class="value num">{{ summary.overtime_minutes|fa }}</span></div>
+</div>
+
+<table class="table">
+  <thead><tr>
+    <th>تاریخ</th><th>روز</th><th>ورود</th><th>خروج</th><th>وضعیت</th><th>تأخیر (دقیقه)</th><th>اضافه‌کاری (دقیقه)</th><th>منبع</th>
+  </tr></thead>
+  <tbody>
+  {% for row in summary.rows %}
+    <tr>
+      <td class="num">{{ row.jdate|jalali_datetime:'date' }}</td>
+      <td>{{ row.jdate.jstrftime }}</td>
+      <td class="num">{% if row.record.check_in %}{{ row.record.check_in|time:'H:i' }}{% else %}—{% endif %}</td>
+      <td class="num">{% if row.record.check_out %}{{ row.record.check_out|time:'H:i' }}{% else %}—{% endif %}</td>
+      <td>
+        {% if row.state == 'ontime' %}<span class="chip">به‌موقع</span>
+        {% elif row.state == 'late' %}<span class="chip chip-warning">با تأخیر</span>
+        {% elif row.state == 'incomplete' %}<span class="chip chip-warning">خروج ثبت نشده</span>
+        {% elif row.state == 'holiday' %}<span class="chip">تعطیل</span>
+        {% else %}<span class="chip chip-danger">غایب</span>{% endif %}
+      </td>
+      <td class="num">{{ row.late_minutes|fa }}</td>
+      <td class="num">{{ row.overtime_minutes|fa }}</td>
+      <td>{% if row.record %}{{ row.record.get_source_display }}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

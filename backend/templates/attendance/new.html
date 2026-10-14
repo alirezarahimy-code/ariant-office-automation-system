@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت تردد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت تردد</h1><p class="sub">ثبت دستی ورود/خروج — برای اصلاح یا ثبت خارج از دستگاه</p></div>
+  <a href="{% url 'attendance:list' %}" class="btn">بازگشت</a>
+</div>
+
+<form method="post" class="card form">{% csrf_token %}
+  <div class="grid-2">
+    <div>
+      <label for="date">تاریخ (شمسی) *</label>
+      <input id="date" name="date" class="input num fa" value="{{ today }}" placeholder="مثلاً ۱۴۰۴/۰۷/۲۴" inputmode="numeric" dir="ltr" style="text-align:right" required>
+    </div>
+    {% if users|length > 1 %}
+    <div>
+      <label for="user_id">کاربر</label>
+      <select id="user_id" name="user_id" class="select">
+        {% for u in users %}<option value="{{ u.pk }}" {% if u.pk == user.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="check_in">ساعت ورود</label>
+      <input id="check_in" name="check_in" class="input num" placeholder="HH:MM" dir="ltr" style="text-align:right">
+    </div>
+    <div>
+      <label for="check_out">ساعت خروج</label>
+      <input id="check_out" name="check_out" class="input num" placeholder="HH:MM" dir="ltr" style="text-align:right">
+    </div>
+  </div>
+  <div>
+    <label for="note">یادداشت</label>
+    <input id="note" name="note" class="input" maxlength="300" placeholder="اختیاری">
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت</button>
+    <a href="{% url 'attendance:list' %}" class="btn">انصراف</a>
+  </div>
+</form>
+{% endblock %}

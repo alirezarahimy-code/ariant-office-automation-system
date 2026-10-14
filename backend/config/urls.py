@@ -21,6 +21,7 @@ urlpatterns = [
     path('tasks/', include('apps.tasks.urls')),
     path('reports/', include('apps.reports.urls')),
     path('tickets/', include('apps.tickets.urls')),
+    path('attendance/', include('apps.attendance.urls')),
     path('platform/', include('apps.registry.urls')),
     # وب‌سرویس نسخه ۱ — قرارداد پل تیکتینگ (docs/04)
     path('api/v1/health', HealthView.as_view(), name='api-health'),

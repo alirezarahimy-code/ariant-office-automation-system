@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}گزارش ماهانه تردد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گزارش ماهانه تردد</h1>
+    <p class="sub">{{ target.get_full_name|default:target.username }} — {{ month_name }} {{ year|fa }}</p></div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'attendance:list' %}?year={{ year }}&month={{ month }}" class="btn">فهرست</a>
+    <a href="{% url 'attendance:new' %}" class="btn btn-primary">ثبت تردد</a>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="label">روز حاضر</span><span class="value num">{{ summary.present_days|fa }}</span></div>
+  <div class="stat"><span class="label">با تأخیر</span><span class="value num">{{ summary.late_days|fa }}</span></div>
+  <div class="stat"><span class="label">غیبت</span><span class="value num">{{ summary.absent_days|fa }}</span></div>
+  <div class="stat"><span class="label">مجموع کارکرد (ساعت)</span><span class="value num">{{ summary.worked_minutes|fa }}</span></div>
+  <div class="stat"><span class="label">اضافه‌کاری (دقیقه)</span><span class="value num">{{ summary.overtime_minutes|fa }}</span></div>
+</div>
+
+<div class="card">
+  <p class="sub">برنامه کاری: {{ summary.schedule.name }} —
+    {{ summary.schedule.start_time|time:'H:i' }} تا {{ summary.schedule.end_time|time:'H:i' }} —
+    مهلت تأخیر {{ summary.schedule.grace_minutes|fa }} دقیقه</p>
+</div>
+
+<table class="table">
+  <thead><tr><th>تاریخ</th><th>وضعیت روز</th><th>ورود</th><th>خروج</th><th>تأخیر</th><th>اضافه‌کاری</th></tr></thead>
+  <tbody>
+  {% for row in summary.rows %}
+    <tr>
+      <td class="num">{{ row.jdate|jalali_datetime:'date' }}</td>
+      <td>
+        {% if row.state == 'ontime' %}<span class="chip">به‌موقع</span>
+        {% elif row.state == 'late' %}<span class="chip chip-warning">با تأخیر</span>
+        {% elif row.state == 'incomplete' %}<span class="chip chip-warning">خروج ثبت نشده</span>
+        {% elif row.state == 'holiday' %}<span class="chip">تعطیل</span>
+        {% else %}<span class="chip chip-danger">غایب</span>{% endif %}
+      </td>
+      <td class="num">{% if row.record.check_in %}{{ row.record.check_in|time:'H:i' }}{% else %}—{% endif %}</td>
+      <td class="num">{% if row.record.check_out %}{{ row.record.check_out|time:'H:i' }}{% else %}—{% endif %}</td>
+      <td class="num">{{ row.late_minutes|fa }}</td>
+      <td class="num">{{ row.overtime_minutes|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
