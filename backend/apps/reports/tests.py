@@ -76,8 +76,8 @@ class DashboardTests(TestCase):
         self.assertTrue(resp.context['is_manager'])
         self.assertContains(resp, 'نمای سازمانی')
         self.assertEqual(resp.context['org_overdue'], 1)
-        # هر سه نوع نامه در نمودار ماهانه حاضرند
-        self.assertEqual(len(resp.context['org_month_by_type']), 3)
+        # همه انواع نامه در نمودار ماهانه حاضرند (وارده/صادره/داخلی/یادداشتی)
+        self.assertEqual(len(resp.context['org_month_by_type']), 4)
 
     def test_actionable_statuses_whitelist(self):
         """فقط وضعیت‌های قابل اقدام مشمول عقب‌افتادگی‌اند."""

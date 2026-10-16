@@ -258,8 +258,31 @@ def letter_detail(request, pk):
     archive_item = ArchiveItem.objects.filter(
         content_type=ct_letter, object_id=letter.pk,
     ).select_related('folder', 'folder__box').first()
+    # ── لایه حرفه‌ای: نسخه‌ها، امضاها، پرونده، رؤیت‌ها، پاراف ──
+    from apps.core.services import feature_enabled as _feat
+    pro = {}
+    if _feat('secretariat.revisions_lock'):
+        pro['revisions'] = letter.revisions.all()[:10]
+        pro['is_locked'] = letter.locked_at is not None
+    if _feat('secretariat.signatures'):
+        pro['sig_requests'] = letter.signature_requests.prefetch_related(
+            'steps__signer_user', 'steps__signer_position')[:5]
+        from .services import user_signature_steps
+        pro['my_sig_steps'] = [
+            st for st in user_signature_steps(user).filter(request__letter=letter)]
+    if _feat('secretariat.register_check'):
+        pro['register_check'] = getattr(letter, 'register_check', None)
+    if _feat('secretariat.casefiles'):
+        pro['case_file'] = letter.case_file
+    if _feat('secretariat.read_receipt'):
+        pro['read_receipts'] = letter.read_receipts.select_related('user')[:20]
+    if _feat('secretariat.paraph'):
+        pro['paraphs'] = letter.paraphs.select_related('user')[:20]
+    if _feat('secretariat.answer_pairing'):
+        pro['pair_form'] = True
     return render(request, 'secretariat/letter_detail.html', {
         'letter': letter,
+        'pro': pro,
         'wf_instance': instance_for(letter),
         'can_bind_workflow': user.is_superuser
                              or user.has_perm('secretariat.manage_secretariat'),
@@ -435,8 +458,8 @@ def kartable(request):
     today = date.today()
     warning_days = today + timedelta(days=3)
 
-    my_referrals_pending = Referral.objects.filter(
-        to_user=user, status=Referral.Status.PENDING).select_related('letter', 'from_user', 'letter__office')
+    my_referrals_pending = svc.visible_referrals(user).filter(
+        status=Referral.Status.PENDING).select_related('letter', 'from_user', 'letter__office')
     waiting_ids = [r.letter_id for r in my_referrals_pending]
     waiting_letters = list(apply_confidentiality(
         Letter.objects.filter(pk__in=waiting_ids), user).select_related('office'))
@@ -448,6 +471,16 @@ def kartable(request):
         if letter.pk not in have_ids:
             waiting_letters.append(letter)
             have_ids.add(letter.pk)
+    # رونوشت‌های «جهت اقدام» این کاربر — نیازمند اقدام
+    action_copies = []
+    if feature_enabled('secretariat.copy_action'):
+        for c in Copy.objects.filter(
+                to_user=user, kind='action', done_at__isnull=True
+        ).select_related('letter', 'letter__office'):
+            if c.letter.pk not in have_ids and c.letter.status not in CLOSED_STATUSES:
+                action_copies.append(c)
+                waiting_letters.append(c.letter)
+                have_ids.add(c.letter.pk)
     visible_ids = have_ids
     referral_map = {r.letter_id: r for r in my_referrals_pending if r.letter_id in visible_ids}
 
@@ -794,3 +827,441 @@ def delegation_deactivate(request, pk):
     delegation.save(update_fields=['is_active', 'updated_at'])
     messages.success(request, 'جانشینی غیرفعال شد.')
     return redirect('secretariat:delegations')
+
+
+# ════════════════════════════════════════════════════════════════
+# ویوهای لایه حرفه‌ای دبیرخانه (همه پشت کلیدهای قابلیت)
+# ════════════════════════════════════════════════════════════════
+from apps.core.services import feature_enabled, feature_required
+from .forms import (
+    CaseFileAddLetterForm, CaseFileForm, CorrespondentForm, FrequentPhraseForm,
+    MemoLetterForm, NumberReservationForm, ParaphForm, RegisterCheckForm,
+    RevisionForm, SearchForm, SignatureDecisionForm, SignatureRequestForm,
+    SLARuleForm)
+from . import services as svc
+from .models import (
+    CaseFile, Correspondent, FrequentPhrase, NumberReservation, Paraph,
+    RegisterCheck, RegisterEntry, SLARule, SignatureRequest, SignatureStep)
+
+
+def _is_manager(user):
+    return user.is_superuser or user.has_perm('secretariat.manage_secretariat')
+
+
+# ── پرونده‌ها ─────────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.casefiles')
+def case_file_list(request):
+    from django.db.models import Count, Max
+    qs = CaseFile.objects.annotate(
+        n_letters=Count('letters'), last_activity=Max('letters__created_at'))
+    status = request.GET.get('status', '')
+    if status:
+        qs = qs.filter(status=status)
+    q = request.GET.get('q', '').strip()
+    if q:
+        from django.db.models import Q
+        qs = qs.filter(Q(title__icontains=q) | Q(number__icontains=q))
+    return render(request, 'secretariat/casefile_list.html', {
+        'rows': qs, 'status': status, 'q': q,
+        'form': CaseFileForm(),
+    })
+
+
+@login_required
+@feature_required('secretariat.casefiles')
+def case_file_new(request):
+    if request.method == 'POST':
+        form = CaseFileForm(request.POST)
+        if form.is_valid():
+            cf = svc.open_case_file(
+                form.cleaned_data['title'], user=request.user,
+                description=form.cleaned_data['description'],
+                topic=form.cleaned_data['topic'],
+                owner_user=form.cleaned_data['owner_user'],
+                confidentiality=form.cleaned_data['confidentiality'] or 'normal')
+            messages.success(request, f'پرونده {cf.number} تشکیل شد.')
+            return redirect('secretariat:case_file_detail', pk=cf.pk)
+    else:
+        form = CaseFileForm()
+    return render(request, 'secretariat/casefile_new.html', {'form': form})
+
+
+@login_required
+@feature_required('secretariat.casefiles')
+def case_file_detail(request, pk):
+    cf = get_object_or_404(CaseFile.objects.select_related('topic', 'owner_user'), pk=pk)
+    letters = cf.letters.select_related('office', 'created_by').order_by('created_at')
+    return render(request, 'secretariat/casefile_detail.html', {
+        'case_file': cf, 'letters': letters,
+        'events': cf.events.select_related('actor')[:50],
+        'add_form': CaseFileAddLetterForm(),
+        'can_manage': _is_manager(request.user),
+    })
+
+
+@login_required
+@feature_required('secretariat.casefiles')
+def case_file_close(request, pk):
+    cf = get_object_or_404(CaseFile, pk=pk)
+    svc.set_case_file_status(cf, CaseFile.Status.CLOSED, user=request.user,
+                             note=request.POST.get('note', ''))
+    messages.success(request, 'پرونده بسته شد.')
+    return redirect('secretariat:case_file_detail', pk=cf.pk)
+
+
+@login_required
+@feature_required('secretariat.casefiles')
+def case_file_reopen(request, pk):
+    cf = get_object_or_404(CaseFile, pk=pk)
+    svc.set_case_file_status(cf, CaseFile.Status.OPEN, user=request.user, note='بازگشایی')
+    messages.success(request, 'پرونده بازگشایی شد.')
+    return redirect('secretariat:case_file_detail', pk=cf.pk)
+
+
+@login_required
+@feature_required('secretariat.casefiles')
+def case_file_add_letter(request, pk):
+    cf = get_object_or_404(CaseFile, pk=pk)
+    if request.method == 'POST':
+        form = CaseFileAddLetterForm(request.POST)
+        if form.is_valid():
+            letter = get_object_or_404(
+                visible_letters(request.user), pk=form.cleaned_data['letter_pk'])
+            try:
+                svc.add_letter_to_case_file(letter, cf, user=request.user)
+                messages.success(request, f'نامه {letter.number_display} به پرونده افزوده شد.')
+            except ValueError as exc:
+                messages.error(request, str(exc))
+    return redirect('secretariat:case_file_detail', pk=cf.pk)
+
+
+# ── دفتر اندیکاتور ───────────────────────────────────────────
+@login_required
+@feature_required('secretariat.register_book')
+def register_book(request):
+    qs = RegisterEntry.objects.select_related(
+        'letter', 'letter__office', 'prev_row').order_by('jalali_year', 'row_number')
+    year = request.GET.get('year', '')
+    if year:
+        qs = qs.filter(jalali_year=int(year))
+    else:
+        from .services import current_jalali_year
+        year = current_jalali_year()
+        qs = qs.filter(jalali_year=year)
+    office_id = request.GET.get('office', '')
+    if office_id:
+        qs = qs.filter(office_id=office_id)
+    return render(request, 'secretariat/register_book.html', {
+        'rows': qs[:500], 'year': year, 'office_id': office_id,
+        'offices': Office.objects.all(),
+        'check_form': RegisterCheckForm(),
+    })
+
+
+@login_required
+@feature_required('secretariat.register_book')
+def register_book_print(request):
+    year = int(request.GET.get('year', 0)) or None
+    qs = RegisterEntry.objects.select_related('letter', 'prev_row').order_by('jalali_year', 'row_number')
+    if year:
+        qs = qs.filter(jalali_year=year)
+    return render(request, 'secretariat/register_book_print.html', {'rows': qs[:1000]})
+
+
+# ── کنترل پیش از ثبت ─────────────────────────────────────────
+@login_required
+@feature_required('secretariat.register_check')
+def letter_register_check(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if request.method == 'POST':
+        form = RegisterCheckForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            result = data.pop('result')
+            obj = svc.register_check(
+                letter, request.user, result,
+                has_signature=data['has_signature'],
+                copies_count_ok=data['copies_count_ok'],
+                attachments_ok=data['attachments_ok'],
+                dates_ok=data['dates_ok'],
+                addressee_ok=data['addressee_ok'],
+                note=data['note'])
+            if obj.result == RegisterCheck.Result.PASS:
+                svc.create_register_entry(letter, user=request.user)
+                messages.success(request, 'کنترل ثبت تأیید شد و ردیف دفتر اندیکاتور ثبت شد.')
+            else:
+                messages.warning(request, 'نامه جهت اصلاح برگشت داده شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+# ── دفتر اندکس (طبقه‌بندی موضوعی) ────────────────────────────
+@login_required
+@feature_required('secretariat.index_book')
+def index_book(request):
+    from django.db.models import Count
+    from apps.secretariat.models import Topic
+    topics = Topic.objects.annotate(n=Count('letters')).filter(n__gt=0).order_by('code', 'title')
+    data = []
+    for t in topics:
+        data.append({'topic': t, 'letters': t.letters.select_related('case_file')[:200]})
+    return render(request, 'secretariat/index_book.html', {'rows': data})
+
+
+# ── امضای چندنفره ────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.signatures')
+def signature_new(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if request.method == 'POST':
+        form = SignatureRequestForm(request.POST)
+        if form.is_valid():
+            signers = [{'user': u} for u in form.cleaned_data['signers']]
+            req = svc.create_signature_request(
+                letter, signers, form.cleaned_data['mode'], request.user)
+            from apps.core.models import Notification
+            for s in req.steps.filter(signer_user__isnull=False):
+                Notification.objects.create(
+                    user=s.signer_user,
+                    title='نامه در انتظار امضای شما',
+                    body=f'{letter.subject[:80]}',
+                    url=f'/letters/{letter.pk}/')
+            messages.success(request, 'درخواست امضا ثبت شد.')
+            return redirect('secretariat:letter_detail', pk=pk)
+    else:
+        form = SignatureRequestForm()
+    return render(request, 'secretariat/signature_new.html', {'form': form, 'letter': letter})
+
+
+@login_required
+@feature_required('secretariat.signatures')
+def signature_decide(request, pk):
+    step = get_object_or_404(
+        SignatureStep.objects.select_related('request__letter'), pk=pk)
+    user = request.user
+    mine = (step.signer_user_id == user.pk
+            or (step.signer_position_id and step.signer_position.holder_id == user.pk))
+    if not mine and not user.is_superuser:
+        messages.error(request, 'شما امضاکننده این گام نیستید.')
+        return redirect('secretariat:letter_detail', pk=step.request.letter_id)
+    if request.method == 'POST':
+        form = SignatureDecisionForm(request.POST)
+        if form.is_valid():
+            svc.decide_signature_step(
+                step, user, form.cleaned_data['decision'], form.cleaned_data['comment'])
+            messages.success(request, 'تصمیم شما ثبت شد.')
+            return redirect('secretariat:letter_detail', pk=step.request.letter_id)
+    else:
+        form = SignatureDecisionForm()
+    return render(request, 'secretariat/signature_decide.html', {
+        'form': form, 'step': step, 'letter': step.request.letter})
+
+
+# ── نسخه‌ها و قفل ────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.revisions_lock')
+def letter_new_revision(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if request.method == 'POST':
+        form = RevisionForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            if data.get('subject'):
+                letter.subject = data['subject']
+            if data.get('body'):
+                letter.body = data['body']
+            letter.save()
+            svc.new_revision(letter, request.user, data['reason'])
+            messages.success(request, f'نسخه {letter.current_revision} ثبت شد.')
+            return redirect('secretariat:letter_detail', pk=pk)
+    else:
+        form = RevisionForm(initial={'subject': letter.subject, 'body': letter.body})
+    return render(request, 'secretariat/revision_new.html', {'form': form, 'letter': letter})
+
+
+@login_required
+@feature_required('secretariat.revisions_lock')
+def letter_unlock(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if not _is_manager(request.user):
+        messages.error(request, 'باز کردن قفل فقط با مجوز مدیریت دبیرخانه ممکن است.')
+    else:
+        svc.unlock_letter(letter, request.user, reason=request.POST.get('reason', ''))
+        messages.success(request, 'قفل نامه باز شد (در رویدادنامه ثبت شد).')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+# ── رونوشت اقدامی، پاراف، رسید رؤیت ─────────────────────────
+@login_required
+def copy_done(request, pk):
+    from .models import Copy
+    copy = get_object_or_404(Copy, pk=pk)
+    if feature_enabled('secretariat.copy_action'):
+        svc.copy_mark_done(copy, request.user)
+        messages.success(request, 'رونوشت اقدامی «انجام شد» علامت خورد.')
+    return redirect('secretariat:letter_detail', pk=copy.letter_id)
+
+
+@login_required
+@feature_required('secretariat.paraph')
+def letter_paraph(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if request.method == 'POST':
+        form = ParaphForm(request.POST)
+        if form.is_valid():
+            svc.add_paraph(letter, request.user, form.cleaned_data['text'])
+            messages.success(request, 'پاراف ثبت شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+@login_required
+def letter_mark_read(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if feature_enabled('secretariat.read_receipt'):
+        svc.record_read_receipt(letter, request.user, 'direct')
+        messages.success(request, 'دریافت شما ثبت شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+# ── SLA و معوقات ─────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.sla')
+def sla_rules(request):
+    if not _is_manager(request.user):
+        messages.error(request, 'مدیریت قواعد SLA فقط برای مدیریت دبیرخانه است.')
+        return redirect('secretariat:kartable')
+    if request.method == 'POST':
+        form = SLARuleForm(request.POST)
+        if form.is_valid():
+            SLARule.objects.create(**form.cleaned_data)
+            messages.success(request, 'قاعده SLA ثبت شد.')
+            return redirect('secretariat:sla_rules')
+    else:
+        form = SLARuleForm()
+    return render(request, 'secretariat/sla_rules.html', {
+        'rows': SLARule.objects.all(), 'form': form})
+
+
+@login_required
+@feature_required('secretariat.sla')
+def overdue_list(request):
+    from .models import Referral
+    warned, overdue = svc.check_sla_overdue()
+    if warned or overdue:
+        messages.info(
+            request,
+            f'موتور یادآوری: {len(warned)} یادآوری، {len(overdue)} معطل.')
+    rows = Referral.objects.filter(
+        status=Referral.Status.PENDING, sla_due_at__isnull=False
+    ).select_related('letter', 'to_user', 'to_department').order_by('sla_due_at')
+    return render(request, 'secretariat/overdue_list.html', {'rows': rows[:200]})
+
+
+# ── رزرو شماره ───────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.number_reserve')
+def number_reserve(request):
+    if request.method == 'POST':
+        form = NumberReservationForm(request.POST)
+        if form.is_valid():
+            office = Office.objects.filter(is_active=True).first()
+            obj = svc.reserve_number(
+                office, form.cleaned_data['letter_type'], request.user,
+                note=form.cleaned_data['note'])
+            messages.success(
+                request, f'شماره {obj.jalali_year}/{obj.serial} رزرو شد.')
+            return redirect('secretariat:number_reserve')
+    else:
+        form = NumberReservationForm()
+    rows = NumberReservation.objects.select_related('reserved_by', 'used_by_letter')[:50]
+    return render(request, 'secretariat/number_reserve.html', {
+        'rows': rows, 'form': form})
+
+
+# ── طرف مکاتبه ───────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.correspondents')
+def correspondents(request):
+    if request.method == 'POST':
+        form = CorrespondentForm(request.POST)
+        if form.is_valid():
+            obj = Correspondent.objects.create(**form.cleaned_data)
+            messages.success(request, f'طرف مکاتبه «{obj.title}» ثبت شد.')
+            return redirect('secretariat:correspondents')
+    else:
+        form = CorrespondentForm()
+    from django.db.models import Count
+    rows = Correspondent.objects.annotate(n=Count('letters'))
+    return render(request, 'secretariat/correspondents.html', {
+        'rows': rows[:200], 'form': form})
+
+
+# ── عبارت‌های پرتکرار ────────────────────────────────────────
+@login_required
+@feature_required('secretariat.frequent_phrases')
+def frequent_phrases(request):
+    if request.method == 'POST':
+        form = FrequentPhraseForm(request.POST)
+        if form.is_valid():
+            FrequentPhrase.objects.create(**form.cleaned_data)
+            messages.success(request, 'عبارت پرتکرار ثبت شد.')
+            return redirect('secretariat:frequent_phrases')
+    else:
+        form = FrequentPhraseForm()
+    return render(request, 'secretariat/frequent_phrases.html', {
+        'rows': FrequentPhrase.objects.all(), 'form': form})
+
+
+# ── نامه یادداشتی ────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.memo_letters')
+def letter_memo(request):
+    if request.method == 'POST':
+        form = MemoLetterForm(request.POST)
+        if form.is_valid():
+            office = Office.objects.filter(is_active=True).first()
+            data = form.cleaned_data
+            letter = register_letter(
+                office, Letter.LetterType.MEMO, data['subject'],
+                created_by=request.user)
+            letter.body = data['body']
+            letter.to_user = data['to_user']
+            letter.to_department = data['to_department']
+            letter.priority = data['priority'] or Letter.Priority.NORMAL
+            if data.get('letter_date'):
+                from .forms import jalali_to_gregorian
+                letter.letter_date = jalali_to_gregorian(data['letter_date'])
+            letter.save()
+            if letter.to_user:
+                _notify(
+                    letter.to_user, 'نامه یادداشتی تازه',
+                    letter.subject[:120], f'/letters/{letter.pk}/')
+            messages.success(request, f'نامه یادداشتی {letter.number_display} ثبت شد.')
+            return redirect('secretariat:letter_detail', pk=letter.pk)
+    else:
+        form = MemoLetterForm()
+    return render(request, 'secretariat/letter_memo.html', {'form': form})
+
+
+# ── ثبت مقابل (پاسخ وارده) ──────────────────────────────────
+@login_required
+@feature_required('secretariat.answer_pairing')
+def letter_pair(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if request.method == 'POST':
+        other_pk = int(request.POST.get('other_pk', 0))
+        other = get_object_or_404(visible_letters(request.user), pk=other_pk)
+        svc.pair_answer(letter, other, request.user)
+        messages.success(
+            request, f'نامه {other.number_display} به‌عنوان «پاسخ/متن مقابل» پیوند خورد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+# ── جست‌وجوی سراسری ──────────────────────────────────────────
+@login_required
+@feature_required('secretariat.global_search')
+def search(request):
+    q = request.GET.get('q', '').strip()
+    results = svc.search_all(request.user, q) if q else {'letters': [], 'case_files': [], 'correspondents': []}
+    return render(request, 'secretariat/search.html', {
+        'q': q, 'results': results, 'form': SearchForm(initial={'q': q})})

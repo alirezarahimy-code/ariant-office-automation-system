@@ -166,3 +166,43 @@ def users_admin_edit(request, pk):
     user.save(update_fields=['first_name', 'last_name', 'email', 'is_active'])
     messages.success(request, f'کاربر {user.username} به‌روزرسانی شد.')
     return redirect('accounts:users')
+
+
+@login_required
+def features_admin(request):
+    """مدیریت کلیدهای قابلیت — اجزا همیشه هستند؛ سازمان روشن/خاموش می‌کند."""
+    from django.contrib import messages
+    from django.shortcuts import redirect, render
+
+    from apps.core.models import FEATURE_REGISTRY, FeatureToggle
+    from apps.core.services import clear_feature_cache
+
+    if not request.user.is_superuser:
+        messages.error(request, 'مدیریت قابلیت‌ها فقط برای مدیر ارشد است.')
+        return redirect('accounts:settings')
+
+    if request.method == 'POST':
+        code = request.POST.get('code', '')
+        if code in FEATURE_REGISTRY:
+            obj, _ = FeatureToggle.objects.get_or_create(
+                code=code,
+                defaults={'title': FEATURE_REGISTRY[code][0],
+                          'group': FEATURE_REGISTRY[code][1]})
+            obj.is_enabled = request.POST.get('is_enabled') == '1'
+            obj.save()
+            clear_feature_cache()
+            messages.success(
+                request,
+                'قابلیت «{}» روی {} قرار گرفت.'.format(
+                    obj.title, 'فعال' if obj.is_enabled else 'غیرفعال'))
+        return redirect('accounts:features')
+
+    rows = []
+    for code, (title, group) in sorted(FEATURE_REGISTRY.items(), key=lambda kv: kv[1][1]):
+        obj = FeatureToggle.objects.filter(code=code).first()
+        rows.append({
+            'code': code, 'title': title, 'group': group,
+            'is_enabled': True if obj is None else obj.is_enabled,
+            'description': '' if obj is None else obj.description,
+        })
+    return render(request, 'core/features.html', {'rows': rows})

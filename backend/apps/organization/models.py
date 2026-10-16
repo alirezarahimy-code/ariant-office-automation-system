@@ -91,3 +91,25 @@ class Employee(TimeStampedModel, SoftDeleteModel):
     @property
     def full_name(self) -> str:
         return f'{self.first_name} {self.last_name}'
+
+
+class Position(TimeStampedModel):
+    """جایگاه/سمت سازمانی — مقصد ارجاع‌های پایدار (با جابه‌جایی نفر، نامه نمی‌سوزد)."""
+
+    title = models.CharField('عنوان جایگاه', max_length=150)
+    department = models.ForeignKey(
+        Department, verbose_name='واحد', related_name='positions',
+        null=True, blank=True, on_delete=models.SET_NULL)
+    holder = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='دارنده فعلی', related_name='held_positions',
+        null=True, blank=True, on_delete=models.SET_NULL)
+    is_active = models.BooleanField('فعال', default=True)
+
+    class Meta:
+        verbose_name = 'جایگاه'
+        verbose_name_plural = 'جایگاه‌ها'
+        ordering = ['department__title', 'title']
+
+    def __str__(self) -> str:
+        who = f' — {self.holder.get_full_name() or self.holder.username}' if self.holder_id else ''
+        return f'{self.title}{who}'

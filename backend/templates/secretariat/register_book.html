@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}دفتر اندیکاتور{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>دفتر اندیکاتور</h1>
+    <p class="page-sub">ثبت رسمی نامه‌ها — سال {{ year|fa }} — ستون‌های استاندارد دفتر</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'secretariat:register_book_print' %}?year={{ year }}">چاپ دفتر</a>
+</div>
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ردیف</th><th>شماره قبل</th><th>تاریخ</th><th>شرح نامه</th><th>ضمائم</th>
+        <th>شماره/تاریخ رسیده</th><th>ارجاع به</th><th>برگشت تقریبی</th><th>تاریخ صدور</th>
+        <th>رونوشت به</th><th>شماره پرونده</th><th>نامه</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.row_number|fa }}</td>
+        <td>{{ r.prev_row.row_number|fa|default:'—' }}</td>
+        <td>{{ r.letter.letter_date|jdate }}</td>
+        <td>{{ r.summary }}</td>
+        <td>{{ r.attachment_count|fa }}</td>
+        <td>{{ r.incoming_ref|default:'—' }}</td>
+        <td>{{ r.referred_to|default:'—' }}</td>
+        <td>{{ r.expected_return_date|jdate|default:'—' }}</td>
+        <td>{{ r.issue_date|jdate|default:'—' }}</td>
+        <td>{{ r.copy_to|default:'—' }}</td>
+        <td>{{ r.file_number|default:'—' }}</td>
+        <td><a href="{% url 'secretariat:letter_detail' r.letter_id %}">{{ r.letter.number_display }}</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="12" class="text-muted">هنوز ردیفی ثبت نشده — پس از «کنترل ثبت» نامه‌ها، ردیف‌ها اینجا می‌آیند.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

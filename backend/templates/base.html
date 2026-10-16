@@ -55,11 +55,30 @@
         <a class="side-link" href="{% url 'secretariat:letter_list' %}?type=outgoing">دفتر صادره</a>
         <a class="side-link" href="{% url 'secretariat:letter_list' %}?type=internal">نامه‌های داخلی</a>
         <a class="side-link" href="{% url 'secretariat:letter_list' %}">همه نامه‌ها</a>
+        {% if features.secretariat.memo_letters %}
+        <a class="side-link {% if request.resolver_match.url_name == 'memo' %}active{% endif %}" href="{% url 'secretariat:memo' %}">نامه یادداشتی</a>
+        {% endif %}
+        {% if features.secretariat.casefiles %}
+        <a class="side-link {% if request.resolver_match.url_name == 'case_file_list' %}active{% endif %}" href="{% url 'secretariat:case_file_list' %}">پرونده‌ها</a>
+        {% endif %}
+        {% if features.secretariat.register_book %}
+        <a class="side-link {% if request.resolver_match.url_name == 'register_book' %}active{% endif %}" href="{% url 'secretariat:register_book' %}">دفتر اندیکاتور</a>
+        {% endif %}
+        {% if features.secretariat.index_book %}
+        <a class="side-link {% if request.resolver_match.url_name == 'index_book' %}active{% endif %}" href="{% url 'secretariat:index_book' %}">دفتر اندکس</a>
+        {% endif %}
+        {% if features.secretariat.correspondents %}
+        <a class="side-link {% if request.resolver_match.url_name == 'correspondents' %}active{% endif %}" href="{% url 'secretariat:correspondents' %}">طرف‌های مکاتبه</a>
+        {% endif %}
+        {% if features.secretariat.sla %}
+        <a class="side-link {% if request.resolver_match.url_name == 'overdue' %}active{% endif %}" href="{% url 'secretariat:overdue' %}">معوقات و مهلت‌ها</a>
+        {% endif %}
       </div>
       <div class="side-group">
         <div class="label">سازمان</div>
         <a class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">پروفایل من</a>
         <a class="side-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" href="{% url 'accounts:settings' %}">تنظیمات سامانه</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'features' %}active{% endif %}" href="{% url 'accounts:features' %}">قابلیت‌های سامانه</a>
         <a class="side-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}" href="{% url 'accounts:users' %}">مدیریت کاربران</a>
         <a class="side-link" href="/admin/">پنل مدیریت</a>
       </div>
@@ -71,7 +90,7 @@
 
   <div class="main">
     <header class="topbar">
-      <form class="search" action="{% url 'secretariat:letter_list' %}" method="get" role="search">
+      <form class="search" action="{% if features.secretariat.global_search %}{% url 'secretariat:search' %}{% else %}{% url 'secretariat:letter_list' %}{% endif %}" method="get" role="search">
         <input type="text" name="q" id="global-search" placeholder="جست‌وجو در موضوع، فرستنده، شماره…"
                value="{{ request.GET.q|default:'' }}" aria-label="جست‌وجو">
         <kbd>Ctrl+K</kbd>

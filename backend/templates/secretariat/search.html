@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}جست‌وجوی سراسری{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>جست‌وجوی سراسری</h1>
+  <p class="page-sub">نتایج همیشه در محدوده دسترسی شما — میان‌بر: Ctrl+K</p>
+</div></div>
+
+{% if q %}
+<div class="card">
+  <h3>نامه‌ها ({{ results.letters|length }})</h3>
+  <table class="table">
+    <tbody>
+      {% for l in results.letters %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' l.pk %}">{{ l.number_display }}</a></td>
+        <td>{{ l.subject }}</td>
+        <td>{{ l.get_letter_type_display }}</td>
+      </tr>
+      {% empty %}<tr><td class="text-muted">موردی یافت نشد.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>پرونده‌ها ({{ results.case_files|length }})</h3>
+  <table class="table">
+    <tbody>
+      {% for cf in results.case_files %}
+      <tr>
+        <td><a href="{% url 'secretariat:case_file_detail' cf.pk %}">{{ cf.number }}</a></td>
+        <td>{{ cf.title }}</td>
+      </tr>
+      {% empty %}<tr><td class="text-muted">موردی یافت نشد.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>طرف‌های مکاتبه ({{ results.correspondents|length }})</h3>
+  <table class="table">
+    <tbody>
+      {% for c in results.correspondents %}
+      <tr><td>{{ c.title }}</td><td>{{ c.get_kind_display }}</td></tr>
+      {% empty %}<tr><td class="text-muted">موردی یافت نشد.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="text-muted">عبارتی را جست‌وجو کنید.</p></div>
+{% endif %}
+{% endblock %}

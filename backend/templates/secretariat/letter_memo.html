@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}نامه یادداشتی{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>نامه یادداشتی (اداری)</h1>
+  <p class="page-sub">مکاتبه سبک داخلی با شماره یادداشتی (پیشوند «ی») — مثل یادداشت‌های اداری رایج</p>
+</div></div>
+<div class="card">
+  <form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}
+    <button class="btn" type="submit">ثبت یادداشت</button></form>
+</div>
+{% endblock %}

@@ -159,6 +159,99 @@
         {% endfor %}
       </ul>
     </div>
+    {% if pro %}
+    <div class="card">
+      <div class="card-title">لایه حرفه‌ای دبیرخانه</div>
+
+      {% if pro.is_locked %}
+      <div class="t-note">🔒 این نامه قفل شده است (نسخه {{ letter.current_revision|fa }}).
+        {% if user.is_superuser %}<form method="post" action="{% url 'secretariat:letter_unlock' letter.pk %}" style="display:inline">{% csrf_token %}
+          <button class="btn btn-sm" type="submit">باز کردن قفل (ثبت در رویدادنامه)</button></form>{% endif %}
+      </div>
+      {% elif features.secretariat.revisions_lock %}
+      <div class="btn-row">
+        <a class="btn btn-sm" href="{% url 'secretariat:letter_new_revision' letter.pk %}">نسخه جدید بساز</a>
+      </div>
+      {% endif %}
+
+      {% if features.secretariat.revisions_lock and pro.revisions %}
+      <div class="t-meta">نسخه‌ها:</div>
+      <ul class="timeline">
+        {% for rev in pro.revisions %}
+        <li><div class="t-head">نسخه {{ rev.revision_no|fa }}</div>
+          <div class="t-meta">{{ rev.changed_by }} — {{ rev.created_at|jalali_datetime }} — {{ rev.reason }}</div></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if features.secretariat.signatures %}
+      <div class="t-meta">امضای چندنفره:</div>
+      {% for req in pro.sig_requests %}
+      <ul class="timeline">
+        <li><div class="t-head">درخواست {{ req.get_mode_display }} — {{ req.get_status_display }}
+          ({{ req.approved_count|fa }} از {{ req.total_count|fa }})</div>
+          {% for st in req.steps.all %}
+          <div class="t-meta">گام {{ st.order|fa }}: {{ st.signer_user.get_full_name|default:st.signer_label }} — {{ st.get_status_display }}
+            {% if st.signed_revision %} (نسخه {{ st.revision_no|default:st.signed_revision.revision_no|fa }}){% endif %}</div>
+          {% endfor %}
+        </li>
+      </ul>
+      {% empty %}
+      <div class="t-meta">درخواست امضایی ثبت نشده.</div>
+      {% endfor %}
+      {% for st in pro.my_sig_steps %}
+      <a class="btn btn-sm" href="{% url 'secretariat:signature_decide' st.pk %}">تصمیم روی گام امضای شما</a>
+      {% endfor %}
+      <a class="btn btn-sm" href="{% url 'secretariat:signature_new' letter.pk %}">ارسال برای امضا</a>
+      {% endif %}
+
+      {% if features.secretariat.register_check %}
+      <div class="t-meta">کنترل پیش از ثبت:
+        {% if pro.register_check %}✓ {{ pro.register_check.get_result_display }} — {{ pro.register_check.checked_by }}
+        {% else %}<a class="btn btn-sm" href="#" onclick="document.getElementById('regcheck').classList.toggle('hidden');return false">ثبت کنترل</a>{% endif %}
+      </div>
+      <form id="regcheck" class="form-grid hidden" method="post" action="{% url 'secretariat:letter_register_check' letter.pk %}">
+        {% csrf_token %}
+        <label><input type="checkbox" name="has_signature" value="1"> امضا/تأیید مدیر دارد</label>
+        <label><input type="checkbox" name="copies_count_ok" value="1"> تعداد نسخ/رونوشت درست است</label>
+        <label><input type="checkbox" name="attachments_ok" value="1"> ضمائم مطابقت دارد</label>
+        <label><input type="checkbox" name="dates_ok" value="1"> شماره و تاریخ درج شده</label>
+        <label><input type="checkbox" name="addressee_ok" value="1"> عنوان گیرنده صحیح است</label>
+        <select name="result"><option value="pass">تأیید و ثبت</option><option value="fail">برگشت جهت اصلاح</option></select>
+        <input type="text" name="note" placeholder="یادداشت…">
+        <button class="btn btn-sm" type="submit">ثبت نتیجه کنترل</button>
+      </form>
+      {% endif %}
+
+      {% if features.secretariat.casefiles %}
+      <div class="t-meta">پرونده:
+        {% if pro.case_file %}<a href="{% url 'secretariat:case_file_detail' pro.case_file.pk %}">{{ pro.case_file.number }} — {{ pro.case_file.title }}</a>
+        {% else %}— <a href="{% url 'secretariat:case_file_list' %}">افزودن به پرونده</a>{% endif %}
+      </div>
+      {% endif %}
+
+      {% if features.secretariat.read_receipt %}
+      <div class="t-meta">دریافت شد / رؤیت‌ها:
+        {% for rr in pro.read_receipts %}<span class="pill green">{{ rr.user.get_full_name|default:rr.user.username }} ✓</span> {% empty %}—{% endfor %}
+      </div>
+      <form method="post" action="{% url 'secretariat:letter_mark_read' letter.pk %}">{% csrf_token %}
+        <button class="btn btn-sm" type="submit">دریافت شد</button></form>
+      {% endif %}
+
+      {% if features.secretariat.paraph %}
+      <div class="t-meta">پاراف‌ها:</div>
+      <ul class="timeline">
+        {% for ph in pro.paraphs %}
+        <li><div class="t-head">{{ ph.user.get_full_name|default:ph.user.username }}</div>
+          <div class="t-note">{{ ph.text }}</div></li>
+        {% empty %}<li><div class="t-meta">پارافی نیست.</div></li>{% endfor %}
+      </ul>
+      <form method="post" action="{% url 'secretariat:letter_paraph' letter.pk %}" class="form-grid">
+        {% csrf_token %}<input type="text" name="text" placeholder="متن پاراف…"><button class="btn btn-sm" type="submit">ثبت پاراف</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 
   <!-- ستون اقدام‌ها -->

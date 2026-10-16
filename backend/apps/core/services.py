@@ -91,3 +91,43 @@ def send_notification(user, title: str, body: str = '', url: str = '') -> Notifi
     except Exception:  # noqa: BLE001 — خطای پیام‌رسان هرگز نباید اعلان را بشکند
         logger.exception('خطای ارسال پیام‌رسان اعلان برای کاربر %s', user.pk)
     return notification
+
+
+# ─────────────────────────────────────────────────────────────
+# کلیدهای روشن/خاموش قابلیت‌ها (Feature Toggles)
+# ─────────────────────────────────────────────────────────────
+_FEATURE_CACHE: dict[str, bool] = {}
+
+
+def clear_feature_cache() -> None:
+    _FEATURE_CACHE.clear()
+
+
+def feature_enabled(code: str, default: bool = True) -> bool:
+    """وضعیت یک قابلیت — اگر ردیفی نباشد، طبق رفتار مرجع «فعال» فرض می‌شود."""
+    if code in _FEATURE_CACHE:
+        return _FEATURE_CACHE[code]
+    try:
+        from apps.core.models import FeatureToggle
+        obj = FeatureToggle.objects.filter(code=code).first()
+        value = default if obj is None else obj.is_enabled
+    except Exception:  # noqa: BLE001 — پیش از مهاجرت
+        value = default
+    _FEATURE_CACHE[code] = value
+    return value
+
+
+def feature_required(code: str):
+    """دکوراتور ویو — اگر قابلیت غیرفعال بود، صفحه «غیرفعال» نشان می‌دهد."""
+    from functools import wraps
+
+    from django.shortcuts import render
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            if not feature_enabled(code):
+                return render(request, 'core/feature_disabled.html', {'feature_code': code})
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator

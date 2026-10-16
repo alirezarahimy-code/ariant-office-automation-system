@@ -156,3 +156,44 @@ class UserProfile(TimeStampedModel):
     def for_user(cls, user) -> 'UserProfile':
         obj, _ = cls.objects.get_or_create(user=user)
         return obj
+
+
+#: فهرست قابلیت‌های قابل روشن/خاموش — «اجزا همیشه هستند؛ سازمان می‌تواند غیرفعالشان کند»
+FEATURE_REGISTRY: dict[str, tuple[str, str]] = {
+    # code: (عنوان, گروه)
+    'secretariat.casefiles': ('پرونده‌های مکاتباتی (کلاسور)', 'دبیرخانه'),
+    'secretariat.register_book': ('دفتر اندیکاتور', 'دبیرخانه'),
+    'secretariat.index_book': ('دفتر اندکس (طبقه‌بندی موضوعی)', 'دبیرخانه'),
+    'secretariat.topics': ('موضوعات و کلیدواژه‌ها', 'دبیرخانه'),
+    'secretariat.register_check': ('کنترل پیش از ثبت (چک‌لیست مسئول دفتر)', 'دبیرخانه'),
+    'secretariat.signatures': ('تأیید/امضای چندنفره', 'دبیرخانه'),
+    'secretariat.revisions_lock': ('نسخه‌ها و قفل نامه پس از امضا', 'دبیرخانه'),
+    'secretariat.copy_action': ('رونوشت «جهت اقدام»', 'دبیرخانه'),
+    'secretariat.sla': ('مهلت اقدام و یادآوری (SLA)', 'دبیرخانه'),
+    'secretariat.read_receipt': ('رسید «دریافت شد» و گزارش رؤیت', 'دبیرخانه'),
+    'secretariat.number_reserve': ('رزرو شماره / شماره آزاد', 'دبیرخانه'),
+    'secretariat.correspondents': ('دفترچه طرف‌های مکاتبه', 'دبیرخانه'),
+    'secretariat.frequent_phrases': ('موضوعات و شرح‌های پرتکرار', 'دبیرخانه'),
+    'secretariat.memo_letters': ('نامه‌های یادداشتی (اداری)', 'دبیرخانه'),
+    'secretariat.paraph': ('پاراف (دیده‌شدن روی متن)', 'دبیرخانه'),
+    'secretariat.answer_pairing': ('ثبت مقابل (زنجیره وارده ↔ صادره)', 'دبیرخانه'),
+    'secretariat.global_search': ('جست‌وجوی سراسری (Ctrl+K)', 'عمومی'),
+}
+
+
+class FeatureToggle(TimeStampedModel):
+    """کلید روشن/خاموش قابلیت‌ها — اجزا حذف نمی‌شوند؛ فقط غیرفعال می‌شوند."""
+
+    code = models.SlugField('کد قابلیت', max_length=60, unique=True)
+    title = models.CharField('عنوان', max_length=150)
+    group = models.CharField('گروه', max_length=40, default='دبیرخانه')
+    description = models.TextField('توضیح', blank=True, default='')
+    is_enabled = models.BooleanField('فعال', default=True)
+
+    class Meta:
+        verbose_name = 'کلید قابلیت'
+        verbose_name_plural = 'کلیدهای قابلیت'
+        ordering = ['group', 'code']
+
+    def __str__(self) -> str:
+        return f'{self.title} ({"فعال" if self.is_enabled else "غیرفعال"})'

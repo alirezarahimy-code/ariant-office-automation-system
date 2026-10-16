@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}پرونده جدید{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>تشکیل پرونده جدید</h1>
+<p class="page-sub">شماره پرونده به‌صورت خودکار (پ-سال-ردیف) صادر می‌شود</p></div></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">تشکیل پرونده</button>
+  </form>
+</div>
+{% endblock %}

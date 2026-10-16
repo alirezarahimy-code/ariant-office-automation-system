@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}دفتر اندکس{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>دفتر اندکس — طبقه‌بندی موضوعی</h1>
+  <p class="page-sub">نامه‌ها گروه‌بندی‌شده بر اساس موضوع (کلاسور موضوعی)</p>
+</div></div>
+{% for row in rows %}
+<div class="card">
+  <h3>{{ row.topic.title }} {% if row.topic.code %}<span class="chip">{{ row.topic.code }}</span>{% endif %}
+    <span class="text-muted small">({{ row.topic.n|fa }} نامه)</span></h3>
+  <table class="table">
+    <thead><tr><th>شماره</th><th>موضوع</th><th>پرونده</th></tr></thead>
+    <tbody>
+      {% for l in row.letters %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' l.pk %}">{{ l.number_display }}</a></td>
+        <td>{{ l.subject }}</td>
+        <td>{{ l.case_file.number|default:'—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% empty %}
+<div class="card"><p class="text-muted">هنوز نامه‌ای موضوع‌دار نیست — در کارت نامه، «موضوعات» را تعیین کنید.</p></div>
+{% endfor %}
+{% endblock %}

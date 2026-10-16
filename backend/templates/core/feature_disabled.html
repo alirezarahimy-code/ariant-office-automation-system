@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}قابلیت غیرفعال{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>این قابلیت غیرفعال است</h1>
+    <p class="page-sub">قابلیت «{{ feature_code }}» توسط مدیر سامانه غیرفعال شده است. اجزا حذف نشده‌اند — در صورت نیاز، از مدیر بخواهید آن را دوباره روشن کند.</p>
+  </div>
+  <a class="btn" href="{% url 'accounts:features' %}">مدیریت قابلیت‌ها</a>
+</div>
+<div class="card">
+  <p>این صفحه عمداً ساده است: هیچ داده‌ای حذف یا مخفی نشده؛ فقط مسیر قابلیت بسته است.</p>
+</div>
+{% endblock %}

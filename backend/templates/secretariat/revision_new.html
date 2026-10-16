@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}نسخه جدید{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>نسخه جدید نامه</h1>
+  <p class="page-sub">پس از ثبت، نسخه جاری در تاریخچه می‌ماند و نامه برای امضای مجدد آماده می‌شود.</p>
+</div></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">ثبت نسخه جدید</button>
+  </form>
+</div>
+{% endblock %}
