@@ -188,6 +188,7 @@ FEATURE_REGISTRY: dict[str, tuple[str, str]] = {
     'secretariat.sign_proxy': ('تفویض امضا (امضا از طرف)', 'دبیرخانه'),
     'secretariat.number_format': ('الگوی شماره قابل‌تنظیم', 'دبیرخانه'),
     'secretariat.word_export': ('خروجی Word نامه', 'دبیرخانه'),
+    'secretariat.courier_book': ('دفتر پیک/نامه‌رسان', 'دبیرخانه'),
     'platform.pwa': ('نصب روی موبایل (PWA)', 'عمومی'),
 }
 

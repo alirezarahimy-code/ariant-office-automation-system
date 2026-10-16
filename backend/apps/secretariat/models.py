@@ -315,6 +315,10 @@ class Attachment(TimeStampedModel):
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name='بارگذار', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+')
+    kind = models.CharField(
+        'نوع پیوست', max_length=10,
+        choices=[('file', 'فایل'), ('scan', 'اسکن/پویش'), ('photo', 'تصویر')],
+        default='file')
 
     class Meta:
         verbose_name = 'پیوست'
@@ -1018,3 +1022,33 @@ class RetentionRule(TimeStampedModel):
 
     def __str__(self) -> str:
         return f'{self.name} ({self.years} سال — {self.get_action_display()})'
+
+
+class CourierLog(TimeStampedModel):
+    """دفتر پیک/نامه‌رسان — ثبت توزیع فیزیکی نامه‌ها با رسید تحویل (رفتار دفتر پیک)."""
+
+    class Status(models.TextChoices):
+        SENT = 'sent', 'ارسال‌شده'
+        DELIVERED = 'delivered', 'تحویل‌شده'
+        RETURNED = 'returned', 'برگشتی'
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='courier_logs')
+    courier_name = models.CharField('نام نامه‌رسان/پیک', max_length=150, blank=True, default='')
+    receiver_name = models.CharField('تحویل‌گیرنده', max_length=150, blank=True, default='')
+    sent_at = models.DateTimeField('زمان ارسال', null=True, blank=True)
+    delivered_at = models.DateTimeField('زمان تحویل', null=True, blank=True)
+    status = models.CharField(
+        'وضعیت', max_length=10, choices=Status.choices, default=Status.SENT)
+    note = models.TextField('یادداشت', blank=True, default='')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ثبت‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL)
+
+    class Meta:
+        verbose_name = 'رکورد پیک/نامه‌رسان'
+        verbose_name_plural = 'دفتر پیک'
+        ordering = ['-sent_at', '-created_at']
+
+    def __str__(self) -> str:
+        return f'پیک نامه {self.letter_id} — {self.get_status_display()}'

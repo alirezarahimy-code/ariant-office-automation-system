@@ -71,4 +71,8 @@ urlpatterns = [
     path('retention-rules/', views.retention_rules, name='retention_rules'),
     path('number-formats/', views.number_formats, name='number_formats'),
     path('unit-report/', views.unit_report, name='unit_report'),
+
+    path('courier/', views.courier_list, name='courier_list'),
+    path('courier/<int:pk>/update/', views.courier_update, name='courier_update'),
+    path('register-book/excel/', views.register_book_excel, name='register_book_excel'),
 ]

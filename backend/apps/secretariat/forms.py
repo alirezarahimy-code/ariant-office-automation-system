@@ -74,6 +74,15 @@ class MultipleFileField(forms.FileField):
         return [cleaned] if cleaned else []
 
 
+
+
+COPY_KIND_CHOICES = [('original', 'اصل'), ('duplicate', 'المثنی'), ('copy', 'کپی')]
+
+COPY_KIND_FIELD = forms.ChoiceField(
+    label='نوع نسخه', choices=COPY_KIND_CHOICES, initial='original', required=False)
+PHYSICAL_COUNT_FIELD = forms.IntegerField(
+    label='تعداد نسخ فیزیکی', min_value=1, initial=1, required=False)
+
 class IncomingLetterForm(_StyledForm):
     """ثبت نامه وارده — P0 (docs/10 بند ۱٫۱)."""
 
@@ -89,6 +98,8 @@ class IncomingLetterForm(_StyledForm):
         label='سطح محرمانگی', choices=Letter.Confidentiality.choices, initial='normal')
     deadline = JalaliDateField(label='مهلت پاسخ')
     attachments = MultipleFileField(label='پیوست‌ها (اسکن نامه)', required=False)
+    copy_kind = COPY_KIND_FIELD
+    physical_count = PHYSICAL_COUNT_FIELD
 
     invalid_attachments: list[str] = []
 
@@ -105,9 +116,12 @@ class IncomingLetterForm(_StyledForm):
             summary=d['summary'], sender_name=d['sender_name'], sender_org=d['sender_org'],
             letter_date=d['letter_date'], priority=d['priority'],
             confidentiality=d['confidentiality'], deadline=d['deadline'])
+        letter.copy_kind = d.get('copy_kind') or 'original'
+        letter.physical_count = d.get('physical_count') or 1
+        letter.save(update_fields=['copy_kind', 'physical_count'])
         self.invalid_attachments = []
         for f in self.files.getlist('attachments'):
-            attachment = Attachment(letter=letter, file=f, uploaded_by=user)
+            attachment = Attachment(letter=letter, file=f, uploaded_by=user, kind='scan')
             try:
                 attachment.full_clean()
                 attachment.save()
@@ -131,6 +145,8 @@ class OutgoingDraftForm(_StyledForm):
     priority = forms.ChoiceField(label='درجه فوریت', choices=Letter.Priority.choices, initial='normal')
     confidentiality = forms.ChoiceField(
         label='سطح محرمانگی', choices=Letter.Confidentiality.choices, initial='normal')
+    copy_kind = COPY_KIND_FIELD
+    physical_count = PHYSICAL_COUNT_FIELD
 
     def clean_subject(self):
         subject = self.cleaned_data['subject'].strip()
@@ -140,10 +156,14 @@ class OutgoingDraftForm(_StyledForm):
 
     def save(self, user) -> Letter:
         d = self.cleaned_data
-        return register_letter(
+        letter = register_letter(
             d['office'], Letter.LetterType.OUTGOING, d['subject'], created_by=user,
             summary=d['summary'], body=d['body'], letter_date=d['letter_date'],
             priority=d['priority'], confidentiality=d['confidentiality'])
+        letter.copy_kind = d.get('copy_kind') or 'original'
+        letter.physical_count = d.get('physical_count') or 1
+        letter.save(update_fields=['copy_kind', 'physical_count'])
+        return letter
 
 
 class InternalLetterForm(_StyledForm):
@@ -170,6 +190,8 @@ class InternalLetterForm(_StyledForm):
     template_id = forms.IntegerField(label='الگوی نامه', required=False,
                                      widget=forms.HiddenInput)
     attachments = MultipleFileField(label='پیوست‌ها', required=False)
+    copy_kind = COPY_KIND_FIELD
+    physical_count = PHYSICAL_COUNT_FIELD
 
     invalid_attachments: list[str] = []
 
@@ -193,9 +215,12 @@ class InternalLetterForm(_StyledForm):
             letter_date=d['letter_date'], priority=d['priority'],
             confidentiality=d['confidentiality'],
             delivery_method=d['delivery_method'], deadline=d['deadline'])
+        letter.copy_kind = d.get('copy_kind') or 'original'
+        letter.physical_count = d.get('physical_count') or 1
+        letter.save(update_fields=['copy_kind', 'physical_count'])
         self.invalid_attachments = []
         for f in self.files.getlist('attachments'):
-            attachment = Attachment(letter=letter, file=f, uploaded_by=user)
+            attachment = Attachment(letter=letter, file=f, uploaded_by=user, kind='scan')
             try:
                 attachment.full_clean()
                 attachment.save()
