@@ -178,6 +178,17 @@ FEATURE_REGISTRY: dict[str, tuple[str, str]] = {
     'secretariat.paraph': ('پاراف (دیده‌شدن روی متن)', 'دبیرخانه'),
     'secretariat.answer_pairing': ('ثبت مقابل (زنجیره وارده ↔ صادره)', 'دبیرخانه'),
     'secretariat.global_search': ('جست‌وجوی سراسری (Ctrl+K)', 'عمومی'),
+    'secretariat.batch_print': ('چاپ گروهی نامه‌ها', 'دبیرخانه'),
+    'secretariat.copy_labels': ('نسخه‌گذاری چاپ (اصل/المثنی/کپی)', 'دبیرخانه'),
+    'secretariat.delivery_receipt': ('رسید تحویل نامه', 'دبیرخانه'),
+    'secretariat.fax_book': ('دفتر فاکس (دورنویس)', 'دبیرخانه'),
+    'secretariat.personal_archive': ('بایگانی شخصی', 'دبیرخانه'),
+    'secretariat.retention': ('رده نگهداری اسناد', 'دبیرخانه'),
+    'secretariat.group_referral': ('ارجاع گروهی (هم‌زمان چند نفر)', 'دبیرخانه'),
+    'secretariat.sign_proxy': ('تفویض امضا (امضا از طرف)', 'دبیرخانه'),
+    'secretariat.number_format': ('الگوی شماره قابل‌تنظیم', 'دبیرخانه'),
+    'secretariat.word_export': ('خروجی Word نامه', 'دبیرخانه'),
+    'platform.pwa': ('نصب روی موبایل (PWA)', 'عمومی'),
 }
 
 

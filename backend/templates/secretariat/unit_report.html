@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}کارنامه واحدها{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>کارنامه واحدها</h1>
+  <p class="page-sub">حجم ارجاع‌ها و سرعت اقدام — برای نظارت مدیریتی</p>
+</div></div>
+<div class="card">
+  <h3>بیشترین ارجاع‌ها</h3>
+  <table class="table">
+    <thead><tr><th>واحد</th><th>تعداد ارجاع</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td>{{ r.to_department__title|default:'—' }}</td><td>{{ r.n|fa }}</td></tr>
+      {% empty %}<tr><td colspan="2" class="text-muted">داده‌ای نیست.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>سریع‌ترین‌ها (میانگین زمان اقدام — ساعت)</h3>
+  <table class="table">
+    <thead><tr><th>واحد</th><th>میانگین (ساعت)</th><th>تعداد</th></tr></thead>
+    <tbody>
+      {% for r in acted %}
+      <tr><td>{{ r.to_department__title }}</td><td>{{ r.avg_hours|floatformat:1 }}</td><td>{{ r.n|fa }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="text-muted">داده‌ای نیست.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

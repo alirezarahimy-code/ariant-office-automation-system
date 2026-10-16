@@ -483,3 +483,135 @@ def visible_referrals(user):
     q = Q(to_user=user) | Q(target_position_id__in=position_ids)
     return Referral.objects.filter(q).exclude(
         status__in=[Referral.Status.CANCELLED])
+
+
+# ════════════════════════════════════════════════════════════════
+# تکمیل دبیرخانه — چاپ گروهی، دورنویس، بایگانی، تفویض امضا
+# ════════════════════════════════════════════════════════════════
+
+# ── دورنویس (فاکس) ──────────────────────────────────────────
+def fax_to_letter(fax, user=None):
+    """تبدیل رکورد فاکس به نامه — مطابق رفتار «تبدیل مستقیم فاکس به نامه»."""
+    from apps.secretariat.models import FaxLog, Letter, Office
+    if fax.letter_id:
+        return fax.letter
+    office = Office.objects.filter(is_active=True).first()
+    letter = register_letter(
+        office, Letter.LetterType.INCOMING,
+        f'فاکس {fax.get_direction_display()} — {fax.correspondent or fax.fax_number}',
+        created_by=user or fax.created_by)
+    letter.body = fax.note
+    letter.sender_name = fax.correspondent
+    letter.delivery_method = Letter.DeliveryMethod.FAX
+    letter.save()
+    fax.letter = letter
+    fax.save(update_fields=['letter'])
+    return letter
+
+
+# ── بایگانی شخصی ─────────────────────────────────────────────
+def personal_archive_toggle(user, letter):
+    from apps.secretariat.models import PersonalArchive
+    obj = PersonalArchive.objects.filter(user=user, letter=letter).first()
+    if obj:
+        obj.delete()
+        return None
+    return PersonalArchive.objects.create(user=user, letter=letter)
+
+
+# ── بازگشایی نامه بایگانی‌شده ────────────────────────────────
+def reopen_letter(letter, user, note=''):
+    """به‌گردش‌انداختن مجدد نامه بایگانی‌شده — مطابق رفتار آرپا/دیدگاه."""
+    from apps.secretariat.models import Letter, LetterEvent
+    old = letter.status
+    letter.status = Letter.Status.IN_PROGRESS
+    letter.save(update_fields=['status'])
+    LetterEvent.objects.create(
+        letter=letter, actor=user, action=LetterEvent.Action.STATUS_CHANGED,
+        from_status=old, to_status=letter.status,
+        note=f'بازگشایی از بایگانی و گردش مجدد — {note}')
+    return letter
+
+
+# ── ارجاع گروهی ──────────────────────────────────────────────
+def refer_group(letter, users, from_user, note='', deadline=None, parent=None,
+                attach_relations=False):
+    """ارجاع هم‌زمان به چند نفر (موازی) — هرکدام یک ردیف ارجاع مستقل می‌گیرند."""
+    from apps.secretariat.models import Referral
+    refs = []
+    for u in users:
+        refs.append(Referral.objects.create(
+            letter=letter, from_user=from_user, to_user=u,
+            parent=parent, note=note, deadline=deadline))
+    if attach_relations:
+        # ارسال پیرو/عطف‌های نامه همراه ارجاع — در رویدادنامه ثبت می‌شود
+        from apps.secretariat.models import LetterEvent
+        rels = letter.outgoing_relations.select_related('related')[:10]
+        desc = '، '.join(f'{r.get_kind_display()} {r.related.number_display}' for r in rels)
+        if desc:
+            LetterEvent.objects.create(
+                letter=letter, actor=from_user, action=LetterEvent.Action.REFERRED,
+                note=f'نامه‌های مرتبط همراه ارجاع: {desc}')
+    apply_sla(refs[0]) if refs else None
+    return refs
+
+
+# ── تفویض امضا (امضا از طرف) ────────────────────────────────
+def can_sign_for(user, step) -> bool:
+    """آیا user می‌تواند این گام را امضا کند؟ (شخصی یا با تفویض فعال)"""
+    if step.signer_user_id == user.pk:
+        return True
+    if step.signer_position_id and step.signer_position.holder_id == user.pk:
+        return True
+    if step.signer_user_id:
+        from apps.core.models import Delegation
+        from django.utils import timezone as tz
+        today = tz.now().date()
+        return Delegation.objects.filter(
+            from_user=step.signer_user, to_user=user, is_active=True,
+            start_date__lte=today, end_date__gte=today).exists()
+    return False
+
+
+# ── چاپ گروهی و نسخه‌گذاری ──────────────────────────────────
+COPY_LABELS = (
+    'نسخه ۱ — گیرنده اصلی',
+    'نسخه ۲ — بایگانی کل',
+    'نسخه ۳ — بایگانی واحد ذی‌نفع',
+)
+
+
+def print_copy_labels(letter):
+    """برچسب نسخه‌های چاپ — حداقل ۳ نسخه + یک نسخه به‌ازای هر رونوشت."""
+    labels = list(COPY_LABELS)
+    for i, c in enumerate(letter.copies.all(), start=4):
+        target = c.to_user.get_full_name() if c.to_user_id else c.to_department
+        labels.append(f'نسخه {i} — رونوشت: {target}')
+    return labels
+
+
+# ── خروجی Word (HTML سازگار با MS Word) ─────────────────────
+def letter_word_html(letter) -> str:
+    """خروجی Word نامه — با سربرگ سازمان (رفتار «الگوهای Word» سامانه‌های مرجع)."""
+    from html import escape
+    from apps.core.models import OrgSettings
+    org = OrgSettings.load()
+    copies = ''.join(
+        f'<p>{escape(str(c.to_user or c.to_department or ""))} — {c.get_kind_display()}</p>'
+        for c in letter.copies.all())
+    relations = ''.join(
+        f'<p>{r.get_kind_display()}: {escape(r.related.number_display)} — {escape(r.related.subject)}</p>'
+        for r in letter.outgoing_relations.select_related('related'))
+    return f'''<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word" dir="rtl">
+<head><meta charset="utf-8"><title>{escape(letter.number_display)}</title></head>
+<body>
+<h2 style="text-align:center">{escape(org.org_name)}</h2>
+<p>شماره: {escape(letter.number_display)} — تاریخ: {escape(str(letter.letter_date or ""))}</p>
+<p>موضوع: {escape(letter.subject)}</p>
+<hr>
+<p>{escape(letter.body).replace(chr(10), "<br>")}</p>
+<hr>
+{'<h4>رونوشت‌ها</h4>' + copies if copies else ''}
+{'<h4>نامه‌های مرتبط</h4>' + relations if relations else ''}
+</body></html>'''

@@ -35,6 +35,13 @@ class ProBase(TestCase):
         cls.office = Office.objects.create(
             name='دبیرخانه مرکزی', code='DR0', department=dept)
 
+    def tearDown(self):
+        # کش الگوی شماره نباید بین آزمون‌ها نشت کند (rollback دیتابیس آزمون)
+        from apps.secretariat.models import get_number_format
+        get_number_format.cache_clear()
+        clear_feature_cache()
+        super().tearDown()
+
     def make_letter(self, **kw):
         defaults = dict(
             letter_type=Letter.LetterType.INTERNAL, subject='نامه آزمون',

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}الگوهای شماره{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>الگوهای شماره نامه</h1>
+  <p class="page-sub">قالب شماره به تفکیک نوع نامه — متغیرها: {year} {prefix} {serial}</p>
+</div></div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نوع نامه</th><th>الگو</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td>{{ r.get_letter_type_display }}</td><td><code>{{ r.pattern }}</code></td></tr>
+      {% empty %}
+      <tr><td colspan="2" class="text-muted">الگویی ثبت نشده — شماره‌گذاری از قالب پیش‌فرض استفاده می‌کند.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>الگوی تازه/ویرایش</h3>
+  <form method="post" class="form-grid">{% csrf_token %}
+    <select name="letter_type">{% for value, label in types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    <input type="text" name="pattern" value="{year}/{prefix}/{serial:04}" required>
+    <button class="btn" type="submit">ذخیره</button>
+  </form>
+</div>
+{% endblock %}
