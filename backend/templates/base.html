@@ -91,6 +91,9 @@
         {% if features.secretariat.fax_book %}
         <a class="side-link {% if request.resolver_match.url_name == 'fax_list' %}active{% endif %}" href="{% url 'secretariat:fax_list' %}">دفتر فاکس</a>
         {% endif %}
+        {% if features.secretariat.courier_book %}
+        <a class="side-link {% if request.resolver_match.url_name == 'courier_list' %}active{% endif %}" href="{% url 'secretariat:courier_list' %}">دفتر پیک</a>
+        {% endif %}
         {% if features.secretariat.personal_archive %}
         <a class="side-link {% if request.resolver_match.url_name == 'personal_archive' %}active{% endif %}" href="{% url 'secretariat:personal_archive' %}">بایگانی شخصی</a>
         {% endif %}

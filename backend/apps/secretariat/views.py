@@ -134,6 +134,20 @@ def letter_list(request):
     priority_f = request.GET.get('priority', '')
     if priority_f in dict(Letter.Priority.choices):
         qs = qs.filter(priority=priority_f)
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    if date_from:
+        try:
+            from .forms import jalali_to_gregorian
+            qs = qs.filter(letter_date__gte=jalali_to_gregorian(date_from))
+        except Exception:  # noqa: BLE001
+            pass
+    if date_to:
+        try:
+            from .forms import jalali_to_gregorian
+            qs = qs.filter(letter_date__lte=jalali_to_gregorian(date_to))
+        except Exception:  # noqa: BLE001
+            pass
     conf_f = request.GET.get('conf', '')
     if conf_f in dict(Letter.Confidentiality.choices):
         qs = qs.filter(confidentiality=conf_f)
@@ -1484,3 +1498,77 @@ def unit_report(request):
         key=lambda x: x['avg_hours'])[:20]
     return render(request, 'secretariat/unit_report.html', {
         'rows': rows, 'acted': acted})
+
+
+# ── دفتر پیک (نامه‌رسان) ─────────────────────────────────────
+@login_required
+@feature_required('secretariat.courier_book')
+def courier_list(request):
+    from .models import CourierLog
+    if request.method == 'POST':
+        letter = get_object_or_404(
+            visible_letters(request.user), pk=int(request.POST.get('letter_pk', 0)))
+        log = CourierLog.objects.create(
+            letter=letter,
+            courier_name=request.POST.get('courier_name', ''),
+            receiver_name=request.POST.get('receiver_name', ''),
+            sent_at=timezone.now(),
+            note=request.POST.get('note', ''),
+            created_by=request.user)
+        if request.POST.get('mark_delivered') == '1':
+            log.status = CourierLog.Status.DELIVERED
+            log.delivered_at = timezone.now()
+            log.save()
+        messages.success(request, 'رکورد پیک ثبت شد.')
+        return redirect('secretariat:courier_list')
+    rows = CourierLog.objects.select_related('letter', 'created_by')[:100]
+    return render(request, 'secretariat/courier_list.html', {'rows': rows})
+
+
+@login_required
+@feature_required('secretariat.courier_book')
+def courier_update(request, pk):
+    from .models import CourierLog
+    log = get_object_or_404(CourierLog, pk=pk)
+    action = request.POST.get('action', '')
+    if action == 'deliver':
+        log.status = CourierLog.Status.DELIVERED
+        log.delivered_at = timezone.now()
+        log.receiver_name = request.POST.get('receiver_name', log.receiver_name)
+    elif action == 'return':
+        log.status = CourierLog.Status.RETURNED
+    log.save()
+    messages.success(request, 'وضعیت پیک به‌روزرسانی شد.')
+    return redirect('secretariat:courier_list')
+
+
+# ── خروجی Excel دفتر اندیکاتور ──────────────────────────────
+@login_required
+@feature_required('secretariat.register_book')
+def register_book_excel(request):
+    """خروجی اکسل دفتر اندیکاتور — ستون‌های استاندارد دفتر."""
+    from .models import RegisterEntry
+    year = int(request.GET.get('year', 0)) or None
+    qs = RegisterEntry.objects.select_related('letter', 'prev_row').order_by(
+        'jalali_year', 'row_number')
+    if year:
+        qs = qs.filter(jalali_year=year)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'دفتر اندیکاتور'
+    headers = ['ردیف', 'شماره قبل', 'تاریخ', 'شرح نامه', 'ضمائم', 'شماره/تاریخ رسیده',
+               'ارجاع به', 'برگشت تقریبی', 'تاریخ صدور', 'رونوشت به', 'شماره پرونده', 'شماره نامه']
+    ws.append(headers)
+    for r in qs[:2000]:
+        ws.append([
+            r.row_number,
+            r.prev_row.row_number if r.prev_row_id else '',
+            str(r.letter.letter_date or ''), r.summary, r.attachment_count,
+            r.incoming_ref, r.referred_to,
+            str(r.expected_return_date or ''), str(r.issue_date or ''),
+            r.copy_to, r.file_number, r.letter.number_display])
+    resp = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = 'attachment; filename="register-book.xlsx"'
+    wb.save(resp)
+    return resp

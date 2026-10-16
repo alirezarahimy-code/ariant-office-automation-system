@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}دفتر پیک{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>دفتر پیک / نامه‌رسان</h1>
+  <p class="page-sub">ثبت توزیع فیزیکی نامه‌ها با رسید تحویل — «ارسال دستی/پیک»</p></div>
+</div>
+<div class="card">
+  <h3>ثبت ارسال با پیک</h3>
+  <form method="post" class="form-grid">{% csrf_token %}
+    <input type="number" name="letter_pk" placeholder="شماره کارت نامه…" required>
+    <input type="text" name="courier_name" placeholder="نام نامه‌رسان/پیک…">
+    <input type="text" name="receiver_name" placeholder="تحویل‌گیرنده…">
+    <input type="text" name="note" placeholder="یادداشت…">
+    <label><input type="checkbox" name="mark_delivered" value="1"> هم‌زمان «تحویل شد» ثبت شود</label>
+    <button class="btn" type="submit">ثبت</button>
+  </form>
+</div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نامه</th><th>پیک</th><th>تحویل‌گیرنده</th><th>ارسال</th><th>تحویل</th><th>وضعیت</th><th></th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' r.letter_id %}">{{ r.letter.number_display }}</a></td>
+        <td>{{ r.courier_name|default:'—' }}</td>
+        <td>{{ r.receiver_name|default:'—' }}</td>
+        <td>{{ r.sent_at }}</td>
+        <td>{{ r.delivered_at|default:'—' }}</td>
+        <td><span class="chip">{{ r.get_status_display }}</span></td>
+        <td>
+          {% if r.status == 'sent' %}
+          <form method="post" action="{% url 'secretariat:courier_update' r.pk %}" style="display:inline">{% csrf_token %}
+            <input type="hidden" name="action" value="deliver">
+            <button class="btn btn-sm" type="submit">تحویل شد</button></form>
+          <form method="post" action="{% url 'secretariat:courier_update' r.pk %}" style="display:inline">{% csrf_token %}
+            <input type="hidden" name="action" value="return">
+            <button class="btn btn-sm btn-outline" type="submit">برگشتی</button></form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-muted">رکوردی ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

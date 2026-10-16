@@ -44,6 +44,7 @@ def feature_flags(request):
         'secretariat.personal_archive', 'secretariat.retention',
         'secretariat.group_referral', 'secretariat.sign_proxy',
         'secretariat.number_format', 'secretariat.word_export',
+        'secretariat.courier_book',
         'platform.pwa',
     ]
     nested: dict = {}
