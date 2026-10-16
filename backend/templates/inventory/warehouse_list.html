@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}انبارها{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>انبارها و انبارداران</h1><p class="sub">تعریف انبار و دسترسی هر انبار به تفکیک کاربر</p></div>
+  <div class="actions"><a href="{% url 'inventory:dashboard' %}" class="btn">داشبورد انبار</a></div>
+</div>
+
+{% if can_manage %}
+<form method="post" class="form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="create">
+  <div class="form-grid">
+    <div class="field">
+      <label>نام انبار <span class="req">*</span></label>
+      <input type="text" name="name" required>
+    </div>
+    <div class="field">
+      <label>توضیح</label>
+      <input type="text" name="description">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit">افزودن انبار</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+{% for w in warehouses %}
+<div class="card" style="margin-top:12px">
+  <div class="card-head">
+    <div class="card-title">{{ w.name }}</div>
+    <span class="muted tiny">{{ w.description }}</span>
+  </div>
+  <p>
+    <strong>انبارداران:</strong>
+    {% for u in w.users.all %}<span class="chip chip-info">{{ u.username }}</span> {% empty %}<span class="muted">همه کاربران دارای مجوز (بدون محدودیت)</span>{% endfor %}
+  </p>
+  <p><strong>محل‌های استقرار:</strong>
+    {% for loc in w.locations.all %}<span class="chip chip-muted">{{ loc.code }}{% if loc.name %} — {{ loc.name }}{% endif %}</span> {% empty %}<span class="muted">—</span>{% endfor %}
+  </p>
+  {% if can_manage %}
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="users">
+    <input type="hidden" name="warehouse_id" value="{{ w.pk }}">
+    <div class="field">
+      <label>انتخاب انبارداران (چند انتخابه — خالی = بدون محدودیت)</label>
+      <select name="users" multiple size="5">
+        {% for u in users %}<option value="{{ u.pk }}" {% if u in w.users.all %}selected{% endif %}>{{ u.username }} — {{ u.get_full_name|default:'—' }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" type="submit">ذخیره انبارداران</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% empty %}
+<p class="empty">انباری ثبت نشده است.</p>
+{% endfor %}
+{% endblock %}

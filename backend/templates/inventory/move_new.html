@@ -4,7 +4,12 @@
 {% block content %}
 <div class="page-head">
   <div><h1>ثبت سند انبار</h1><p class="sub">رسید ورود یا حواله خروج — موجودی خودکار کنترل می‌شود</p></div>
-  <a href="{% url 'inventory:list' %}" class="btn">بازگشت</a>
+  <div class="actions">
+    {% if features.inventory.documents %}
+    <a href="{% url 'inventory:doc_new' %}" class="btn btn-primary">سند چندردیفی</a>
+    {% endif %}
+    <a href="{% url 'inventory:list' %}" class="btn">بازگشت</a>
+  </div>
 </div>
 
 <form method="post" class="card form">{% csrf_token %}

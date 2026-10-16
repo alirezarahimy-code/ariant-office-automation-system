@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}داشبورد انبار{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>داشبورد انبار</h1><p class="sub">نمای کلی موجودی، هشدارها و آخرین اسناد</p></div>
+  <div class="actions">
+    {% if features.inventory.documents %}
+    <a href="{% url 'inventory:doc_new' %}" class="btn btn-primary">ثبت سند</a>
+    <a href="{% url 'inventory:doc_list' %}" class="btn">اسناد انبار</a>
+    {% endif %}
+    <a href="{% url 'inventory:count_list' %}" class="btn">انبارگردانی</a>
+    <a href="{% url 'inventory:balance' %}" class="btn">موجودی</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="k-label">کالاهای فعال</div><div class="k-value">{{ total_items|fa }}</div></div>
+  <div class="kpi"><div class="k-label">ارزش موجودی (ریال)</div><div class="k-value">{% if show_value %}{{ total_value|fa }}{% else %}—{% endif %}</div></div>
+  <div class="kpi"><div class="k-label">انبارها</div><div class="k-value">{{ warehouses|length|fa }}</div></div>
+  <div class="kpi"><div class="k-label">هشدار موجودی</div><div class="k-value">{{ low|length|fa }}</div></div>
+</div>
+
+{% if low %}
+<div class="card">
+  <div class="card-head"><div class="card-title">هشدار نقطه سفارش / حداقل موجودی</div></div>
+  <table class="table">
+    <thead><tr><th>کالا</th><th>موجودی</th><th>حداقل</th><th>نقطه سفارش</th></tr></thead>
+    <tbody>
+    {% for row in low %}
+      <tr>
+        <td><a class="row-link" href="{% url 'inventory:detail' row.item.pk %}">{{ row.item.code }} — {{ row.item.name }}</a></td>
+        <td class="num"><span class="chip chip-danger">{{ row.stock|fa }}</span></td>
+        <td class="num">{{ row.item.min_stock|fa }}</td>
+        <td class="num">{{ row.item.reorder_point|fa }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if features.inventory.documents %}
+<h3 style="margin:18px 0 8px">آخرین اسناد</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>شماره</th><th>نوع</th><th>تاریخ</th><th>انبار</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for doc in recent_docs %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'inventory:doc_detail' doc.pk %}">{{ doc.number }}</a></td>
+      <td>{{ doc.get_doc_type_display }}</td>
+      <td class="num">{{ doc.date|jdate }}</td>
+      <td>{{ doc.warehouse.name }}</td>
+      <td>
+        {% if doc.status == 'final' %}<span class="chip chip-success">قطعی</span>
+        {% elif doc.status == 'temporary' %}<span class="chip chip-warning">موقت</span>
+        {% else %}<span class="chip chip-danger">ابطال‌شده</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">سندی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<h3 style="margin:18px 0 8px">آخرین انبارگردانی‌ها</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>انبار</th><th>تاریخ</th><th>عنوان</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for count in counts %}
+    <tr>
+      <td>{{ count.warehouse.name }}</td>
+      <td class="num">{{ count.date|jdate }}</td>
+      <td>{{ count.title|default:'—' }}</td>
+      <td>
+        {% if count.status == 'applied' %}<span class="chip chip-success">اعمال‌شده</span>
+        {% elif count.status == 'counting' %}<span class="chip chip-info">در حال شمارش</span>
+        {% else %}<span class="chip chip-muted">پیش‌نویس</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">انبارگردانی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<div class="card" style="margin-top:18px">
+  <div class="card-head"><div class="card-title">گزارش‌ها و ابزار</div></div>
+  <p style="display:flex;gap:8px;flex-wrap:wrap">
+    {% if features.inventory.no_movement %}<a class="btn" href="{% url 'inventory:no_movement' %}">کالاهای بدون گردش</a>{% endif %}
+    {% if features.inventory.serial_expiry %}<a class="btn" href="{% url 'inventory:expiry' %}">انقضا و بچ</a>
+    <a class="btn" href="{% url 'inventory:serials' %}">سریال‌ها</a>{% endif %}
+    {% if features.inventory.price_lists %}<a class="btn" href="{% url 'inventory:price_lists' %}">لیست‌های قیمت</a>{% endif %}
+    {% if features.inventory.barcode_labels %}<a class="btn" href="{% url 'inventory:barcode_labels' %}">چاپ برچسب بارکد</a>{% endif %}
+    {% if features.inventory.excel_reports %}<a class="btn" href="{% url 'inventory:balance_excel' %}">خروجی اکسل موجودی</a>
+    <a class="btn" href="{% url 'inventory:accounting_excel' %}">خروجی اسناد برای حسابداری</a>{% endif %}
+    {% if features.inventory.item_groups %}<a class="btn" href="{% url 'inventory:groups' %}">گروه‌های کالا</a>{% endif %}
+    <a class="btn" href="{% url 'inventory:warehouses' %}">انبارها و انبارداران</a>
+    {% if features.inventory.financial_period %}<a class="btn" href="{% url 'inventory:periods' %}">دوره‌های مالی</a>{% endif %}
+    <a class="btn" href="{% url 'inventory:item_new' %}">ثبت کالای جدید</a>
+  </p>
+</div>
+{% endblock %}

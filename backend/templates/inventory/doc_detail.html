@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}سند {{ doc.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ doc.get_doc_type_display }} {{ doc.number }}</h1>
+    <p class="sub">{{ doc.get_category_display }} — {{ doc.date|jdate }} — {{ doc.warehouse.name }}{% if doc.to_warehouse %} ← {{ doc.to_warehouse.name }}{% endif %}</p>
+  </div>
+  <div class="actions">
+    <a href="{% url 'inventory:doc_print' doc.pk %}" class="btn">چاپ سند</a>
+    {% if can_manage and doc.status == 'temporary' %}
+    <form method="post" action="{% url 'inventory:doc_confirm' doc.pk %}">{% csrf_token %}
+      <button class="btn btn-primary" type="submit">قطعی کردن سند</button>
+    </form>
+    {% endif %}
+    {% if can_manage and doc.status == 'final' %}
+    {% if features.inventory.doc_return %}
+    <form method="post" action="{% url 'inventory:doc_return' doc.pk %}">{% csrf_token %}
+      <button class="btn" type="submit">سند برگشتی</button>
+    </form>
+    {% endif %}
+    {% if features.inventory.doc_cancel %}
+    <form method="post" action="{% url 'inventory:doc_cancel' doc.pk %}"
+          onsubmit="return confirm('سند ابطال شود؟ اثر موجودی آن برداشته می‌شود.');">{% csrf_token %}
+      <input type="text" name="reason" placeholder="علت ابطال">
+      <button class="btn btn-ghost" type="submit">ابطال سند</button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="kv">
+    <div><span class="muted">وضعیت</span>
+      {% if doc.status == 'final' %}<span class="chip chip-success">قطعی</span>
+      {% elif doc.status == 'temporary' %}<span class="chip chip-warning">موقت</span>
+      {% else %}<span class="chip chip-danger">ابطال‌شده</span>{% endif %}
+    </div>
+    <div><span class="muted">شماره مدرک</span> {{ doc.reference|default:'—' }}</div>
+    <div><span class="muted">ثبت‌کننده</span> {{ doc.created_by|default:'—' }}</div>
+    <div><span class="muted">زمان ثبت</span> {{ doc.created_at|jalali_datetime }}</div>
+    {% if doc.confirmed_at %}
+    <div><span class="muted">قطعی توسط</span> {{ doc.confirmed_by|default:'—' }} — {{ doc.confirmed_at|jalali_datetime }}</div>
+    {% endif %}
+    {% if doc.reverses %}
+    <div><span class="muted">سند مبدأ</span> <a class="row-link" href="{% url 'inventory:doc_detail' doc.reverses.pk %}">{{ doc.reverses.number }}</a></div>
+    {% endif %}
+    {% if doc.status == 'cancelled' %}
+    <div><span class="muted">علت ابطال</span> {{ doc.cancel_reason|default:'—' }} ({{ doc.cancelled_at|jalali_datetime }})</div>
+    {% endif %}
+    {% if doc.description %}<div><span class="muted">شرح</span> {{ doc.description }}</div>{% endif %}
+  </div>
+</div>
+
+<h3 style="margin:18px 0 8px">ردیف‌های سند</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr>
+    <th>#</th><th>کالا</th><th>تعداد</th><th>واحد</th><th>ضریب</th>
+    <th>قیمت واحد</th><th>بچ/انقضا</th><th>شرح</th>
+  </tr></thead>
+  <tbody>
+  {% for line in lines %}
+    <tr>
+      <td class="num">{{ forloop.counter }}</td>
+      <td><a class="row-link" href="{% url 'inventory:detail' line.item.pk %}">{{ line.item.code }} — {{ line.item.name }}</a></td>
+      <td class="num">{{ line.quantity|fa }}</td>
+      <td>{{ line.unit_name }}</td>
+      <td class="num">{% if line.unit_ratio != 1 %}{{ line.unit_ratio|fa }}{% else %}—{% endif %}</td>
+      <td class="num">{{ line.unit_price|default_if_none:'—'|fa }}</td>
+      <td class="num">
+        {% if line.batch_no %}{{ line.batch_no }}{% endif %}
+        {% if line.expiry_date %} {{ line.expiry_date|jdate }}{% elif not line.batch_no %}—{% endif %}
+      </td>
+      <td>{{ line.description|default:'—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if moves %}
+<h3 style="margin:18px 0 8px">رویدادهای انبار (کاردکس)</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>کالا</th><th>انبار</th><th>نوع</th><th>تعداد</th><th>قیمت واحد</th></tr></thead>
+  <tbody>
+  {% for move in moves %}
+    <tr>
+      <td>{{ move.item.code }}</td>
+      <td>{{ move.warehouse.name }}</td>
+      <td>{{ move.get_kind_display }}</td>
+      <td class="num">{{ move.signed_quantity|fa }}</td>
+      <td class="num">{{ move.unit_price|default_if_none:'—'|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

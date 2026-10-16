@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}گزارش سریال‌ها{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گزارش سریال‌ها</h1><p class="sub">وضعیت سریال‌های کالاها — در انبار یا خارج از انبار</p></div>
+  <div class="actions">
+    <a href="{% url 'inventory:expiry' %}" class="btn">گزارش انقضا</a>
+    <a href="{% url 'inventory:no_movement' %}" class="btn">بدون گردش</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <select name="item">
+    <option value="">همه کالاهای سریالی</option>
+    {% for it in items %}<option value="{{ it.pk }}" {% if item.pk == it.pk %}selected{% endif %}>{{ it.code }} — {{ it.name }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">فیلتر</button>
+</form>
+
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>کالا</th><th>شماره سریال</th><th>انبار</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for serial in rows %}
+    <tr>
+      <td><a class="row-link" href="{% url 'inventory:detail' serial.item.pk %}">{{ serial.item.code }} — {{ serial.item.name }}</a></td>
+      <td class="num">{{ serial.code }}</td>
+      <td>{{ serial.warehouse.name|default:'—' }}</td>
+      <td>
+        {% if serial.status == 'in_stock' %}<span class="chip chip-success">در انبار</span>
+        {% else %}<span class="chip chip-muted">خارج از انبار</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">سریالی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

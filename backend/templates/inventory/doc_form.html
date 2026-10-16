@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت سند انبار{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت سند انبار</h1><p class="sub">سند چندردیفی رسید/حواله/انتقال/تعدیل — با شماره خودکار</p></div>
+  <div class="actions"><a href="{% url 'inventory:doc_list' %}" class="btn">فهرست اسناد</a></div>
+</div>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>نوع سند</label>
+      <select name="doc_type" id="doc_type">
+        {% for value, label in types %}
+        <option value="{{ value }}" {% if doc_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>دسته سند</label>
+      <select name="category">
+        {% for value, label in categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>تاریخ سند <span class="req">*</span></label>
+      <input type="text" name="date" placeholder="1404/07/30" value="{{ JALALI_TODAY }}">
+    </div>
+    <div class="field">
+      <label>انبار <span class="req">*</span></label>
+      <select name="warehouse_id" required>
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field" id="to_warehouse_field" style="display:none">
+      <label>انبار مقصد <span class="req">*</span></label>
+      <select name="to_warehouse_id">
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>شماره مدرک</label>
+      <input type="text" name="reference" placeholder="شماره فاکتور یا مدرک">
+    </div>
+    <div class="field">
+      <label>شرح سند</label>
+      <input type="text" name="description">
+    </div>
+  </div>
+
+  <h3 style="margin:18px 0 8px">ردیف‌های سند</h3>
+  <div class="table-wrap">
+  <table class="table" id="lines-table">
+    <thead><tr>
+      <th>کالا <span class="req">*</span></th><th>تعداد <span class="req">*</span></th>
+      <th>واحد</th><th>قیمت واحد (ریال)</th><th>بچ/انقضا</th><th>سریال‌ها</th><th>شرح ردیف</th><th></th>
+    </tr></thead>
+    <tbody id="lines-body">
+      <tr class="line-row">
+        <td>
+          <select name="line_item_0" required>
+            <option value="">— انتخاب کالا —</option>
+            {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+          </select>
+        </td>
+        <td><input type="text" name="line_quantity_0" placeholder="0" required></td>
+        <td><input type="text" name="line_unit_0" placeholder="{{ items.0.unit|default:'عدد' }}"></td>
+        <td><input type="text" name="line_price_0" placeholder="ریال"></td>
+        <td>
+          <input type="text" name="line_batch_0" placeholder="بچ">
+          <input type="text" name="line_expiry_0" placeholder="انقضا 1404/01/01">
+        </td>
+        <td><textarea name="line_serials_0" rows="1" placeholder="هر سریال در یک خط"></textarea></td>
+        <td><input type="text" name="line_desc_0"></td>
+        <td><button type="button" class="btn btn-ghost" onclick="this.closest('tr').remove()">حذف</button></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:8px"><button type="button" class="btn" onclick="addLine()">+ ردیف جدید</button></p>
+
+  <div class="form-actions">
+    {% if auto_finalize %}
+      <button class="btn btn-primary" type="submit">ثبت و قطعی سند</button>
+    {% else %}
+      <button class="btn" type="submit">ثبت به‌صورت موقت</button>
+      <button class="btn btn-primary" type="submit" name="finalize" value="1">ثبت و قطعی</button>
+    {% endif %}
+    <a class="btn btn-ghost" href="{% url 'inventory:doc_list' %}">انصراف</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  var counter = 1;
+  window.addLine = function () {
+    var body = document.getElementById('lines-body');
+    var first = body.querySelector('tr');
+    var clone = first.cloneNode(true);
+    clone.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.value = '';
+      if (el.name) el.name = el.name.replace(/_\d+$/, '_' + counter);
+    });
+    counter += 1;
+    body.appendChild(clone);
+  };
+  var sel = document.getElementById('doc_type');
+  var toField = document.getElementById('to_warehouse_field');
+  function sync() {
+    toField.style.display = sel.value === 'transfer' ? '' : 'none';
+  }
+  sel.addEventListener('change', sync);
+  sync();
+})();
+</script>
+{% endblock %}

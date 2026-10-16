@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}دوره‌های مالی انبار{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>دوره‌های مالی انبار</h1><p class="sub">بستن دوره = جلوگیری از ثبت سند در سال مربوط</p></div>
+  <div class="actions"><a href="{% url 'inventory:dashboard' %}" class="btn">داشبورد انبار</a></div>
+</div>
+
+{% if can_manage %}
+<form method="post" class="form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="create">
+  <div class="form-grid">
+    <div class="field">
+      <label>سال شمسی <span class="req">*</span></label>
+      <input type="text" name="year" placeholder="1404" required>
+    </div>
+    <div class="field">
+      <label>عنوان</label>
+      <input type="text" name="title">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit">افزودن دوره</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>سال</th><th>عنوان</th><th>وضعیت</th><th></th></tr></thead>
+  <tbody>
+  {% for p in periods %}
+    <tr>
+      <td class="num">{{ p.year|fa }}</td>
+      <td>{{ p.title|default:'—' }}</td>
+      <td>{% if p.is_open %}<span class="chip chip-success">باز</span>{% else %}<span class="chip chip-danger">بسته</span>{% endif %}</td>
+      <td>
+        {% if can_manage %}
+        <form method="post" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="toggle">
+          <input type="hidden" name="period_id" value="{{ p.pk }}">
+          <button class="btn btn-ghost" type="submit">{% if p.is_open %}بستن دوره{% else %}باز کردن دوره{% endif %}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">دوره‌ای ثبت نشده است — در نبود دوره، ثبت سند آزاد است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

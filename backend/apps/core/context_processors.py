@@ -45,6 +45,17 @@ def feature_flags(request):
         'secretariat.group_referral', 'secretariat.sign_proxy',
         'secretariat.number_format', 'secretariat.word_export',
         'secretariat.courier_book',
+        'inventory.documents', 'inventory.doc_numbering', 'inventory.doc_temp',
+        'inventory.doc_cancel', 'inventory.doc_return',
+        'inventory.item_groups', 'inventory.item_specs', 'inventory.item_image',
+        'inventory.item_barcode', 'inventory.multi_unit', 'inventory.serial_expiry',
+        'inventory.locations', 'inventory.min_max',
+        'inventory.price_lists', 'inventory.fifo', 'inventory.batch_pricing',
+        'inventory.count_tags', 'inventory.count_stages', 'inventory.count_excel',
+        'inventory.count_auto_docs', 'inventory.warehouse_users',
+        'inventory.low_stock_alert', 'inventory.no_movement',
+        'inventory.excel_reports', 'inventory.barcode_labels',
+        'inventory.dashboard', 'inventory.financial_period',
         'platform.pwa',
     ]
     nested: dict = {}

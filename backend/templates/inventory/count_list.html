@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}انبارگردانی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>انبارگردانی</h1><p class="sub">شمارش فیزیکی انبار — تگ چاپی، شمارش چندمرحله و سند اصلاحی خودکار</p></div>
+  <div class="actions"><a href="{% url 'inventory:balance' %}" class="btn">موجودی لحظه‌ای</a></div>
+</div>
+
+{% if can_manage %}
+<form method="post" action="{% url 'inventory:count_new' %}" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>انبار <span class="req">*</span></label>
+      <select name="warehouse_id" required>
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>تاریخ شمارش</label>
+      <input type="text" name="date" value="{{ JALALI_TODAY }}">
+    </div>
+    <div class="field">
+      <label>عنوان</label>
+      <input type="text" name="title" placeholder="مثلاً انبارگردانی پایان سال">
+    </div>
+    <div class="field">
+      <label>تعداد تگ</label>
+      <input type="text" name="tag_count" value="10">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit">شروع انبارگردانی</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>انبار</th><th>تاریخ</th><th>عنوان</th><th>وضعیت</th><th>ثبت‌کننده</th><th></th></tr></thead>
+  <tbody>
+  {% for count in counts %}
+    <tr>
+      <td>{{ count.warehouse.name }}</td>
+      <td class="num">{{ count.date|jdate }}</td>
+      <td>{{ count.title|default:'—' }}</td>
+      <td>
+        {% if count.status == 'applied' %}<span class="chip chip-success">اعمال‌شده</span>
+        {% elif count.status == 'counting' %}<span class="chip chip-info">در حال شمارش</span>
+        {% else %}<span class="chip chip-muted">پیش‌نویس</span>{% endif %}
+      </td>
+      <td>{{ count.created_by|default:'—' }}</td>
+      <td><a class="btn btn-ghost" href="{% url 'inventory:count_detail' count.pk %}">جزئیات</a></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">انبارگردانی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
