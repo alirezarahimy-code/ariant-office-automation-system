@@ -1,0 +1,11 @@
+{
+  "name": "دفترداری دیجیتال آرینت",
+  "short_name": "آرینت",
+  "start_url": "/",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "fa",
+  "background_color": "#f7f8fa",
+  "theme_color": "#1e3a5f",
+  "icons": []
+}

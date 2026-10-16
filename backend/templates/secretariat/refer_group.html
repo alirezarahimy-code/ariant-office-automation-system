@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ارجاع گروهی{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>ارجاع گروهی نامه</h1>
+  <p class="page-sub">{{ letter.number_display }} — {{ letter.subject }} — ارجاع هم‌زمان به چند نفر (موازی)</p>
+</div></div>
+<div class="card">
+  <form method="post" class="form-grid">{% csrf_token %}
+    <label>گیرندگان ارجاع (چند انتخابی — Ctrl):</label>
+    <select name="users" multiple size="10" required>
+      {% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+    </select>
+    <input type="text" name="note" placeholder="دستور/شرح ارجاع…">
+    <label><input type="checkbox" name="attach_relations" value="1"> نامه‌های مرتبط (پیرو/عطف) همراه ارجاع ارسال شود</label>
+    <button class="btn" type="submit">ارجاع گروهی</button>
+  </form>
+</div>
+{% endblock %}

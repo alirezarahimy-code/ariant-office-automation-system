@@ -1039,14 +1039,15 @@ def signature_decide(request, pk):
     step = get_object_or_404(
         SignatureStep.objects.select_related('request__letter'), pk=pk)
     user = request.user
-    mine = (step.signer_user_id == user.pk
-            or (step.signer_position_id and step.signer_position.holder_id == user.pk))
+    mine = svc.can_sign_for(user, step)
     if not mine and not user.is_superuser:
-        messages.error(request, 'شما امضاکننده این گام نیستید.')
+        messages.error(request, 'شما امضاکننده این گام نیستید و تفویض فعالی هم ندارید.')
         return redirect('secretariat:letter_detail', pk=step.request.letter_id)
     if request.method == 'POST':
         form = SignatureDecisionForm(request.POST)
         if form.is_valid():
+            if (step.signer_user_id and step.signer_user_id != user.pk):
+                step.proxy_user = user  # تفویض امضا — امضا از طرف
             svc.decide_signature_step(
                 step, user, form.cleaned_data['decision'], form.cleaned_data['comment'])
             messages.success(request, 'تصمیم شما ثبت شد.')
@@ -1265,3 +1266,221 @@ def search(request):
     results = svc.search_all(request.user, q) if q else {'letters': [], 'case_files': [], 'correspondents': []}
     return render(request, 'secretariat/search.html', {
         'q': q, 'results': results, 'form': SearchForm(initial={'q': q})})
+
+
+# ── چاپ گروهی ────────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.batch_print')
+def batch_print(request):
+    """چاپ گروهی — چند نامه با برچسب نسخه اختصاصی هر گیرنده (رفتار دیدگاه)."""
+    ids = request.GET.get('ids', '')
+    letter_qs = visible_letters(request.user)
+    if ids:
+        id_list = [int(i) for i in ids.split(',') if i.strip().isdigit()]
+        letters = list(letter_qs.filter(pk__in=id_list).select_related('office'))
+    else:
+        status = request.GET.get('status', '')
+        letter_type = request.GET.get('type', '')
+        qs = letter_qs.select_related('office')
+        if status:
+            qs = qs.filter(status=status)
+        if letter_type:
+            qs = qs.filter(letter_type=letter_type)
+        letters = list(qs.order_by('-jalali_year', '-serial')[:25])
+    data = [{
+        'letter': l,
+        'labels': svc.print_copy_labels(l) if feature_enabled('secretariat.copy_labels') else [],
+        'referrals': l.referrals.select_related('to_user', 'to_department')[:8],
+    } for l in letters]
+    return render(request, 'secretariat/batch_print.html', {'rows': data, 'ids': ids})
+
+
+# ── رسید تحویل نامه ──────────────────────────────────────────
+@login_required
+@feature_required('secretariat.delivery_receipt')
+def letter_receipt(request, pk):
+    """برگه رسید تحویل — با خطوط امضا (فرم استاندارد دبیرخانه)."""
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    return render(request, 'secretariat/letter_receipt.html', {
+        'letter': letter,
+        'referrals': letter.referrals.select_related('to_user', 'to_department'),
+    })
+
+
+# ── دفتر فاکس (دورنویس) ─────────────────────────────────────
+@login_required
+@feature_required('secretariat.fax_book')
+def fax_list(request):
+    from .models import FaxLog
+    if request.method == 'POST':
+        fax = FaxLog.objects.create(
+            direction=request.POST.get('direction', 'in'),
+            fax_number=request.POST.get('fax_number', ''),
+            correspondent=request.POST.get('correspondent', ''),
+            pages=int(request.POST.get('pages', 1) or 1),
+            note=request.POST.get('note', ''),
+            status=request.POST.get('status', 'ok'),
+            sent_at=timezone.now(),
+            created_by=request.user)
+        if request.POST.get('convert') == '1':
+            letter = svc.fax_to_letter(fax, request.user)
+            messages.success(request, f'فاکس به نامه {letter.number_display} تبدیل شد.')
+        else:
+            messages.success(request, 'رکورد فاکس ثبت شد.')
+        return redirect('secretariat:fax_list')
+    rows = FaxLog.objects.select_related('letter', 'created_by')[:100]
+    return render(request, 'secretariat/fax_list.html', {'rows': rows})
+
+
+@login_required
+@feature_required('secretariat.fax_book')
+def fax_convert(request, pk):
+    from .models import FaxLog
+    fax = get_object_or_404(FaxLog, pk=pk)
+    letter = svc.fax_to_letter(fax, request.user)
+    messages.success(request, f'فاکس به نامه {letter.number_display} تبدیل شد.')
+    return redirect('secretariat:letter_detail', pk=letter.pk)
+
+
+# ── بایگانی شخصی ─────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.personal_archive')
+def personal_archive(request):
+    rows = request.user.personal_archive.select_related('letter', 'letter__office')[:100]
+    return render(request, 'secretariat/personal_archive.html', {'rows': rows})
+
+
+@login_required
+@feature_required('secretariat.personal_archive')
+def personal_archive_toggle(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    obj = svc.personal_archive_toggle(request.user, letter)
+    messages.success(
+        request,
+        'نامه به بایگانی شخصی شما افزوده شد.' if obj else 'نامه از بایگانی شخصی برداشته شد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+# ── رده نگهداری ──────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.retention')
+def retention_rules(request):
+    from .models import RetentionRule
+    if not _is_manager(request.user):
+        messages.error(request, 'مدیریت رده‌های نگهداری فقط برای مدیریت دبیرخانه است.')
+        return redirect('secretariat:kartable')
+    if request.method == 'POST':
+        RetentionRule.objects.create(
+            name=request.POST.get('name', ''),
+            years=int(request.POST.get('years', 1) or 1),
+            action=request.POST.get('action', 'keep'),
+            description=request.POST.get('description', ''))
+        messages.success(request, 'رده نگهداری ثبت شد.')
+        return redirect('secretariat:retention_rules')
+    return render(request, 'secretariat/retention_rules.html', {
+        'rows': RetentionRule.objects.all()})
+
+
+# ── بازگشایی نامه بایگانی‌شده ────────────────────────────────
+@login_required
+@feature_required('secretariat.personal_archive')
+def letter_reopen(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    if not _is_manager(request.user):
+        messages.error(request, 'بازگشایی نامه بایگانی‌شده با مجوز مدیریت دبیرخانه است.')
+    else:
+        svc.reopen_letter(letter, request.user, note=request.POST.get('note', ''))
+        messages.success(request, 'نامه از بایگانی خارج و دوباره به گردش آمد.')
+    return redirect('secretariat:letter_detail', pk=pk)
+
+
+# ── ارجاع گروهی ──────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.group_referral')
+def letter_refer_group(request, pk):
+    from django.contrib.auth import get_user_model
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    User = get_user_model()
+    if request.method == 'POST':
+        user_ids = request.POST.getlist('users')
+        users = User.objects.filter(pk__in=user_ids, is_active=True)
+        attach = request.POST.get('attach_relations') == '1'
+        refs = svc.refer_group(
+            letter, users, request.user,
+            note=request.POST.get('note', ''),
+            attach_relations=attach)
+        from apps.core.models import Notification
+        for r in refs:
+            Notification.objects.create(
+                user=r.to_user,
+                title='ارجاع گروهی نامه',
+                body=f'{letter.subject[:100]}',
+                url=f'/letters/{letter.pk}/')
+        messages.success(request, f'نامه به {len(refs)} نفر ارجاع شد.')
+        return redirect('secretariat:letter_detail', pk=pk)
+    return render(request, 'secretariat/refer_group.html', {
+        'letter': letter, 'users': User.objects.filter(is_active=True)})
+
+
+# ── خروجی Word ───────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.word_export')
+def letter_word(request, pk):
+    letter = get_object_or_404(visible_letters(request.user), pk=pk)
+    html = svc.letter_word_html(letter)
+    resp = HttpResponse(html, content_type='application/msword')
+    resp['Content-Disposition'] = (
+        f'attachment; filename="letter-{letter.pk}.doc"')
+    return resp
+
+
+# ── الگوی شماره ──────────────────────────────────────────────
+@login_required
+@feature_required('secretariat.number_format')
+def number_formats(request):
+    from .models import NumberFormat
+    if not _is_manager(request.user):
+        messages.error(request, 'مدیریت الگوهای شماره فقط برای مدیریت دبیرخانه است.')
+        return redirect('secretariat:kartable')
+    if request.method == 'POST':
+        NumberFormat.objects.update_or_create(
+            letter_type=request.POST.get('letter_type', ''),
+            office=None,
+            defaults={'pattern': request.POST.get('pattern', '{year}/{prefix}/{serial:04}')})
+        from .models import get_number_format
+        get_number_format.cache_clear()
+        messages.success(request, 'الگوی شماره ذخیره شد.')
+        return redirect('secretariat:number_formats')
+    return render(request, 'secretariat/number_formats.html', {
+        'rows': NumberFormat.objects.all(),
+        'types': Letter.LetterType.choices})
+
+
+# ── کارنامه واحدها ───────────────────────────────────────────
+@login_required
+@feature_required('secretariat.sla')
+def unit_report(request):
+    """کارنامه واحدها — تعداد ارجاع‌ها و میانگین زمان اقدام."""
+    from django.db.models import Avg, Count, F
+    from django.db.models.functions import Extract
+    rows = (Referral.objects
+            .exclude(status=Referral.Status.CANCELLED)
+            .values('to_department__title', 'to_department_id')
+            .annotate(n=Count('id'))
+            .order_by('-n')[:20])
+    # میانگین زمان اقدام (ساعت) — محاسبه در پایتون (سازگار با SQLite)
+    buckets: dict = {}
+    for r in Referral.objects.filter(
+            status=Referral.Status.ACTED, acted_at__isnull=False
+    ).select_related('to_department')[:500]:
+        if r.to_department_id is None:
+            continue
+        hours = (r.acted_at - r.created_at).total_seconds() / 3600.0
+        b = buckets.setdefault(r.to_department.title, [])
+        b.append(hours)
+    acted = sorted(
+        ({'to_department__title': k,
+          'avg_hours': sum(v) / len(v), 'n': len(v)} for k, v in buckets.items()),
+        key=lambda x: x['avg_hours'])[:20]
+    return render(request, 'secretariat/unit_report.html', {
+        'rows': rows, 'acted': acted})

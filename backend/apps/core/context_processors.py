@@ -39,6 +39,12 @@ def feature_flags(request):
         'secretariat.read_receipt', 'secretariat.number_reserve', 'secretariat.correspondents',
         'secretariat.frequent_phrases', 'secretariat.memo_letters', 'secretariat.paraph',
         'secretariat.answer_pairing', 'secretariat.global_search',
+        'secretariat.batch_print', 'secretariat.copy_labels',
+        'secretariat.delivery_receipt', 'secretariat.fax_book',
+        'secretariat.personal_archive', 'secretariat.retention',
+        'secretariat.group_referral', 'secretariat.sign_proxy',
+        'secretariat.number_format', 'secretariat.word_export',
+        'platform.pwa',
     ]
     nested: dict = {}
     for c in codes:

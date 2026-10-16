@@ -162,6 +162,14 @@ class Letter(TimeStampedModel, SoftDeleteModel):
         settings.AUTH_USER_MODEL, verbose_name='قفل‌کننده', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='locked_letters')
     current_revision = models.PositiveIntegerField('نسخه جاری', default=1)
+    copy_kind = models.CharField(
+        'نوع نسخه', max_length=10,
+        choices=[('original', 'اصل'), ('duplicate', 'المثنی'), ('copy', 'کپی')],
+        default='original')
+    physical_count = models.PositiveSmallIntegerField('تعداد نسخ فیزیکی', default=1)
+    retention_rule = models.ForeignKey(
+        'RetentionRule', verbose_name='رده نگهداری', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='letters')
 
     history = HistoricalRecords()
 
@@ -189,7 +197,10 @@ class Letter(TimeStampedModel, SoftDeleteModel):
 
     @property
     def number_display(self) -> str:
-        """شماره نامه با ارقام فارسی: ۱۴۰۵/و/۰۴۸۲"""
+        """شماره نامه با ارقام فارسی — الگوی قابل‌تنظیم یا پیش‌فرض: ۱۴۰۵/و/۰۴۸۲"""
+        fmt = get_number_format(self.office_id, self.letter_type)
+        if fmt is not None:
+            return fmt.format(self)
         prefix = self.TYPE_PREFIX.get(self.letter_type, 'د')
         return f'{to_persian_digits(self.jalali_year)}/{prefix}/{to_persian_digits(f"{self.serial:04d}")}'
 
@@ -555,6 +566,9 @@ class CaseFile(TimeStampedModel):
         default=Letter.Confidentiality.NORMAL)
     opened_at = jmodels.jDateField('تاریخ تشکیل', null=True, blank=True)
     closed_at = jmodels.jDateField('تاریخ بستن', null=True, blank=True)
+    retention_rule = models.ForeignKey(
+        'RetentionRule', verbose_name='رده نگهداری', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='case_files')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name='ایجادکننده', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='created_case_files')
@@ -752,6 +766,9 @@ class SignatureStep(TimeStampedModel):
     signed_revision = models.ForeignKey(
         LetterRevision, verbose_name='نسخه امضاشده', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='signed_steps')
+    proxy_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='امضا از طرف (تفویض)', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='proxy_signed_steps')
 
     class Meta:
         verbose_name = 'گام امضا'
@@ -873,3 +890,131 @@ class FrequentPhrase(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+# ════════════════════════════════════════════════════════════════
+# تکمیل دبیرخانه — بستن همه ردیف‌های باقی‌مانده فهرست مرجع
+# ════════════════════════════════════════════════════════════════
+
+class NumberFormat(TimeStampedModel):
+    """الگوی قابل‌تنظیم شماره نامه — مثل {year}/{prefix}/{serial:04} به تفکیک نوع/دبیرخانه."""
+
+    office = models.ForeignKey(
+        Office, verbose_name='دبیرخانه', on_delete=models.CASCADE,
+        related_name='number_formats', null=True, blank=True)
+    letter_type = models.CharField('نوع نامه', max_length=10, choices=Letter.LetterType.choices)
+    pattern = models.CharField(
+        'الگوی شماره', max_length=60, default='{year}/{prefix}/{serial:04}',
+        help_text='متغیرها: {year} سال، {prefix} پیشوند نوع، {serial} سریال')
+    is_default = models.BooleanField('پیش‌فرض', default=True)
+
+    class Meta:
+        verbose_name = 'الگوی شماره'
+        verbose_name_plural = 'الگوهای شماره'
+        ordering = ['letter_type']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        get_number_format.cache_clear()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        get_number_format.cache_clear()
+
+    def format(self, letter) -> str:
+        from apps.core.persian import to_persian_digits
+        raw = self.pattern.format(
+            year=letter.jalali_year,
+            prefix=Letter.TYPE_PREFIX.get(letter.letter_type, 'د'),
+            serial=letter.serial)
+        return to_persian_digits(raw)
+
+
+from functools import lru_cache  # noqa: E402
+
+
+@lru_cache(maxsize=256)
+def get_number_format(office_id, letter_type):
+    """الگوی شماره با کش — جلوگیری از N+1 در لیست‌های نامه."""
+    return (NumberFormat.objects.filter(
+        office_id=office_id, letter_type=letter_type).first()
+        or NumberFormat.objects.filter(
+            office__isnull=True, letter_type=letter_type).first())
+
+
+class FaxLog(TimeStampedModel):
+    """دورنویس — دفتر فاکس‌های وارده/صادره (مطابق ماژول دورنویس راهکاران)."""
+
+    class Direction(models.TextChoices):
+        IN = 'in', 'دریافتی'
+        OUT = 'out', 'ارسالی'
+
+    class Status(models.TextChoices):
+        OK = 'ok', 'موفق'
+        FAILED = 'failed', 'ناموفق'
+        PENDING = 'pending', 'در انتظار'
+
+    direction = models.CharField('جهت', max_length=5, choices=Direction.choices)
+    fax_number = models.CharField('شماره فاکس', max_length=40)
+    correspondent = models.CharField('طرف مکاتبه', max_length=200, blank=True, default='')
+    sent_at = models.DateTimeField('زمان', null=True, blank=True)
+    pages = models.PositiveSmallIntegerField('تعداد صفحه', default=1)
+    status = models.CharField(
+        'وضعیت', max_length=10, choices=Status.choices, default=Status.OK)
+    note = models.TextField('یادداشت', blank=True, default='')
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه مرتبط', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='fax_logs')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ثبت‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL)
+
+    class Meta:
+        verbose_name = 'رکورد فاکس (دورنویس)'
+        verbose_name_plural = 'دفتر فاکس (دورنویس)'
+        ordering = ['-sent_at', '-created_at']
+
+    def __str__(self) -> str:
+        return f'فاکس {self.get_direction_display()} — {self.fax_number}'
+
+
+class PersonalArchive(TimeStampedModel):
+    """بایگانی شخصی — نگهداری یک نسخه از نامه‌های ارجاع‌شده در بایگانی کاربر."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر', on_delete=models.CASCADE,
+        related_name='personal_archive')
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='personal_archives')
+    note = models.CharField('یادداشت', max_length=300, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'بایگانی شخصی'
+        verbose_name_plural = 'بایگانی‌های شخصی'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'letter'], name='uq_personal_archive'),
+        ]
+
+
+class RetentionRule(TimeStampedModel):
+    """رده نگهداری اسناد (مطابق جداول عمر مفید سازمان اسناد ملی)."""
+
+    class Action(models.TextChoices):
+        KEEP = 'keep', 'نگهداری در بایگانی جاری'
+        TEMPORARY = 'temporary', 'انتقال به بایگانی موقت/راکد'
+        PERMANENT = 'permanent', 'انتقال دائم به آرشیو'
+        DESTROY = 'destroy', 'امحاء (با مجوز)'
+
+    name = models.CharField('نام رده', max_length=150)
+    years = models.PositiveIntegerField('مدت نگهداری (سال)')
+    action = models.CharField('اقدام پس از مدت', max_length=12, choices=Action.choices)
+    description = models.TextField('توضیح', blank=True, default='')
+
+    class Meta:
+        verbose_name = 'رده نگهداری'
+        verbose_name_plural = 'رده‌های نگهداری'
+        ordering = ['years']
+
+    def __str__(self) -> str:
+        return f'{self.name} ({self.years} سال — {self.get_action_display()})'

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}بایگانی شخصی{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>بایگانی شخصی من</h1>
+  <p class="page-sub">نسخه‌ای از نامه‌های مهم — (رفتار «بایگانی شخصی» سامانه‌های مرجع)</p>
+</div></div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>شماره</th><th>موضوع</th><th>تاریخ</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' row.letter_id %}">{{ row.letter.number_display }}</a></td>
+        <td>{{ row.letter.subject }}</td>
+        <td>{{ row.letter.letter_date|jdate }}</td>
+        <td><a class="btn btn-sm btn-outline" href="{% url 'secretariat:personal_archive_toggle' row.letter_id %}">برداشتن</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-muted">بایگانی شخصی شما خالی است — از کارت نامه «افزودن به بایگانی شخصی».</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

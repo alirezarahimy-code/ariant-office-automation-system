@@ -57,4 +57,18 @@ urlpatterns = [
     path('letters/new/memo/', views.letter_memo, name='memo'),
     path('letters/<int:pk>/pair/', views.letter_pair, name='letter_pair'),
     path('search/', views.search, name='search'),
+
+    # ── تکمیل دبیرخانه ──
+    path('letters/batch-print/', views.batch_print, name='batch_print'),
+    path('letters/<int:pk>/receipt/', views.letter_receipt, name='letter_receipt'),
+    path('letters/<int:pk>/word/', views.letter_word, name='letter_word'),
+    path('letters/<int:pk>/reopen/', views.letter_reopen, name='letter_reopen'),
+    path('letters/<int:pk>/personal-archive/', views.personal_archive_toggle, name='personal_archive_toggle'),
+    path('letters/<int:pk>/refer-group/', views.letter_refer_group, name='letter_refer_group'),
+    path('fax/', views.fax_list, name='fax_list'),
+    path('fax/<int:pk>/convert/', views.fax_convert, name='fax_convert'),
+    path('personal-archive/', views.personal_archive, name='personal_archive'),
+    path('retention-rules/', views.retention_rules, name='retention_rules'),
+    path('number-formats/', views.number_formats, name='number_formats'),
+    path('unit-report/', views.unit_report, name='unit_report'),
 ]

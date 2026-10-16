@@ -6,6 +6,17 @@
   <title>{% block title %}{{ ORG_NAME }} — اتوماسیون اداری{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/platform.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  {% if features.platform.pwa %}
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#1e3a5f">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/static/sw.js').catch(function () {});
+      });
+    }
+  </script>
+  {% endif %}
 </head>
 <body hx-boost="true">
 <div class="layout">
@@ -72,6 +83,16 @@
         {% endif %}
         {% if features.secretariat.sla %}
         <a class="side-link {% if request.resolver_match.url_name == 'overdue' %}active{% endif %}" href="{% url 'secretariat:overdue' %}">معوقات و مهلت‌ها</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'unit_report' %}active{% endif %}" href="{% url 'secretariat:unit_report' %}">کارنامه واحدها</a>
+        {% endif %}
+        {% if features.secretariat.batch_print %}
+        <a class="side-link {% if request.resolver_match.url_name == 'batch_print' %}active{% endif %}" href="{% url 'secretariat:batch_print' %}">چاپ گروهی</a>
+        {% endif %}
+        {% if features.secretariat.fax_book %}
+        <a class="side-link {% if request.resolver_match.url_name == 'fax_list' %}active{% endif %}" href="{% url 'secretariat:fax_list' %}">دفتر فاکس</a>
+        {% endif %}
+        {% if features.secretariat.personal_archive %}
+        <a class="side-link {% if request.resolver_match.url_name == 'personal_archive' %}active{% endif %}" href="{% url 'secretariat:personal_archive' %}">بایگانی شخصی</a>
         {% endif %}
       </div>
       <div class="side-group">

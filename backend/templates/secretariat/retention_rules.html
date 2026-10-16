@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}رده نگهداری{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>رده‌های نگهداری اسناد</h1>
+  <p class="page-sub">عمر مفید اسناد — مطابق جداول رده نگهداری سازمان اسناد ملی</p>
+</div></div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نام رده</th><th>سال</th><th>اقدام پس از مدت</th><th>توضیح</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td>{{ r.name }}</td><td>{{ r.years|fa }}</td><td>{{ r.get_action_display }}</td><td>{{ r.description|truncatechars:80 }}</td></tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-muted">رده‌ای تعریف نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>رده تازه</h3>
+  <form method="post" class="form-grid">{% csrf_token %}
+    <input type="text" name="name" placeholder="نام رده…" required>
+    <input type="number" name="years" placeholder="سال نگهداری…" min="1" required>
+    <select name="action">
+      <option value="keep">نگهداری در بایگانی جاری</option>
+      <option value="temporary">انتقال به بایگانی موقت/راکد</option>
+      <option value="permanent">انتقال دائم به آرشیو</option>
+      <option value="destroy">امحاء (با مجوز)</option>
+    </select>
+    <input type="text" name="description" placeholder="توضیح…">
+    <button class="btn" type="submit">ثبت</button>
+  </form>
+</div>
+{% endblock %}

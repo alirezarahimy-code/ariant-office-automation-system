@@ -230,6 +230,25 @@
       </div>
       {% endif %}
 
+      <div class="btn-row">
+        {% if features.secretariat.delivery_receipt %}
+        <a class="btn btn-sm btn-outline" href="{% url 'secretariat:letter_receipt' letter.pk %}">رسید تحویل</a>
+        {% endif %}
+        {% if features.secretariat.word_export %}
+        <a class="btn btn-sm btn-outline" href="{% url 'secretariat:letter_word' letter.pk %}">خروجی Word</a>
+        {% endif %}
+        {% if features.secretariat.group_referral %}
+        <a class="btn btn-sm btn-outline" href="{% url 'secretariat:letter_refer_group' letter.pk %}">ارجاع گروهی</a>
+        {% endif %}
+        {% if features.secretariat.personal_archive %}
+        <a class="btn btn-sm btn-outline" href="{% url 'secretariat:personal_archive_toggle' letter.pk %}">بایگانی شخصی</a>
+        {% endif %}
+        {% if features.secretariat.personal_archive and letter.status == 'archived' %}
+        <form method="post" action="{% url 'secretariat:letter_reopen' letter.pk %}" style="display:inline">{% csrf_token %}
+          <button class="btn btn-sm" type="submit">بازگشایی از بایگانی</button></form>
+        {% endif %}
+      </div>
+
       {% if features.secretariat.read_receipt %}
       <div class="t-meta">دریافت شد / رؤیت‌ها:
         {% for rr in pro.read_receipts %}<span class="pill green">{{ rr.user.get_full_name|default:rr.user.username }} ✓</span> {% empty %}—{% endfor %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}دفتر فاکس{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>دفتر فاکس (دورنویس)</h1>
+  <p class="page-sub">ثبت فاکس‌های دریافتی/ارسالی + تبدیل مستقیم به نامه (رفتار ماژول دورنویس)</p></div>
+</div>
+<div class="card">
+  <h3>ثبت فاکس تازه</h3>
+  <form method="post" class="form-grid">{% csrf_token %}
+    <select name="direction"><option value="in">دریافتی</option><option value="out">ارسالی</option></select>
+    <input type="text" name="fax_number" placeholder="شماره فاکس…" required>
+    <input type="text" name="correspondent" placeholder="طرف مکاتبه…">
+    <input type="number" name="pages" value="1" min="1" placeholder="تعداد صفحه">
+    <select name="status"><option value="ok">موفق</option><option value="failed">ناموفق</option><option value="pending">در انتظار</option></select>
+    <input type="text" name="note" placeholder="یادداشت…">
+    <label><input type="checkbox" name="convert" value="1"> هم‌زمان به نامه تبدیل شود</label>
+    <button class="btn" type="submit">ثبت</button>
+  </form>
+</div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>جهت</th><th>شماره</th><th>طرف</th><th>زمان</th><th>صفحات</th><th>وضعیت</th><th>نامه</th><th></th></tr></thead>
+    <tbody>
+      {% for f in rows %}
+      <tr>
+        <td>{{ f.get_direction_display }}</td>
+        <td>{{ f.fax_number }}</td>
+        <td>{{ f.correspondent|default:'—' }}</td>
+        <td>{{ f.sent_at }}</td>
+        <td>{{ f.pages|fa }}</td>
+        <td>{{ f.get_status_display }}</td>
+        <td>{% if f.letter %}<a href="{% url 'secretariat:letter_detail' f.letter_id %}">{{ f.letter.number_display }}</a>{% else %}—{% endif %}</td>
+        <td>{% if not f.letter %}<a class="btn btn-sm" href="{% url 'secretariat:fax_convert' f.pk %}">تبدیل به نامه</a>{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-muted">رکوردی ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

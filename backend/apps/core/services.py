@@ -97,24 +97,27 @@ def send_notification(user, title: str, body: str = '', url: str = '') -> Notifi
 # کلیدهای روشن/خاموش قابلیت‌ها (Feature Toggles)
 # ─────────────────────────────────────────────────────────────
 _FEATURE_CACHE: dict[str, bool] = {}
+_FEATURES_LOADED = False
 
 
 def clear_feature_cache() -> None:
+    global _FEATURES_LOADED
     _FEATURE_CACHE.clear()
+    _FEATURES_LOADED = False
 
 
 def feature_enabled(code: str, default: bool = True) -> bool:
-    """وضعیت یک قابلیت — اگر ردیفی نباشد، طبق رفتار مرجع «فعال» فرض می‌شود."""
-    if code in _FEATURE_CACHE:
-        return _FEATURE_CACHE[code]
-    try:
-        from apps.core.models import FeatureToggle
-        obj = FeatureToggle.objects.filter(code=code).first()
-        value = default if obj is None else obj.is_enabled
-    except Exception:  # noqa: BLE001 — پیش از مهاجرت
-        value = default
-    _FEATURE_CACHE[code] = value
-    return value
+    """وضعیت یک قابلیت — بارگذاری دسته‌ای همه کلیدها در یک کوئری (بدون N+1)."""
+    global _FEATURES_LOADED
+    if not _FEATURES_LOADED:
+        try:
+            from apps.core.models import FeatureToggle
+            for obj in FeatureToggle.objects.all():
+                _FEATURE_CACHE[obj.code] = obj.is_enabled
+        except Exception:  # noqa: BLE001 — پیش از مهاجرت
+            pass
+        _FEATURES_LOADED = True
+    return _FEATURE_CACHE.get(code, default)
 
 
 def feature_required(code: str):
