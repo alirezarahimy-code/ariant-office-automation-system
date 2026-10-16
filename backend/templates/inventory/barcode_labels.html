@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}چاپ برچسب بارکد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>چاپ برچسب بارکد</h1><p class="sub">برچسب Code39 برای کالاها — آماده چاپ روی لیبل</p></div>
+  <div class="actions"><a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a></div>
+</div>
+
+<form class="filters" method="get">
+  <select name="item" multiple size="4" style="min-width:220px">
+    {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">ساخت برچسب</button>
+  <button class="btn btn-ghost" type="button" onclick="window.print()">چاپ</button>
+</form>
+
+<div class="card">
+  <div style="display:flex;flex-wrap:wrap;gap:10px">
+    {% for row in labels %}
+    <div style="border:1px dashed var(--line);border-radius:8px;padding:10px 14px;text-align:center;width:210px">
+      <div style="font-size:12px;font-weight:700">{{ row.item.name }}</div>
+      {{ row.svg|safe }}
+      <div class="tiny muted">{{ row.item.code }} | {{ row.item.unit }}</div>
+    </div>
+    {% empty %}
+    <p class="empty">کالایی انتخاب نشده است — از فهرست بالا کالا انتخاب کنید.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

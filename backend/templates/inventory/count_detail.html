@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}انبارگردانی {{ count.warehouse.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>انبارگردانی {{ count.warehouse.name }}</h1>
+    <p class="sub">{{ count.date|jdate }} — {{ count.title|default:'بدون عنوان' }}
+      {% if count.status == 'applied' %}<span class="chip chip-success">اعمال‌شده</span>
+      {% elif count.status == 'counting' %}<span class="chip chip-info">در حال شمارش</span>
+      {% else %}<span class="chip chip-muted">پیش‌نویس</span>{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    <a href="{% url 'inventory:count_tags_print' count.pk %}" class="btn">چاپ تگ‌ها</a>
+    <a href="{% url 'inventory:count_template' %}" class="btn">قالب اکسل</a>
+    {% if can_manage and count.status != 'applied' %}
+    <form method="post" action="{% url 'inventory:count_apply_view' count.pk %}">{% csrf_token %}
+      <button class="btn btn-primary" type="submit"
+              onclick="return confirm('انبارگردانی اعمال و سند اصلاحی صادر شود؟');">اعمال و صدور سند اصلاحی</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <strong>تگ‌های صادرشده:</strong>
+  {% for tag in tags %}<span class="chip {% if tag.is_used %}chip-success{% else %}chip-muted{% endif %}">{{ tag.code }}</span> {% empty %}<span class="muted">تگی صادر نشده است.</span>{% endfor %}
+</div>
+
+{% if can_manage and count.status != 'applied' %}
+<div class="card">
+  <div class="card-head"><div class="card-title">ثبت شمارش</div></div>
+  <form method="post" action="{% url 'inventory:count_line_save' count.pk %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field">
+      <label>کالا</label>
+      <select name="item_id" required>
+        {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>تعداد شمارش‌شده</label>
+      <input type="text" name="quantity" required>
+    </div>
+    <div class="field">
+      <label>مرحله شمارش</label>
+      <select name="stage">
+        <option value="1">مرحله اول</option>
+        <option value="2">مرحله دوم (بازشماری)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>توضیح</label>
+      <input type="text" name="note">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit">ثبت شمارش</button>
+    </div>
+  </form>
+  <form method="post" action="{% url 'inventory:count_import' count.pk %}" enctype="multipart/form-data" class="form-grid" style="margin-top:10px">
+    {% csrf_token %}
+    <div class="field">
+      <label>ورود گروهی از اکسل (کد کالا / تعداد)</label>
+      <input type="file" name="file" accept=".xlsx">
+    </div>
+    <div class="field">
+      <label>مرحله</label>
+      <select name="stage"><option value="1">مرحله اول</option><option value="2">مرحله دوم</option></select>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" type="submit">ورود از اکسل</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<h3 style="margin:18px 0 8px">ردیف‌های شمارش</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr>
+    <th>کالا</th><th>موجودی دفتری</th><th>شمارش مرحله ۱</th><th>شمارش مرحله ۲</th>
+    <th>تعداد نهایی</th><th>مغایرت</th><th>توضیح</th>
+  </tr></thead>
+  <tbody>
+  {% for row in lines %}
+    <tr>
+      <td><a class="row-link" href="{% url 'inventory:detail' row.line.item.pk %}">{{ row.line.item.code }} — {{ row.line.item.name }}</a></td>
+      <td class="num">{{ row.expected|fa }}</td>
+      <td class="num">{{ row.line.stage1_quantity|default_if_none:'—'|fa }}</td>
+      <td class="num">{{ row.line.stage2_quantity|default_if_none:'—'|fa }}</td>
+      <td class="num">{{ row.line.counted_quantity|fa }}</td>
+      <td class="num">
+        {% if row.diff and row.diff != 0 %}<span class="chip chip-warning">{{ row.diff|fa }}</span>{% else %}<span class="chip chip-success">بدون مغایرت</span>{% endif %}
+      </td>
+      <td>{{ row.line.note|default:'—' }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="empty">هنوز شمارشی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

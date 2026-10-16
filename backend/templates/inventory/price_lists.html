@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}لیست‌های قیمت{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>لیست‌های قیمت</h1><p class="sub">چندقیمتی — لیست پیش‌فرض، فروش خاص یا قیمت مشتریان</p></div>
+  <div class="actions"><a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a></div>
+</div>
+
+{% if can_manage %}
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>نام لیست <span class="req">*</span></label>
+      <input type="text" name="name" required>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <label style="font-weight:400"><input type="checkbox" name="is_default"> لیست پیش‌فرض</label>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit">افزودن لیست</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>نام لیست</th><th>پیش‌فرض</th><th>فعال</th><th>تعداد کالا</th><th></th></tr></thead>
+  <tbody>
+  {% for pl in lists %}
+    <tr>
+      <td><a class="row-link" href="{% url 'inventory:price_list_detail' pl.pk %}">{{ pl.name }}</a></td>
+      <td>{% if pl.is_default %}<span class="chip chip-success">پیش‌فرض</span>{% else %}—{% endif %}</td>
+      <td>{% if pl.is_active %}<span class="chip chip-info">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td>
+      <td class="num">{{ pl.entries.count|fa }}</td>
+      <td><a class="btn btn-ghost" href="{% url 'inventory:price_list_detail' pl.pk %}">مدیریت قیمت‌ها</a></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">لیست قیمتی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -117,3 +117,13 @@ def filesize_mb(value):
     except (TypeError, ValueError):
         return ''
     return to_persian_digits(f'{mb:.1f}') + ' مگابایت'
+
+
+@register.filter
+def mul(value, arg):
+    """ضرب دو مقدار عددی — محاسبه ارزش ردیف در قالب."""
+    try:
+        from decimal import Decimal
+        return Decimal(str(value)) * Decimal(str(arg))
+    except Exception:  # noqa: BLE001
+        return ''

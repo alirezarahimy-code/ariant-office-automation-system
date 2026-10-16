@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}کارت کالا — ثبت/ویرایش{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if item %}ویرایش کالای {{ item.code }}{% else %}ثبت کالای جدید{% endif %}</h1>
+    <p class="sub">کارت کالا — مشخصات، واحدها، بارکد و سیاست موجودی</p>
+  </div>
+  <div class="actions"><a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a></div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>کد کالا</label>
+      <input type="text" name="code" value="{{ item.code|default:'' }}" placeholder="خالی = کدگذاری خودکار" {% if item %}readonly{% endif %}>
+    </div>
+    <div class="field">
+      <label>نام کالا <span class="req">*</span></label>
+      <input type="text" name="name" value="{{ item.name|default:'' }}" required>
+    </div>
+    <div class="field">
+      <label>واحد پایه</label>
+      <input type="text" name="unit" value="{{ item.unit|default:'عدد' }}">
+    </div>
+    <div class="field">
+      <label>گروه کالا</label>
+      <select name="group">
+        <option value="">— بدون گروه —</option>
+        {% for g in groups %}<option value="{{ g.pk }}" {% if item.group_id == g.pk %}selected{% endif %}>{{ g.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>دسته (متنی)</label>
+      <input type="text" name="category" value="{{ item.category|default:'' }}">
+    </div>
+    <div class="field">
+      <label>بارکد</label>
+      <input type="text" name="barcode" value="{{ item.barcode|default:'' }}">
+    </div>
+    <div class="field">
+      <label>حداقل موجودی</label>
+      <input type="text" name="min_stock" value="{{ item.min_stock|default:'0' }}">
+    </div>
+    <div class="field">
+      <label>حداکثر موجودی</label>
+      <input type="text" name="max_stock" value="{{ item.max_stock|default:'0' }}">
+    </div>
+    <div class="field">
+      <label>نقطه سفارش</label>
+      <input type="text" name="reorder_point" value="{{ item.reorder_point|default:'0' }}">
+    </div>
+    <div class="field">
+      <label>روش قیمت‌گذاری</label>
+      <select name="costing_method">
+        {% for value, label in costing_methods %}
+        <option value="{{ value }}" {% if item.costing_method == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>محل استقرار پیش‌فرض</label>
+      <select name="default_location">
+        <option value="">—</option>
+        {% for loc in locations %}<option value="{{ loc.pk }}" {% if item.default_location_id == loc.pk %}selected{% endif %}>{{ loc }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>تصویر کالا</label>
+      <input type="file" name="image">
+      {% if item.image %}<p class="tiny muted">فایل فعلی: {{ item.image.name }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label>توضیحات</label>
+      <textarea name="description">{{ item.description|default:'' }}</textarea>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <label style="font-weight:400"><input type="checkbox" name="is_active" {% if not item or item.is_active %}checked{% endif %}> فعال</label>
+      <label style="font-weight:400"><input type="checkbox" name="is_service" {% if item.is_service %}checked{% endif %}> کالای خدماتی</label>
+      <label style="font-weight:400"><input type="checkbox" name="track_serial" {% if item.track_serial %}checked{% endif %}> پیگیری سریال</label>
+      <label style="font-weight:400"><input type="checkbox" name="has_expiry" {% if item.has_expiry %}checked{% endif %}> دارای انقضا/بچ</label>
+    </div>
+  </div>
+
+  <h3 style="margin:18px 0 8px">واحدهای فرعی (ضریب تبدیل به واحد پایه)</h3>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>نام واحد</th><th>ضریب تبدیل</th><th>پیش‌فرض اسناد</th></tr></thead>
+    <tbody>
+      {% for unit in item.units.all %}
+      <tr>
+        <td><input type="text" name="unit_name_{{ forloop.counter0 }}" value="{{ unit.name }}"></td>
+        <td><input type="text" name="unit_ratio_{{ forloop.counter0 }}" value="{{ unit.ratio }}"></td>
+        <td><input type="checkbox" name="unit_default_{{ forloop.counter0 }}" {% if unit.is_default %}checked{% endif %}></td>
+      </tr>
+      {% endfor %}
+      {% for i in "012" %}
+      <tr>
+        <td><input type="text" name="unit_name_{{ item.units.count|add:i }}"></td>
+        <td><input type="text" name="unit_ratio_{{ item.units.count|add:i }}" placeholder="1"></td>
+        <td><input type="checkbox" name="unit_default_{{ item.units.count|add:i }}"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:18px 0 8px">مشخصات فنی</h3>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>عنوان</th><th>مقدار</th></tr></thead>
+    <tbody>
+      {% for spec in item.specs.all %}
+      <tr>
+        <td><input type="text" name="spec_title_{{ forloop.counter0 }}" value="{{ spec.title }}"></td>
+        <td><input type="text" name="spec_value_{{ forloop.counter0 }}" value="{{ spec.value }}"></td>
+      </tr>
+      {% endfor %}
+      {% for i in "01234" %}
+      <tr>
+        <td><input type="text" name="spec_title_{{ item.specs.count|add:i }}"></td>
+        <td><input type="text" name="spec_value_{{ item.specs.count|add:i }}"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ذخیره کارت کالا</button>
+    <a class="btn btn-ghost" href="{% url 'inventory:list' %}">انصراف</a>
+  </div>
+</form>
+{% endblock %}

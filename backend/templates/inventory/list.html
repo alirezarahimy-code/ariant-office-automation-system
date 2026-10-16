@@ -3,17 +3,31 @@
 {% block title %}انبار{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><h1>انبار</h1><p class="sub">کالاها و موجودی لحظه‌ای — رسید، حواله و انبارگردانی</p></div>
-  <div style="display:flex;gap:.5rem">
+  <div><h1>انبار</h1><p class="sub">کالاها و موجودی لحظه‌ای — کارت کالا، اسناد و انبارگردانی</p></div>
+  <div class="actions">
+    <a href="{% url 'inventory:dashboard' %}" class="btn">داشبورد انبار</a>
+    {% if features.inventory.documents %}
+    <a href="{% url 'inventory:doc_list' %}" class="btn">اسناد انبار</a>
+    <a href="{% url 'inventory:doc_new' %}" class="btn btn-primary">ثبت سند</a>
+    {% else %}
+    <a href="{% url 'inventory:move_new' %}" class="btn btn-primary">ثبت سند</a>
+    {% endif %}
     <a href="{% url 'inventory:balance' %}" class="btn">موجودی و انبارگردانی</a>
     <a href="{% url 'inventory:value' %}" class="btn">ارزش موجودی</a>
-    <a href="{% url 'inventory:move_new' %}" class="btn btn-primary">ثبت سند</a>
   </div>
 </div>
 
-<form class="toolbar" method="get">
-  <input type="search" name="q" value="{{ q }}" placeholder="جست‌وجوی کد، نام یا دسته…">
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="جست‌وجوی کد، نام، بارکد یا دسته…">
+  {% if features.inventory.item_groups %}
+  <select name="group">
+    <option value="">همه گروه‌ها</option>
+    {% for g in groups %}<option value="{{ g.pk }}" {% if group_id == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.full_name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <label style="font-size:13px"><input type="checkbox" name="inactive" value="1" {% if show_inactive %}checked{% endif %}> نمایش غیرفعال‌ها</label>
   <button class="btn" type="submit">جست‌وجو</button>
+  <a class="btn btn-ghost" href="{% url 'inventory:item_new' %}">ثبت کالای جدید</a>
 </form>
 
 {% if low %}
@@ -24,22 +38,28 @@
 {% endif %}
 
 <table class="table">
-  <thead><tr><th>کد</th><th>نام کالا</th><th>دسته</th><th>واحد</th><th>موجودی</th><th>حداقل</th></tr></thead>
+  <thead><tr><th>کد</th><th>نام کالا</th><th>گروه/دسته</th><th>واحد</th><th>موجودی</th><th>حداقل</th><th>نقطه سفارش</th></tr></thead>
   <tbody>
   {% for row in rows %}
     <tr>
       <td class="num">{{ row.item.code }}</td>
-      <td><a class="row-link" href="{% url 'inventory:detail' pk=row.item.pk %}">{{ row.item.name }}</a></td>
-      <td>{{ row.item.category|default:'—' }}</td>
+      <td>
+        <a class="row-link" href="{% url 'inventory:detail' pk=row.item.pk %}">{{ row.item.name }}</a>
+        {% if not row.item.is_active %}<span class="chip chip-muted">غیرفعال</span>{% endif %}
+        {% if row.item.is_service %}<span class="chip chip-info">خدماتی</span>{% endif %}
+      </td>
+      <td>{{ row.item.group.full_name|default:row.item.category|default:'—' }}</td>
       <td>{{ row.item.unit }}</td>
       <td class="num">
         {{ row.stock|fa }}
-        {% if row.item.min_stock and row.stock < row.item.min_stock %}<span class="chip chip-danger">زیر حداقل</span>{% endif %}
+        {% if row.item.min_stock and row.stock < row.item.min_stock %}<span class="chip chip-danger">زیر حداقل</span>
+        {% elif row.item.reorder_point and row.stock < row.item.reorder_point %}<span class="chip chip-warning">نقطه سفارش</span>{% endif %}
       </td>
       <td class="num">{{ row.item.min_stock|fa }}</td>
+      <td class="num">{{ row.item.reorder_point|fa }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="6">کالایی ثبت نشده است.</td></tr>
+    <tr><td colspan="7">کالایی ثبت نشده است.</td></tr>
   {% endfor %}
   </tbody>
 </table>

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}گروه‌های کالا{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گروه‌های کالا</h1><p class="sub">ساختار درختی گروه/زیرگروه برای دسته‌بندی کالاها</p></div>
+  <div class="actions"><a href="{% url 'inventory:list' %}" class="btn">فهرست کالاها</a></div>
+</div>
+
+{% if can_manage %}
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>نام گروه <span class="req">*</span></label>
+      <input type="text" name="name" required>
+    </div>
+    <div class="field">
+      <label>گروه والد</label>
+      <select name="parent">
+        <option value="">— گروه اصلی —</option>
+        {% for g in groups %}<option value="{{ g.pk }}">{{ g.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit">افزودن گروه</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>نام گروه</th><th>مسیر</th><th>کالاها</th></tr></thead>
+  <tbody>
+  {% for g in groups %}
+    <tr>
+      <td style="padding-right:{{ g.level|add:'0'|stringformat:'d' }}0px">{{ g.name }}</td>
+      <td class="muted tiny">{{ g.path }}</td>
+      <td class="num">{{ g.items.count|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">گروهی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

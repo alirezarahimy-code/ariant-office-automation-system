@@ -1,0 +1,68 @@
+{% load persian_tags %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>چاپ سند {{ doc.number }}</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; direction: rtl; margin: 24px; color: #111; }
+    h1 { font-size: 17px; margin: 0 0 4px; }
+    .head { display: flex; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 12px; }
+    .meta { font-size: 12px; line-height: 2; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #444; padding: 6px 8px; font-size: 12px; text-align: right; }
+    th { background: #f0f0f0; }
+    .sign { margin-top: 48px; display: flex; justify-content: space-between; font-size: 12px; }
+    .sign div { border-top: 1px solid #111; padding-top: 6px; width: 30%; text-align: center; }
+    .foot { margin-top: 16px; font-size: 11px; color: #555; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+<div class="head">
+  <div>
+    <h1>{{ ORG_NAME|default:'سازمان' }} — سند {{ doc.get_doc_type_display }}</h1>
+    <div class="meta">شماره سند: <strong>{{ doc.number }}</strong> | وضعیت: {{ doc.get_status_display }}</div>
+  </div>
+  <div class="meta">
+    تاریخ سند: {{ doc.date|jdate }}<br>
+    انبار: {{ doc.warehouse.name }}{% if doc.to_warehouse %} ← {{ doc.to_warehouse.name }}{% endif %}<br>
+    دسته: {{ doc.get_category_display }}<br>
+    شماره مدرک: {{ doc.reference|default:'—' }}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>کد کالا</th><th>نام کالا</th><th>تعداد</th><th>واحد</th><th>قیمت واحد (ریال)</th><th>ارزش (ریال)</th><th>شرح</th></tr>
+  </thead>
+  <tbody>
+    {% for line in lines %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ line.item.code }}</td>
+      <td>{{ line.item.name }}</td>
+      <td>{{ line.quantity|fa }}</td>
+      <td>{{ line.unit_name }}</td>
+      <td>{{ line.unit_price|default_if_none:'—'|fa }}</td>
+      <td>{% if line.unit_price %}{{ line.base_quantity|mul:line.unit_price|fa }}{% else %}—{% endif %}</td>
+      <td>{{ line.description|default:'' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="foot">شرح: {{ doc.description|default:'—' }} | ثبت‌کننده: {{ doc.created_by|default:'—' }}</div>
+
+<div class="sign">
+  <div>مهر و امضای تحویل‌دهنده</div>
+  <div>مهر و امضای تحویل‌گیرنده</div>
+  <div>تأیید انباردار</div>
+</div>
+
+<p class="no-print" style="margin-top:24px">
+  <button onclick="window.print()">چاپ</button>
+  <a href="{% url 'inventory:doc_detail' doc.pk %}">بازگشت</a>
+</p>
+</body>
+</html>

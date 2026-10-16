@@ -51,11 +51,30 @@
         <a class="side-link {% if request.resolver_match.app_name == 'archive' %}active{% endif %}" href="{% url 'archive:list' %}">بایگانی و امحا</a>
         <a class="side-link {% if request.resolver_match.app_name == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}">تیکت‌ها</a>
         <a class="side-link {% if request.resolver_match.app_name == 'attendance' %}active{% endif %}" href="{% url 'attendance:list' %}">کنترل تردد</a>
-        <a class="side-link {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:list' %}">انبار</a>
         <a class="side-link {% if request.resolver_match.app_name == 'commerce' %}active{% endif %}" href="{% url 'commerce:list' %}">امور بازرگانی</a>
         <a class="side-link" href="{% url 'bridge:jump' %}">ورود به سامانه تیکتینگ</a>
         {% if user.is_superuser or perms.registry.manage_platform or perms.secretariat.view_all_letter %}
         <a class="side-link {% if request.resolver_match.app_name == 'registry' %}active{% endif %}" href="{% url 'registry:platform' %}">بستر یکپارچه</a>
+        {% endif %}
+      </div>
+      <div class="side-group">
+        <div class="label">انبار</div>
+        <a class="side-link {% if request.resolver_match.app_name == 'inventory' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'inventory:dashboard' %}">داشبورد انبار</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:list' %}">کالاها و موجودی</a>
+        {% if features.inventory.documents %}
+        <a class="side-link {% if request.resolver_match.url_name == 'doc_new' %}active{% endif %}" href="{% url 'inventory:doc_new' %}">ثبت سند انبار</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'doc_list' %}active{% endif %}" href="{% url 'inventory:doc_list' %}">اسناد انبار</a>
+        {% endif %}
+        <a class="side-link {% if request.resolver_match.url_name == 'count_list' %}active{% endif %}" href="{% url 'inventory:count_list' %}">انبارگردانی</a>
+        {% if features.inventory.price_lists %}
+        <a class="side-link {% if request.resolver_match.url_name == 'price_lists' %}active{% endif %}" href="{% url 'inventory:price_lists' %}">لیست‌های قیمت</a>
+        {% endif %}
+        {% if features.inventory.no_movement %}
+        <a class="side-link {% if request.resolver_match.url_name == 'no_movement' %}active{% endif %}" href="{% url 'inventory:no_movement' %}">گزارش‌های انبار</a>
+        {% endif %}
+        <a class="side-link {% if request.resolver_match.url_name == 'warehouses' %}active{% endif %}" href="{% url 'inventory:warehouses' %}">انبارها</a>
+        {% if features.inventory.financial_period %}
+        <a class="side-link {% if request.resolver_match.url_name == 'periods' %}active{% endif %}" href="{% url 'inventory:periods' %}">دوره‌های مالی</a>
         {% endif %}
       </div>
       <div class="side-group">

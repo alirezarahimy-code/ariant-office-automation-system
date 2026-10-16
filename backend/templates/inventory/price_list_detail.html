@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}لیست قیمت {{ price_list.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>لیست قیمت «{{ price_list.name }}»</h1><p class="sub">قیمت تک‌تک کالاها یا تغییر دسته‌ای درصدی</p></div>
+  <div class="actions"><a href="{% url 'inventory:price_lists' %}" class="btn">همه لیست‌ها</a></div>
+</div>
+
+{% if can_manage %}
+<div class="card">
+  <div class="card-head"><div class="card-title">قیمت‌گذاری دسته‌ای</div></div>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="batch">
+    <div class="field">
+      <label>درصد تغییر (مثبت = افزایش، منفی = کاهش)</label>
+      <input type="text" name="percent" placeholder="10">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit"
+              onclick="return confirm('قیمت همه کالاهای این لیست تغییر کند؟');">اعمال تغییر دسته‌ای</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <div class="card-head"><div class="card-title">ثبت قیمت کالا</div></div>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="set">
+    <div class="field">
+      <label>کالا</label>
+      <select name="item_id" required>
+        {% for row in rows %}<option value="{{ row.item.pk }}">{{ row.item.code }} — {{ row.item.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>قیمت (ریال)</label>
+      <input type="text" name="price" required>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" type="submit">ثبت قیمت</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<div class="table-wrap" style="margin-top:12px">
+<table class="table">
+  <thead><tr><th>کد</th><th>نام کالا</th><th>قیمت این لیست (ریال)</th><th>آخرین قیمت خرید</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="num">{{ row.item.code }}</td>
+      <td><a class="row-link" href="{% url 'inventory:detail' row.item.pk %}">{{ row.item.name }}</a></td>
+      <td class="num">{% if row.entry %}{{ row.entry.price|fa }}{% else %}—{% endif %}</td>
+      <td class="num">{{ row.item.last_purchase_price|default_if_none:'—'|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">کالایی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

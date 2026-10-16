@@ -19,7 +19,11 @@
 </form>
 
 <div class="stats">
+  {% if show_value %}
   <div class="stat"><span class="label">ارزش کل موجودی (ریال)</span><span class="value num">{{ data.total|fa }}</span></div>
+  {% else %}
+  <div class="stat"><span class="label">ارزش کل موجودی</span><span class="value num">—</span><span class="tiny muted">مشاهده ارزش ریالی نیاز به مجوز دارد</span></div>
+  {% endif %}
 </div>
 
 <table class="table">
@@ -30,8 +34,8 @@
       <td class="num">{{ row.item.code }}</td>
       <td>{{ row.item.name }}</td>
       <td class="num">{{ row.stock|fa }}</td>
-      <td class="num">{{ row.avg_price|fa }}</td>
-      <td class="num">{{ row.value|fa }}</td>
+      {% if show_value %}<td class="num">{{ row.avg_price|fa }}</td>
+      <td class="num">{{ row.value|fa }}</td>{% else %}<td class="num">—</td><td class="num">—</td>{% endif %}
     </tr>
   {% empty %}
     <tr><td colspan="5">موجودی‌ای ثبت نشده است.</td></tr>
