@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}پرونده‌ها{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>پرونده‌های مکاتباتی</h1>
+    <p class="page-sub">واحد کار دبیرخانه — همه نامه‌های یک ماجرا در یک کلاسور</p>
+  </div>
+  <a class="btn" href="{% url 'secretariat:case_file_new' %}">پرونده جدید</a>
+</div>
+<div class="card">
+  <form method="get" class="filter-row">
+    <input type="text" name="q" value="{{ q }}" placeholder="جست‌وجوی عنوان/شماره…">
+    <select name="status">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="open" {% if status == 'open' %}selected{% endif %}>باز</option>
+      <option value="closed" {% if status == 'closed' %}selected{% endif %}>بسته</option>
+      <option value="archived" {% if status == 'archived' %}selected{% endif %}>بایگانی‌شده</option>
+    </select>
+    <button class="btn btn-sm" type="submit">فیلتر</button>
+  </form>
+  <table class="table">
+    <thead><tr><th>شماره پرونده</th><th>عنوان</th><th>وضعیت</th><th>مسئول</th><th>تعداد نامه</th><th></th></tr></thead>
+    <tbody>
+      {% for cf in rows %}
+      <tr>
+        <td>{{ cf.number }}</td>
+        <td>{{ cf.title }}</td>
+        <td><span class="chip">{{ cf.get_status_display }}</span></td>
+        <td>{{ cf.owner_user.get_full_name|default:'—' }}</td>
+        <td>{{ cf.n_letters|fa }}</td>
+        <td><a class="btn btn-sm" href="{% url 'secretariat:case_file_detail' cf.pk %}">باز کردن</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-muted">هنوز پرونده‌ای ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

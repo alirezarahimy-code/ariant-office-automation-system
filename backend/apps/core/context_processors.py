@@ -27,3 +27,21 @@ def platform_context(request):
     if request.user.is_authenticated:
         ctx['UNREAD_NOTIFICATIONS'] = request.user.notifications.filter(is_read=False).count()
     return ctx
+
+
+def feature_flags(request):
+    """کلیدهای قابلیت برای قالب‌ها: {% if features.secretariat_casefiles %}"""
+    from apps.core.services import feature_enabled
+    codes = [
+        'secretariat.casefiles', 'secretariat.register_book', 'secretariat.index_book',
+        'secretariat.topics', 'secretariat.register_check', 'secretariat.signatures',
+        'secretariat.revisions_lock', 'secretariat.copy_action', 'secretariat.sla',
+        'secretariat.read_receipt', 'secretariat.number_reserve', 'secretariat.correspondents',
+        'secretariat.frequent_phrases', 'secretariat.memo_letters', 'secretariat.paraph',
+        'secretariat.answer_pairing', 'secretariat.global_search',
+    ]
+    nested: dict = {}
+    for c in codes:
+        group, key = c.split('.', 1)
+        nested.setdefault(group, {})[key] = feature_enabled(c)
+    return {'features': nested}

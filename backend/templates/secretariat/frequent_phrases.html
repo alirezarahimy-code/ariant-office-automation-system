@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}عبارت‌های پرتکرار{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>موضوعات و شرح‌های پرتکرار</h1>
+  <p class="page-sub">برای سرعت بخشیدن به ثبت نامه — الگوهای پرکاربرد سازمان</p>
+</div></div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نوع</th><th>عنوان</th><th>متن</th></tr></thead>
+    <tbody>
+      {% for p in rows %}
+      <tr><td>{{ p.get_scope_display }}</td><td>{{ p.title }}</td><td>{{ p.text|truncatechars:120 }}</td></tr>
+      {% empty %}
+      <tr><td colspan="3" class="text-muted">عبارتی ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>افزودن عبارت</h3>
+  <form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}
+    <button class="btn" type="submit">ثبت</button></form>
+</div>
+{% endblock %}

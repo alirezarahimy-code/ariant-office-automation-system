@@ -66,6 +66,7 @@ class Letter(TimeStampedModel, SoftDeleteModel):
         INCOMING = 'incoming', 'وارده'
         OUTGOING = 'outgoing', 'صادره'
         INTERNAL = 'internal', 'داخلی'
+        MEMO = 'memo', 'یادداشتی'
 
     class Priority(models.TextChoices):
         NORMAL = 'normal', 'عادی'
@@ -76,6 +77,7 @@ class Letter(TimeStampedModel, SoftDeleteModel):
         NORMAL = 'normal', 'عادی'
         INTERNAL = 'internal', 'داخلی'
         CONFIDENTIAL = 'confidential', 'محرمانه'
+        VERY_CONFIDENTIAL = 'very_confidential', 'خیلی محرمانه'
         SECRET = 'secret', 'سری'
 
     class DeliveryMethod(models.TextChoices):
@@ -103,6 +105,7 @@ class Letter(TimeStampedModel, SoftDeleteModel):
         LetterType.INCOMING: 'و',
         LetterType.OUTGOING: 'ص',
         LetterType.INTERNAL: 'د',
+        LetterType.MEMO: 'ی',
     }
 
     office = models.ForeignKey(
@@ -129,7 +132,7 @@ class Letter(TimeStampedModel, SoftDeleteModel):
     priority = models.CharField(
         'درجه فوریت', max_length=10, choices=Priority.choices, default=Priority.NORMAL)
     confidentiality = models.CharField(
-        'سطح محرمانگی', max_length=12, choices=Confidentiality.choices,
+        'سطح محرمانگی', max_length=20, choices=Confidentiality.choices,
         default=Confidentiality.NORMAL)
     delivery_method = models.CharField(
         'شیوه ارسال', max_length=12, choices=DeliveryMethod.choices,
@@ -142,6 +145,23 @@ class Letter(TimeStampedModel, SoftDeleteModel):
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name='ثبت‌کننده', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='created_letters')
+
+    # ── لایه حرفه‌ای (مطابق سامانه‌های مرجع) ──
+    case_file = models.ForeignKey(
+        'CaseFile', verbose_name='پرونده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='letters')
+    correspondent = models.ForeignKey(
+        'Correspondent', verbose_name='طرف مکاتبه', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='letters')
+    topics = models.ManyToManyField(
+        'Topic', verbose_name='موضوعات', blank=True, related_name='letters')
+    keywords = models.ManyToManyField(
+        'Keyword', verbose_name='کلیدواژه‌ها', blank=True, related_name='letters')
+    locked_at = models.DateTimeField('زمان قفل', null=True, blank=True)
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='قفل‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='locked_letters')
+    current_revision = models.PositiveIntegerField('نسخه جاری', default=1)
 
     history = HistoricalRecords()
 
@@ -206,6 +226,19 @@ class Referral(TimeStampedModel):
     status = models.CharField(
         'وضعیت', max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
     acted_at = models.DateTimeField('زمان اقدام', null=True, blank=True)
+    # ── لایه حرفه‌ای ──
+    target_kind = models.CharField(
+        'نوع مقصد', max_length=10,
+        choices=[('user', 'شخص'), ('position', 'جایگاه'), ('department', 'واحد')],
+        default='user')
+    target_position = models.ForeignKey(
+        'organization.Position', verbose_name='جایگاه مقصد', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='referrals')
+    return_note = models.TextField('دلیل بازگشت جهت اصلاح', blank=True, default='')
+    returned_at = models.DateTimeField('زمان بازگشت', null=True, blank=True)
+    sla_due_at = models.DateTimeField('مهلت SLA', null=True, blank=True, db_index=True)
+    warned_at = models.DateTimeField('زمان یادآوری', null=True, blank=True)
+    overdue_at = models.DateTimeField('زمان عبور از مهلت', null=True, blank=True)
 
     class Meta:
         verbose_name = 'ارجاع'
@@ -213,8 +246,9 @@ class Referral(TimeStampedModel):
         ordering = ['created_at']
 
     def clean(self):
-        if self.to_user_id is None and self.to_department_id is None:
-            raise ValidationError('ارجاع باید گیرنده (شخص یا واحد) داشته باشد.')
+        if (self.to_user_id is None and self.to_department_id is None
+                and self.target_position_id is None):
+            raise ValidationError('ارجاع باید گیرنده (شخص، جایگاه یا واحد) داشته باشد.')
 
     def __str__(self) -> str:
         target = self.to_user or self.to_department
@@ -234,6 +268,15 @@ class Copy(TimeStampedModel):
         on_delete=models.SET_NULL, related_name='received_copies')
     note = models.TextField('یادداشت', blank=True, default='')
     viewed_at = models.DateTimeField('زمان مشاهده', null=True, blank=True)
+    # ── رونوشت اقدامی/اطلاعی (مطابق دبیرخانه استاندارد) ──
+    kind = models.CharField(
+        'نوع رونوشت', max_length=10,
+        choices=[('info', 'جهت اطلاع'), ('action', 'جهت اقدام')], default='info')
+    action_note = models.TextField('شرح اقدام', blank=True, default='')
+    done_at = models.DateTimeField('زمان انجام اقدام', null=True, blank=True)
+    done_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='انجام‌دهنده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='done_copies')
 
     class Meta:
         verbose_name = 'رونوشت'
@@ -300,6 +343,12 @@ class LetterEvent(TimeStampedModel):
         CLOSED = 'closed', 'بستن'
         ARCHIVED = 'archived', 'بایگانی'
         NOTE = 'note', 'یادداشت'
+        CHECKED = 'checked', 'کنترل ثبت'
+        APPROVED = 'approved', 'تأیید/امضا'
+        REJECTED = 'rejected', 'رد'
+        EDITED = 'edited', 'ویرایش'
+        LOCKED = 'locked', 'قفل'
+        RETURNED = 'returned', 'بازگشت جهت اصلاح'
 
     letter = models.ForeignKey(
         Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='events')
@@ -359,6 +408,7 @@ class LetterRelation(TimeStampedModel):
         FOLLOW = 'follow', 'پیرو'
         REF = 'ref', 'عطف'
         RETURN = 'return', 'بازگشت'
+        ANSWER = 'answer', 'پاسخ'
 
     letter = models.ForeignKey(
         Letter, verbose_name='نامه', on_delete=models.CASCADE,
@@ -414,6 +464,412 @@ class LetterTemplate(TimeStampedModel):
         verbose_name = 'الگوی نامه'
         verbose_name_plural = 'الگوهای نامه'
         ordering = ['title']
+
+    def __str__(self) -> str:
+        return self.title
+
+
+# ════════════════════════════════════════════════════════════════
+# لایه حرفه‌ای دبیرخانه — مطابق رفتار سامانه‌های مرجع (دیدگاه/راهکاران/کارما)
+# ════════════════════════════════════════════════════════════════
+
+class Correspondent(TimeStampedModel):
+    """طرف مکاتبه: شخص حقیقی یا حقوقی — با سابقه خودکار مکاتبات."""
+
+    class Kind(models.TextChoices):
+        PERSON = 'person', 'شخص حقیقی'
+        ORG = 'org', 'شخص حقوقی / سازمان'
+
+    kind = models.CharField('نوع', max_length=10, choices=Kind.choices, default=Kind.ORG)
+    title = models.CharField('نام/عنوان', max_length=200)
+    national_id = models.CharField('شناسه ملی/کد ملی', max_length=20, blank=True, default='')
+    phone = models.CharField('تلفن', max_length=30, blank=True, default='')
+    address = models.TextField('نشانی', blank=True, default='')
+    is_active = models.BooleanField('فعال', default=True)
+
+    class Meta:
+        verbose_name = 'طرف مکاتبه'
+        verbose_name_plural = 'طرف‌های مکاتبه'
+        ordering = ['title']
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Topic(TimeStampedModel):
+    """درخت موضوعات نامه — برای دفتر اندکس و طبقه‌بندی."""
+
+    parent = models.ForeignKey(
+        'self', verbose_name='موضوع والد', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='children')
+    title = models.CharField('عنوان موضوع', max_length=150)
+    code = models.CharField('کد', max_length=20, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'موضوع'
+        verbose_name_plural = 'موضوعات'
+        ordering = ['code', 'title']
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Keyword(TimeStampedModel):
+    """کلیدواژه/برچسب نامه."""
+
+    title = models.CharField('عنوان', max_length=100, unique=True)
+
+    class Meta:
+        verbose_name = 'کلیدواژه'
+        verbose_name_plural = 'کلیدواژه‌ها'
+        ordering = ['title']
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class CaseFile(TimeStampedModel):
+    """پرونده (کلاسور) مکاتباتی — واحد کار واقعی دبیرخانه: چند نامه در یک ماجرا."""
+
+    class Status(models.TextChoices):
+        OPEN = 'open', 'باز'
+        CLOSED = 'closed', 'بسته'
+        ARCHIVED = 'archived', 'بایگانی‌شده'
+
+    number = models.CharField('شماره پرونده', max_length=40, unique=True)
+    title = models.CharField('عنوان', max_length=300)
+    description = models.TextField('شرح', blank=True, default='')
+    topic = models.ForeignKey(
+        Topic, verbose_name='موضوع', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='case_files')
+    owner_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='مسئول پرونده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='owned_case_files')
+    owner_position = models.ForeignKey(
+        'organization.Position', verbose_name='جایگاه مسئول', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='case_files')
+    status = models.CharField(
+        'وضعیت', max_length=10, choices=Status.choices, default=Status.OPEN, db_index=True)
+    confidentiality = models.CharField(
+        'سطح محرمانگی', max_length=20, choices=Letter.Confidentiality.choices,
+        default=Letter.Confidentiality.NORMAL)
+    opened_at = jmodels.jDateField('تاریخ تشکیل', null=True, blank=True)
+    closed_at = jmodels.jDateField('تاریخ بستن', null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ایجادکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='created_case_files')
+
+    class Meta:
+        verbose_name = 'پرونده'
+        verbose_name_plural = 'پرونده‌ها'
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        return f'{self.number} — {self.title[:50]}'
+
+    @property
+    def letter_count(self) -> int:
+        return self.letters.count()
+
+
+class CaseFileEvent(TimeStampedModel):
+    """رویداد پرونده (باز/بستن/بازگشایی/افزودن نامه)."""
+
+    ACTION_OPEN = 'open'
+    ACTION_CLOSE = 'close'
+    ACTION_REOPEN = 'reopen'
+    ACTION_ADD_LETTER = 'add_letter'
+    ACTION_CHOICES = [
+        (ACTION_OPEN, 'تشکیل'), (ACTION_CLOSE, 'بستن'),
+        (ACTION_REOPEN, 'بازگشایی'), (ACTION_ADD_LETTER, 'افزودن نامه'),
+    ]
+    case_file = models.ForeignKey(
+        CaseFile, verbose_name='پرونده', on_delete=models.CASCADE, related_name='events')
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر', null=True, blank=True,
+        on_delete=models.SET_NULL)
+    action = models.CharField('اقدام', max_length=20, choices=ACTION_CHOICES)
+    note = models.TextField('یادداشت', blank=True, default='')
+
+    class Meta:
+        verbose_name = 'رویداد پرونده'
+        verbose_name_plural = 'رویدادهای پرونده'
+        ordering = ['created_at']
+
+
+class RegisterEntry(TimeStampedModel):
+    """ردیف دفتر اندیکاتور — snapshot تغییرناپذیر ثبت رسمی (ستون‌های دفتر ۱۲ ستونه)."""
+
+    office = models.ForeignKey(
+        Office, verbose_name='دبیرخانه', on_delete=models.CASCADE, related_name='register_entries')
+    jalali_year = models.PositiveSmallIntegerField('سال شمسی')
+    row_number = models.PositiveIntegerField('شماره ردیف')
+    letter = models.OneToOneField(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='register_entry')
+    summary = models.CharField('شرح نامه', max_length=300, blank=True, default='')
+    attachment_count = models.PositiveSmallIntegerField('تعداد ضمائم', default=0)
+    incoming_ref = models.CharField(
+        'شماره/تاریخ نامه رسیده', max_length=120, blank=True, default='')
+    referred_to = models.CharField('ارجاع به', max_length=300, blank=True, default='')
+    expected_return_date = jmodels.jDateField('تاریخ تقریبی برگشت', null=True, blank=True)
+    issue_date = jmodels.jDateField('تاریخ صدور', null=True, blank=True)
+    copy_to = models.CharField('رونوشت به', max_length=300, blank=True, default='')
+    prev_row = models.ForeignKey(
+        'self', verbose_name='ردیف قبل', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='next_rows')
+    file_number = models.CharField('شماره پرونده', max_length=40, blank=True, default='')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ثبت‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL)
+
+    class Meta:
+        verbose_name = 'ردیف دفتر اندیکاتور'
+        verbose_name_plural = 'دفتر اندیکاتور'
+        ordering = ['office', 'jalali_year', 'row_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['office', 'jalali_year', 'row_number'],
+                name='uq_register_row'),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.jalali_year}/{self.row_number} — {self.summary[:40]}'
+
+
+class RegisterCheck(TimeStampedModel):
+    """کنترل پیش از ثبت (چک‌لیست مسئول دفتر) — گیت رسمی قبل از شماره‌گذاری نهایی."""
+
+    class Result(models.TextChoices):
+        PASS = 'pass', 'تأیید و ثبت'
+        FAIL = 'fail', 'برگشت جهت اصلاح'
+
+    letter = models.OneToOneField(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='register_check')
+    checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='کنترل‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL)
+    checked_at = models.DateTimeField('زمان کنترل', null=True, blank=True)
+    has_signature = models.BooleanField('امضا/تأیید مدیر دارد', default=False)
+    copies_count_ok = models.BooleanField('تعداد نسخ/رونوشت‌ها درست است', default=False)
+    attachments_ok = models.BooleanField('ضمائم با تعداد اعلام‌شده مطابقت دارد', default=False)
+    dates_ok = models.BooleanField('شماره و تاریخ درج شده', default=False)
+    addressee_ok = models.BooleanField('عنوان گیرنده/رونوشت صحیح است', default=False)
+    note = models.TextField('یادداشت', blank=True, default='')
+    result = models.CharField('نتیجه', max_length=6, choices=Result.choices, default=Result.FAIL)
+
+    class Meta:
+        verbose_name = 'کنترل ثبت'
+        verbose_name_plural = 'کنترل‌های ثبت'
+
+    def __str__(self) -> str:
+        return f'کنترل نامه {self.letter_id}: {self.get_result_display()}'
+
+
+class LetterRevision(TimeStampedModel):
+    """نسخه متن نامه — هر تغییر مجاز یک snapshot؛ مبنای امضای «نسخه مشخص»."""
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='revisions')
+    revision_no = models.PositiveIntegerField('شماره نسخه')
+    subject = models.CharField('موضوع', max_length=300)
+    body = models.TextField('متن')
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ویرایش‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL)
+    reason = models.CharField('دلیل', max_length=300, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'نسخه نامه'
+        verbose_name_plural = 'نسخه‌های نامه'
+        ordering = ['-revision_no']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['letter', 'revision_no'], name='uq_letter_revision'),
+        ]
+
+    def __str__(self) -> str:
+        return f'نامه {self.letter_id} — نسخه {self.revision_no}'
+
+
+class SignatureRequest(TimeStampedModel):
+    """درخواست امضای چندنفره — سری یا موازی، روی یک نسخه مشخص."""
+
+    class Mode(models.TextChoices):
+        SEQUENTIAL = 'sequential', 'سری (نوبتی)'
+        PARALLEL = 'parallel', 'موازی (هم‌زمان)'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'در جریان'
+        COMPLETED = 'completed', 'تکمیل‌شده'
+        REJECTED = 'rejected', 'ردشده'
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='signature_requests')
+    mode = models.CharField('حالت', max_length=12, choices=Mode.choices, default=Mode.SEQUENTIAL)
+    status = models.CharField(
+        'وضعیت', max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='ایجادکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='created_signature_requests')
+
+    class Meta:
+        verbose_name = 'درخواست امضا'
+        verbose_name_plural = 'درخواست‌های امضا'
+        ordering = ['-created_at']
+
+    @property
+    def approved_count(self) -> int:
+        return self.steps.filter(status=SignatureStep.Status.APPROVED).count()
+
+    @property
+    def total_count(self) -> int:
+        return self.steps.count()
+
+
+class SignatureStep(TimeStampedModel):
+    """گام امضا — هر امضاکننده روی «نسخه امضاشده» نظر می‌دهد."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'در انتظار'
+        APPROVED = 'approved', 'تأییدشده'
+        REJECTED = 'rejected', 'ردشده'
+        CHANGES = 'changes', 'درخواست اصلاح'
+
+    request = models.ForeignKey(
+        SignatureRequest, verbose_name='درخواست', on_delete=models.CASCADE, related_name='steps')
+    order = models.PositiveSmallIntegerField('ترتیب', default=1)
+    signer_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='امضاکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='signature_steps')
+    signer_position = models.ForeignKey(
+        'organization.Position', verbose_name='جایگاه امضاکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='signature_steps')
+    signer_label = models.CharField('سمت امضا', max_length=150, blank=True, default='')
+    status = models.CharField(
+        'وضعیت', max_length=10, choices=Status.choices, default=Status.PENDING)
+    comment = models.TextField('نظر', blank=True, default='')
+    signed_at = models.DateTimeField('زمان امضا', null=True, blank=True)
+    signed_revision = models.ForeignKey(
+        LetterRevision, verbose_name='نسخه امضاشده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='signed_steps')
+
+    class Meta:
+        verbose_name = 'گام امضا'
+        verbose_name_plural = 'گام‌های امضا'
+        ordering = ['request', 'order']
+
+    def __str__(self) -> str:
+        who = self.signer_user or self.signer_label or self.signer_position
+        return f'امضا: {who} — {self.get_status_display()}'
+
+
+class ReadReceipt(TimeStampedModel):
+    """رسید «دریافت شد» — چه کسی، کِی، از کدام مسیر دید."""
+
+    class Source(models.TextChoices):
+        REFERRAL = 'referral', 'ارجاع'
+        COPY = 'copy', 'رونوشت'
+        DIRECT = 'direct', 'مستقیم'
+        POSITION = 'position', 'جایگاه'
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='read_receipts')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر', on_delete=models.CASCADE,
+        related_name='letter_read_receipts')
+    source = models.CharField('مبدأ', max_length=12, choices=Source.choices, default=Source.DIRECT)
+    seen_at = models.DateTimeField('زمان رؤیت', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'رسید رؤیت'
+        verbose_name_plural = 'رسیدهای رؤیت'
+        ordering = ['-seen_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['letter', 'user', 'source'], name='uq_read_receipt'),
+        ]
+
+
+class SLARule(TimeStampedModel):
+    """قاعده مهلت اقدام — بر اساس نوع/اولویت نامه (ساعت کاری)."""
+
+    name = models.CharField('نام قاعده', max_length=150)
+    letter_type = models.CharField(
+        'نوع نامه', max_length=10, choices=Letter.LetterType.choices, blank=True, default='')
+    priority = models.CharField(
+        'اولویت', max_length=10, choices=Letter.Priority.choices, blank=True, default='')
+    action_hours = models.PositiveIntegerField('مهلت اقدام (ساعت)')
+    warn_hours_before = models.PositiveIntegerField('یادآوری قبل از موعد (ساعت)', default=24)
+    is_active = models.BooleanField('فعال', default=True)
+
+    class Meta:
+        verbose_name = 'قاعده SLA'
+        verbose_name_plural = 'قاعده‌های SLA'
+        ordering = ['letter_type', 'priority']
+
+    def __str__(self) -> str:
+        return f'{self.name} ({self.action_hours} ساعت)'
+
+
+class NumberReservation(TimeStampedModel):
+    """رزرو شماره — «شماره بگیر، بعداً صادر کن» یا شماره آزاد."""
+
+    office = models.ForeignKey(
+        Office, verbose_name='دبیرخانه', on_delete=models.CASCADE, related_name='number_reservations')
+    letter_type = models.CharField('نوع نامه', max_length=10, choices=Letter.LetterType.choices)
+    jalali_year = models.PositiveSmallIntegerField('سال شمسی')
+    serial = models.PositiveIntegerField('شماره رزروشده')
+    reserved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='رزروکننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='number_reservations')
+    note = models.CharField('یادداشت', max_length=200, blank=True, default='')
+    used_by_letter = models.ForeignKey(
+        Letter, verbose_name='نامه مصرف‌کننده', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='number_reservations')
+
+    class Meta:
+        verbose_name = 'رزرو شماره'
+        verbose_name_plural = 'رزروهای شماره'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['office', 'letter_type', 'jalali_year', 'serial'],
+                name='uq_number_reservation'),
+        ]
+
+
+class Paraph(TimeStampedModel):
+    """پاراف — «دیده شد» کوتاه روی نامه، جدا از هامش."""
+
+    letter = models.ForeignKey(
+        Letter, verbose_name='نامه', on_delete=models.CASCADE, related_name='paraphs')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='paraphs')
+    text = models.TextField('متن پاراف')
+
+    class Meta:
+        verbose_name = 'پاراف'
+        verbose_name_plural = 'پاراف‌ها'
+        ordering = ['created_at']
+
+
+class FrequentPhrase(TimeStampedModel):
+    """موضوع/شرح پرتکرار — برای سرعت بخشیدن به ثبت."""
+
+    class Scope(models.TextChoices):
+        SUBJECT = 'subject', 'موضوع'
+        BODY = 'body', 'شرح/متن'
+        NOTE = 'note', 'دستور ارجاع'
+
+    scope = models.CharField('نوع', max_length=10, choices=Scope.choices, default=Scope.SUBJECT)
+    title = models.CharField('عنوان', max_length=200)
+    text = models.TextField('متن')
+
+    class Meta:
+        verbose_name = 'عبارت پرتکرار'
+        verbose_name_plural = 'عبارت‌های پرتکرار'
+        ordering = ['scope', 'title']
 
     def __str__(self) -> str:
         return self.title

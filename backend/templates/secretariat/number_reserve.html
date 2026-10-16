@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}رزرو شماره{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>رزرو شماره نامه</h1>
+  <p class="page-sub">«شماره بگیر، بعداً صادر کن» — شماره از توالی رسمی کسر می‌شود</p>
+</div></div>
+<div class="card">
+  <form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}
+    <button class="btn" type="submit">رزرو شماره</button></form>
+</div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>شماره</th><th>نوع</th><th>رزروکننده</th><th>یادداشت</th><th>مصرف‌شده</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.jalali_year|fa }}/{{ r.serial|fa }}</td>
+        <td>{{ r.get_letter_type_display }}</td>
+        <td>{{ r.reserved_by }}</td>
+        <td>{{ r.note }}</td>
+        <td>{% if r.used_by_letter %}{{ r.used_by_letter.number_display }}{% else %}—{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted">رزروی ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

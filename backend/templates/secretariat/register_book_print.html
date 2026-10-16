@@ -1,0 +1,45 @@
+{% load static persian_tags %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>دفتر اندیکاتور</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; direction: rtl; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #333; padding: 4px 6px; text-align: center; }
+    th { background: #eee; }
+    h1 { font-size: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>دفتر اندیکاتور</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ردیف</th><th>شماره قبل</th><th>تاریخ</th><th>شرح نامه</th><th>ضمائم</th>
+        <th>شماره/تاریخ رسیده</th><th>ارجاع به</th><th>برگشت تقریبی</th><th>تاریخ صدور</th>
+        <th>رونوشت به</th><th>شماره پرونده</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.row_number|fa }}</td>
+        <td>{{ r.prev_row.row_number|fa|default:'—' }}</td>
+        <td>{{ r.letter.letter_date|jdate }}</td>
+        <td>{{ r.summary }}</td>
+        <td>{{ r.attachment_count|fa }}</td>
+        <td>{{ r.incoming_ref }}</td>
+        <td>{{ r.referred_to }}</td>
+        <td>{{ r.expected_return_date|jdate }}</td>
+        <td>{{ r.issue_date|jdate }}</td>
+        <td>{{ r.copy_to }}</td>
+        <td>{{ r.file_number }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <script>window.print();</script>
+</body>
+</html>

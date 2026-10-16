@@ -45,6 +45,30 @@
   <a class="tab {% if tab == 'tickets' %}active{% endif %}" href="?tab=tickets">تیکت‌های من <span class="count">({{ tickets|length|fa }})</span></a>
 </div>
 
+{% if action_copies %}
+<div class="card">
+  <div class="card-title">رونوشت‌های «جهت اقدام» <span class="pill warn">{{ action_copies|length|fa }}</span></div>
+  <table class="table">
+    <thead><tr><th>نامه</th><th>از</th><th>شرح اقدام</th><th></th></tr></thead>
+    <tbody>
+      {% for c in action_copies %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' c.letter_id %}">{{ c.letter.number_display }}</a> — {{ c.letter.subject|truncatechars:40 }}</td>
+        <td>{{ c.letter.created_by.get_full_name|default:'—' }}</td>
+        <td>{{ c.action_note|default:c.note|truncatechars:60 }}</td>
+        <td>
+          <form method="post" action="{% url 'secretariat:copy_done' c.pk %}">{% csrf_token %}
+            <button class="btn btn-sm" type="submit">انجام شد</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+<div class="hidden-tabs-end" style="display:none">
+</div>
+
 {% if tab == 'waiting' %}
   {% include 'partials/_letter_table.html' with letters=waiting %}
 {% elif tab == 'progress' %}

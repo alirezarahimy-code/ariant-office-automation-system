@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}تصمیم امضا{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>گام امضا — {{ step.get_status_display }}</h1>
+  <p class="page-sub">نامه: {{ letter.number_display }} — {{ letter.subject }} — نسخه {{ letter.current_revision|fa }}</p>
+</div></div>
+<div class="card">
+  <pre class="letter-body">{{ letter.body }}</pre>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">ثبت تصمیم</button>
+  </form>
+</div>
+{% endblock %}

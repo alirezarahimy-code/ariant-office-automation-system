@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}قابلیت‌های سامانه{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>قابلیت‌های سامانه</h1>
+    <p class="page-sub">اجزا همیشه در سامانه حضور دارند؛ در صورت عدم نیاز سازمان، غیرفعالشان کنید و هر وقت لازم شد دوباره روشن.</p>
+  </div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>قابلیت</th>
+        <th>گروه</th>
+        <th>وضعیت</th>
+        <th>کلید</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          <strong>{{ row.title }}</strong>
+          <div class="text-muted small">{{ row.code }}</div>
+        </td>
+        <td><span class="chip">{{ row.group }}</span></td>
+        <td>
+          {% if row.is_enabled %}
+            <span class="chip chip-success">فعال</span>
+          {% else %}
+            <span class="chip chip-muted">غیرفعال</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="code" value="{{ row.code }}">
+            {% if row.is_enabled %}
+              <input type="hidden" name="is_enabled" value="0">
+              <button type="submit" class="btn btn-sm btn-outline">غیرفعال کن</button>
+            {% else %}
+              <input type="hidden" name="is_enabled" value="1">
+              <button type="submit" class="btn btn-sm">فعال کن</button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

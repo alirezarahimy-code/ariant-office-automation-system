@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}معوقات و مهلت‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>معوقات و مهلت‌های اقدام</h1>
+  <p class="page-sub">موتور یادآوری SLA — نوار وضعیت: سبز (وقت هست) / قرمز (عبور از مهلت)</p>
+</div>
+<a class="btn btn-outline" href="{% url 'secretariat:sla_rules' %}">قواعد SLA</a>
+</div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نامه</th><th>گیرنده</th><th>مهلت</th><th>وضعیت</th><th></th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' r.letter_id %}">{{ r.letter.number_display }}</a> — {{ r.letter.subject|truncatechars:50 }}</td>
+        <td>{{ r.to_user.get_full_name|default:r.to_department }}</td>
+        <td>{{ r.sla_due_at }}</td>
+        <td>
+          {% if r.overdue_at %}<span class="chip chip-danger">عبور از مهلت</span>
+          {% elif r.warned_at %}<span class="chip chip-warn">نزدیک به مهلت</span>
+          {% else %}<span class="chip chip-success">در مهلت</span>{% endif %}
+        </td>
+        <td><a class="btn btn-sm" href="{% url 'secretariat:letter_detail' r.letter_id %}">باز کردن</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted">ارجاعی با مهلت SLA ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}پرونده {{ case_file.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ case_file.title }}</h1>
+    <p class="page-sub">شماره پرونده: {{ case_file.number }} — {{ case_file.get_status_display }}
+      {% if case_file.topic %} — موضوع: {{ case_file.topic }}{% endif %}</p>
+  </div>
+  <div class="btn-row">
+    {% if can_manage %}
+      {% if case_file.status == 'open' %}
+      <form method="post" action="{% url 'secretariat:case_file_close' case_file.pk %}">{% csrf_token %}
+        <button class="btn btn-outline" type="submit">بستن پرونده</button></form>
+      {% else %}
+      <form method="post" action="{% url 'secretariat:case_file_reopen' case_file.pk %}">{% csrf_token %}
+        <button class="btn" type="submit">بازگشایی</button></form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h3>نامه‌های پرونده (تایم‌لاین)</h3>
+  <table class="table">
+    <thead><tr><th>شماره</th><th>نوع</th><th>موضوع</th><th>تاریخ</th><th>وضعیت</th></tr></thead>
+    <tbody>
+      {% for l in letters %}
+      <tr>
+        <td><a href="{% url 'secretariat:letter_detail' l.pk %}">{{ l.number_display }}</a></td>
+        <td><span class="chip">{{ l.get_letter_type_display }}</span></td>
+        <td>{{ l.subject }}</td>
+        <td>{{ l.letter_date|jdate }}</td>
+        <td>{{ l.get_status_display }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted">نامه‌ای در این پرونده نیست.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if can_manage %}
+<div class="card">
+  <h3>افزودن نامه به پرونده</h3>
+  <form method="post" action="{% url 'secretariat:case_file_add_letter' case_file.pk %}" class="form-grid">
+    {% csrf_token %}
+    {{ add_form.as_p }}
+    <button class="btn btn-sm" type="submit">افزودن</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3>رویدادهای پرونده</h3>
+  <ul>
+    {% for e in events %}
+    <li>{{ e.created_at }} — {{ e.actor }} — {{ e.get_action_display }} {{ e.note }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

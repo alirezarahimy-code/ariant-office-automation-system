@@ -18,3 +18,7 @@ urlpatterns = [
     path('users/', core_views.users_admin, name='users'),
     path('users/<int:pk>/edit/', core_views.users_admin_edit, name='users_edit'),
 ]
+
+urlpatterns += [
+    path('settings/features/', core_views.features_admin, name='features'),
+]

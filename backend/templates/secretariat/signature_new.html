@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}درخواست امضا{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>ارسال برای امضای چندنفره</h1>
+  <p class="page-sub">نامه: {{ letter.number_display }} — {{ letter.subject }}</p>
+</div></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">ارسال برای امضا</button>
+  </form>
+  <p class="text-muted small">در حالت «سری»، امضاها به ترتیب انتخاب انجام می‌شود؛ در حالت «موازی» همه هم‌زمان می‌توانند امضا کنند.</p>
+</div>
+{% endblock %}

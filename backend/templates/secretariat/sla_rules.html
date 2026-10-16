@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}قواعد SLA{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <h1>قواعد مهلت اقدام (SLA)</h1>
+  <p class="page-sub">مهلت خودکار ارجاع‌ها بر اساس نوع و اولویت نامه</p>
+</div></div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نام</th><th>نوع نامه</th><th>اولویت</th><th>مهلت (ساعت)</th><th>یادآوری</th><th>فعال</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ r.get_letter_type_display|default:'همه' }}</td>
+        <td>{{ r.get_priority_display|default:'همه' }}</td>
+        <td>{{ r.action_hours|fa }}</td>
+        <td>{{ r.warn_hours_before|fa }} ساعت قبل</td>
+        <td>{% if r.is_enabled %}✓{% else %}✗{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-muted">قاعده‌ای ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h3>قاعده تازه</h3>
+  <form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}
+    <button class="btn" type="submit">ثبت قاعده</button></form>
+</div>
+{% endblock %}
