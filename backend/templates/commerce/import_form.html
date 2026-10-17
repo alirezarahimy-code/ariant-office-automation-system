@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت محموله وارداتی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت محموله وارداتی</h1><p class="sub">پیش‌فاکتور ارزی تا ترخیص — هزینه‌های واردات به تفکیک مرحله</p></div>
+  <div class="actions"><a href="{% url 'commerce:import_list' %}" class="btn">فهرست محموله‌ها</a></div>
+</div>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>تأمین‌کننده خارجی <span class="req">*</span></label>
+      <select name="supplier_id" required>
+        {% for p in parties %}<option value="{{ p.pk }}">{{ p.code }} — {{ p.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>سفارش خرید مرتبط</label>
+      <select name="order_id">
+        <option value="">—</option>
+        {% for o in orders %}<option value="{{ o.pk }}">{{ o.number }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>ارز</label>
+      <select name="currency"><option value="USD">دلار</option><option value="EUR">یورو</option><option value="IRR">ریال</option></select>
+    </div>
+    <div class="field"><label>نرخ تسعیر (ریال)</label><input type="text" name="exchange_rate" value="1"></div>
+    <div class="field"><label>ارزش کالا (ارز)</label><input type="text" name="goods_value"></div>
+    <div class="field"><label>شماره پیش‌فاکتور</label><input type="text" name="proforma_no"></div>
+    <div class="field"><label>شماره اعتبار/حواله ارزی</label><input type="text" name="lc_no"></div>
+    <div class="field"><label>شماره بارنامه</label><input type="text" name="bl_no"></div>
+    <div class="field"><label>شماره اظهارنامه/ترخیص</label><input type="text" name="customs_no"></div>
+    <div class="field"><label>تاریخ پیش‌فاکتور</label><input type="text" name="proforma_date"></div>
+    <div class="field"><label>تاریخ بارنامه</label><input type="text" name="bl_date"></div>
+    <div class="field"><label>تاریخ ترخیص</label><input type="text" name="customs_date"></div>
+  </div>
+
+  <h3 style="margin:18px 0 8px">هزینه‌های واردات (ریال)</h3>
+  <div class="form-grid">
+    <div class="field"><label>حمل</label><input type="text" name="cost_freight" value="0"></div>
+    <div class="field"><label>بیمه</label><input type="text" name="cost_insurance" value="0"></div>
+    <div class="field"><label>گمرک</label><input type="text" name="cost_customs" value="0"></div>
+    <div class="field"><label>حق‌العمل ترخیص</label><input type="text" name="cost_clearing" value="0"></div>
+    <div class="field"><label>شرح</label><input type="text" name="description"></div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت محموله</button>
+    <a class="btn btn-ghost" href="{% url 'commerce:import_list' %}">انصراف</a>
+  </div>
+</form>
+{% endblock %}

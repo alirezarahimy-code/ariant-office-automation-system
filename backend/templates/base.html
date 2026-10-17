@@ -51,7 +51,33 @@
         <a class="side-link {% if request.resolver_match.app_name == 'archive' %}active{% endif %}" href="{% url 'archive:list' %}">بایگانی و امحا</a>
         <a class="side-link {% if request.resolver_match.app_name == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}">تیکت‌ها</a>
         <a class="side-link {% if request.resolver_match.app_name == 'attendance' %}active{% endif %}" href="{% url 'attendance:list' %}">کنترل تردد</a>
-        <a class="side-link {% if request.resolver_match.app_name == 'commerce' %}active{% endif %}" href="{% url 'commerce:list' %}">امور بازرگانی</a>
+      </div>
+      <div class="side-group">
+        <div class="label">بازرگانی</div>
+        <a class="side-link {% if request.resolver_match.app_name == 'commerce' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'commerce:dashboard' %}">داشبورد بازرگانی</a>
+        <a class="side-link {% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'commerce' %}active{% endif %}" href="{% url 'commerce:list' %}">درخواست خرید</a>
+        {% if features.commerce.parties %}
+        <a class="side-link {% if request.resolver_match.url_name == 'party_list' %}active{% endif %}" href="{% url 'commerce:party_list' %}">طرف‌های تجاری</a>
+        {% endif %}
+        {% if features.commerce.purchase_orders %}
+        <a class="side-link {% if request.resolver_match.url_name == 'order_list' %}active{% endif %}" href="{% url 'commerce:order_list' %}">سفارش‌های خرید</a>
+        {% endif %}
+        {% if features.commerce.purchase_invoices %}
+        <a class="side-link {% if request.resolver_match.url_name == 'invoice_list' %}active{% endif %}" href="{% url 'commerce:invoice_list' %}">فاکتورهای خرید</a>
+        {% endif %}
+        {% if features.commerce.sales %}
+        <a class="side-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}" href="{% url 'commerce:sales_list' %}">اسناد فروش</a>
+        {% endif %}
+        <a class="side-link {% if request.resolver_match.url_name == 'contract_list' %}active{% endif %}" href="{% url 'commerce:contract_list' %}">قراردادها</a>
+        {% if features.commerce.import_orders %}
+        <a class="side-link {% if request.resolver_match.url_name == 'import_list' %}active{% endif %}" href="{% url 'commerce:import_list' %}">خرید خارجی</a>
+        {% endif %}
+        {% if features.commerce.commitments %}
+        <a class="side-link {% if request.resolver_match.url_name == 'report_commitments' %}active{% endif %}" href="{% url 'commerce:report_commitments' %}">تعهدات باز</a>
+        {% endif %}
+      </div>
+      <div class="side-group">
+        <div class="label">اتصال</div>
         <a class="side-link" href="{% url 'bridge:jump' %}">ورود به سامانه تیکتینگ</a>
         {% if user.is_superuser or perms.registry.manage_platform or perms.secretariat.view_all_letter %}
         <a class="side-link {% if request.resolver_match.app_name == 'registry' %}active{% endif %}" href="{% url 'registry:platform' %}">بستر یکپارچه</a>

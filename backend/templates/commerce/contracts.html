@@ -40,6 +40,25 @@
       <input id="end_date" name="end_date" class="input num fa" inputmode="numeric" dir="ltr" style="text-align:right">
     </div>
   </div>
+  <div class="grid-2">
+    <div>
+      <label for="kind">نوع قرارداد</label>
+      <select id="kind" name="kind" class="select">
+        {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="party_id">طرف تجاری (کارت)</label>
+      <select id="party_id" name="party_id" class="select">
+        <option value="">—</option>
+        {% for p in parties %}<option value="{{ p.pk }}">{{ p.code }} — {{ p.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="guarantee_amount">مبلغ ضمانت (ریال)</label>
+      <input id="guarantee_amount" name="guarantee_amount" class="input num" dir="ltr" style="text-align:right" value="0">
+    </div>
+  </div>
   <div class="form-actions">
     <button class="btn btn-primary" type="submit">ثبت قرارداد</button>
   </div>

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}فاکتورهای خرید{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>فاکتورهای خرید</h1><p class="sub">فاکتور کالا/خدمت/دارایی — تخفیف، اضافات، مالیات و تقسیط</p></div>
+  <div class="actions">
+    <a href="{% url 'commerce:invoice_new' %}" class="btn btn-primary">ثبت فاکتور خرید</a>
+    <a href="{% url 'commerce:dashboard' %}" class="btn">داشبورد بازرگانی</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <select name="status">
+    <option value="">همه وضعیت‌ها</option>
+    {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">فیلتر</button>
+</form>
+
+<table class="table">
+  <thead><tr><th>شماره سند</th><th>شماره فاکتور</th><th>تأمین‌کننده</th><th>نوع</th><th>تاریخ</th><th>کل (ریال)</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for inv in invoices %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'commerce:invoice_detail' inv.pk %}">{{ inv.number }}</a></td>
+      <td class="num">{{ inv.invoice_no|default:'—' }}</td>
+      <td>{{ inv.supplier.name }}</td>
+      <td>{{ inv.get_kind_display }}</td>
+      <td class="num">{{ inv.date|jdate }}</td>
+      <td class="num">{{ inv.total|fa }}</td>
+      <td>
+        {% if inv.status == 'final' %}<span class="chip chip-success">قطعی</span>
+        {% elif inv.status == 'cancelled' %}<span class="chip chip-danger">ابطال‌شده</span>
+        {% else %}<span class="chip chip-warning">پیش‌نویس</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="empty">فاکتوری ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

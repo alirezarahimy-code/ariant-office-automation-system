@@ -1,0 +1,67 @@
+{% load persian_tags %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>سفارش خرید {{ order.number }}</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; direction: rtl; margin: 24px; color: #111; }
+    h1 { font-size: 17px; margin: 0 0 4px; }
+    .head { display: flex; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 12px; }
+    .meta { font-size: 12px; line-height: 2; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #444; padding: 6px 8px; font-size: 12px; text-align: right; }
+    th { background: #f0f0f0; }
+    .sign { margin-top: 48px; display: flex; justify-content: space-between; font-size: 12px; }
+    .sign div { border-top: 1px solid #111; padding-top: 6px; width: 30%; text-align: center; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+<div class="head">
+  <div>
+    <h1>{{ ORG_NAME|default:'سازمان' }} — سفارش خرید</h1>
+    <div class="meta">شماره سفارش: <strong>{{ order.number }}</strong> | وضعیت: {{ order.get_status_display }}</div>
+  </div>
+  <div class="meta">
+    تاریخ: {{ order.date|jdate }}<br>
+    تأمین‌کننده: {{ order.supplier.name }}<br>
+    تاریخ تحویل: {{ order.delivery_date|jdate|default:'—' }}<br>
+    انبار تحویل: {{ order.warehouse|default:'—' }}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>شرح</th><th>تعداد</th><th>واحد</th><th>قیمت واحد (ریال)</th><th>تخفیف ٪</th><th>جمع (ریال)</th></tr>
+  </thead>
+  <tbody>
+    {% for line in lines %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ line.description }}</td>
+      <td>{{ line.quantity|fa }}</td>
+      <td>{{ line.unit_name }}</td>
+      <td>{{ line.unit_price|fa }}</td>
+      <td>{{ line.discount_percent|fa }}</td>
+      <td>{{ line.line_total|fa }}</td>
+    </tr>
+    {% endfor %}
+    <tr><td colspan="6"><strong>جمع کل</strong></td><td><strong>{{ order.total|fa }}</strong></td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:11px;color:#555">شرح: {{ order.description|default:'—' }} | تخفیف کل: {{ order.discount_amount|fa }} | مالیات: {{ order.tax_percent|fa }}٪ | اضافات: {{ order.extra_costs|fa }}</p>
+
+<div class="sign">
+  <div>مهر و امضای خریدار</div>
+  <div>مهر و امضای تأمین‌کننده</div>
+  <div>تأیید واحد بازرگانی</div>
+</div>
+
+<p class="no-print" style="margin-top:24px">
+  <button onclick="window.print()">چاپ</button>
+  <a href="{% url 'commerce:order_detail' order.pk %}">بازگشت</a>
+</p>
+</body>
+</html>

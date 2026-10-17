@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}کارت {{ party.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ party.name }}</h1><p class="sub">{{ party.code }} — {{ party.get_kind_display }}</p></div>
+  <div class="actions">
+    {% if features.commerce.purchase_orders %}<a href="{% url 'commerce:order_new' %}" class="btn">سفارش خرید جدید</a>{% endif %}
+    <a href="{% url 'commerce:party_list' %}" class="btn">فهرست طرف‌ها</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div class="card-title">مشخصات</div></div>
+  <div class="kv">
+    <div><span class="muted">کد اقتصادی</span> {{ party.economic_code|default:'—' }}</div>
+    <div><span class="muted">شناسه ملی</span> {{ party.national_id|default:'—' }}</div>
+    <div><span class="muted">تلفن</span> {{ party.phone|default:'—' }}</div>
+    <div><span class="muted">موبایل</span> {{ party.mobile|default:'—' }}</div>
+    <div><span class="muted">ایمیل</span> {{ party.email|default:'—' }}</div>
+    <div><span class="muted">شخص رابط</span> {{ party.contact_person|default:'—' }}</div>
+    <div><span class="muted">نشانی</span> {{ party.address|default:'—' }}</div>
+    <div><span class="muted">شرایط پرداخت</span>
+      {% if party.payment_terms_days %}{{ party.payment_terms_days|fa }} روز{% endif %}
+      {{ party.payment_terms_note }}</div>
+    <div><span class="muted">سقف اعتبار</span> {{ party.credit_limit|fa }} ریال</div>
+    <div><span class="muted">بانک/حساب</span> {{ party.bank_name|default:'—' }} {{ party.account_no }} {{ party.sheba }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <div class="card-head"><div class="card-title">اسناد مرتبط</div></div>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>نوع</th><th>شماره/عنوان</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+    <tbody>
+    {% for order in orders %}
+      <tr>
+        <td><span class="chip chip-info">سفارش خرید</span></td>
+        <td><a class="row-link" href="{% url 'commerce:order_detail' order.pk %}">{{ order.number }}</a></td>
+        <td class="num">{{ order.date|jdate }}</td>
+        <td class="num">{{ order.total|fa }}</td>
+        <td>{{ order.get_status_display }}</td>
+      </tr>
+    {% endfor %}
+    {% for inv in invoices %}
+      <tr>
+        <td><span class="chip">فاکتور خرید</span></td>
+        <td><a class="row-link" href="{% url 'commerce:invoice_detail' inv.pk %}">{{ inv.number }}</a></td>
+        <td class="num">{{ inv.date|jdate }}</td>
+        <td class="num">{{ inv.total|fa }}</td>
+        <td>{{ inv.get_status_display }}</td>
+      </tr>
+    {% endfor %}
+    {% for doc in sales %}
+      <tr>
+        <td><span class="chip chip-success">{{ doc.get_kind_display }}</span></td>
+        <td><a class="row-link" href="{% url 'commerce:sales_detail' doc.pk %}">{{ doc.number }}</a></td>
+        <td class="num">{{ doc.date|jdate }}</td>
+        <td class="num">{{ doc.total|fa }}</td>
+        <td>{{ doc.get_status_display }}</td>
+      </tr>
+    {% endfor %}
+    {% for contract in contracts %}
+      <tr>
+        <td><span class="chip chip-warning">قرارداد</span></td>
+        <td><a class="row-link" href="{% url 'commerce:contract_list' %}">{{ contract.number|default:contract.title }}</a></td>
+        <td class="num">{{ contract.start_date|jdate }}</td>
+        <td class="num">{{ contract.amount|fa }}</td>
+        <td>{{ contract.get_status_display }}</td>
+      </tr>
+    {% endfor %}
+    {% if not orders and not invoices and not sales and not contracts %}
+      <tr><td colspan="5" class="empty">سندی برای این طرف ثبت نشده است.</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}اسناد فروش{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>اسناد فروش</h1><p class="sub">پیش‌فاکتور، سفارش فروش، فاکتور فروش و برگشت از فروش</p></div>
+  <div class="actions">
+    <a href="{% url 'commerce:sales_new' %}" class="btn btn-primary">ثبت سند فروش</a>
+    <a href="{% url 'commerce:dashboard' %}" class="btn">داشبورد بازرگانی</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <select name="kind">
+    <option value="">همه انواع</option>
+    {% for value, label in kinds %}<option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">فیلتر</button>
+</form>
+
+<table class="table">
+  <thead><tr><th>شماره</th><th>نوع</th><th>مشتری</th><th>تاریخ</th><th>کل (ریال)</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for doc in docs %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'commerce:sales_detail' doc.pk %}">{{ doc.number }}</a></td>
+      <td>{{ doc.get_kind_display }}</td>
+      <td>{{ doc.customer.name }}</td>
+      <td class="num">{{ doc.date|jdate }}</td>
+      <td class="num">{{ doc.total|fa }}</td>
+      <td>
+        {% if doc.status == 'final' %}<span class="chip chip-success">قطعی</span>
+        {% elif doc.status == 'cancelled' %}<span class="chip chip-danger">ابطال‌شده</span>
+        {% else %}<span class="chip chip-warning">پیش‌نویس</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">سندی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

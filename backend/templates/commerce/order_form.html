@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت سفارش خرید{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت سفارش خرید</h1><p class="sub">سفارش چندردیفی — شماره خودکار سالانه، تحویل در انبار</p></div>
+  <div class="actions"><a href="{% url 'commerce:order_list' %}" class="btn">فهرست سفارش‌ها</a></div>
+</div>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>تأمین‌کننده <span class="req">*</span></label>
+      <select name="supplier_id" required>
+        {% for p in parties %}<option value="{{ p.pk }}">{{ p.code }} — {{ p.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>تاریخ سفارش</label>
+      <input type="text" name="date" value="{{ JALALI_TODAY }}">
+    </div>
+    <div class="field">
+      <label>تاریخ تحویل</label>
+      <input type="text" name="delivery_date">
+    </div>
+    <div class="field">
+      <label>انبار تحویل</label>
+      <select name="warehouse_id">
+        <option value="">—</option>
+        {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>درخواست مبدأ</label>
+      <select name="request_id">
+        <option value="">—</option>
+        {% for r in requests %}<option value="{{ r.pk }}">{{ r.title }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>قرارداد</label>
+      <select name="contract_id">
+        <option value="">—</option>
+        {% for c in contracts %}<option value="{{ c.pk }}">{{ c.title }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>تخفیف کل (ریال)</label><input type="text" name="discount_amount" value="0"></div>
+    <div class="field"><label>مالیات/ارزش افزوده (٪)</label><input type="text" name="tax_percent" value="0"></div>
+    <div class="field"><label>اضافات (ریال)</label><input type="text" name="extra_costs" value="0"></div>
+    <div class="field"><label>شرح</label><input type="text" name="description"></div>
+  </div>
+
+  <h3 style="margin:18px 0 8px">ردیف‌های سفارش</h3>
+  <div class="table-wrap">
+  <table class="table" id="lines-table">
+    <thead><tr>
+      <th>کالا</th><th>شرح <span class="req">*</span></th><th>تعداد <span class="req">*</span></th>
+      <th>واحد</th><th>قیمت واحد (ریال)</th><th>تخفیف ٪</th><th></th>
+    </tr></thead>
+    <tbody id="lines-body">
+      <tr class="line-row">
+        <td>
+          <select name="line_item_0">
+            <option value="">— کالای انبار —</option>
+            {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+          </select>
+        </td>
+        <td><input type="text" name="line_desc_0" required></td>
+        <td><input type="text" name="line_qty_0" value="1" required></td>
+        <td><input type="text" name="line_unit_0" value="عدد"></td>
+        <td><input type="text" name="line_price_0" required></td>
+        <td><input type="text" name="line_disc_0" value="0"></td>
+        <td><button type="button" class="btn btn-ghost" onclick="this.closest('tr').remove()">حذف</button></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:8px"><button type="button" class="btn" onclick="addLine()">+ ردیف جدید</button></p>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">ثبت پیش‌نویس</button>
+    <button class="btn btn-primary" type="submit" name="action" value="confirm">ثبت و تأیید سفارش</button>
+    <a class="btn btn-ghost" href="{% url 'commerce:order_list' %}">انصراف</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  var counter = 1;
+  window.addLine = function () {
+    var body = document.getElementById('lines-body');
+    var clone = body.querySelector('tr').cloneNode(true);
+    clone.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.value = el.name.indexOf('line_qty') !== -1 ? '1' :
+                 (el.name.indexOf('line_disc') !== -1 ? '0' :
+                 (el.name.indexOf('line_unit') !== -1 ? 'عدد' : ''));
+      if (el.name) el.name = el.name.replace(/_\d+$/, '_' + counter);
+    });
+    counter += 1;
+    body.appendChild(clone);
+  };
+})();
+</script>
+{% endblock %}

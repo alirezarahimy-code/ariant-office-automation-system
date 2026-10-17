@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}سفارش {{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>سفارش خرید {{ order.number }}</h1>
+    <p class="sub">{{ order.supplier.name }} — {{ order.date|jdate }}
+      {% if order.status == 'cancelled' %}<span class="chip chip-danger">لغوشده</span>
+      {% elif order.status == 'received' %}<span class="chip chip-success">تحویل‌شده</span>
+      {% elif order.status == 'partial' %}<span class="chip chip-warning">تحویل جزئی</span>
+      {% elif order.status == 'confirmed' %}<span class="chip chip-info">تأییدشده</span>
+      {% else %}<span class="chip chip-muted">پیش‌نویس</span>{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    <a href="{% url 'commerce:order_print' order.pk %}" class="btn">چاپ سفارش</a>
+    {% if can_manage and order.status == 'draft' %}
+    <form method="post" action="{% url 'commerce:order_confirm' order.pk %}">{% csrf_token %}
+      <button class="btn btn-primary" type="submit">تأیید سفارش</button>
+    </form>
+    {% endif %}
+    {% if can_manage and order.status != 'cancelled' %}
+    {% if features.commerce.purchase_invoices %}
+    <a href="{% url 'commerce:invoice_new' %}" class="btn">فاکتور خرید</a>
+    {% endif %}
+    <form method="post" action="{% url 'commerce:order_cancel' order.pk %}"
+          onsubmit="return confirm('سفارش لغو شود؟');">{% csrf_token %}
+      <button class="btn btn-ghost" type="submit">لغو سفارش</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="kv">
+    <div><span class="muted">انبار تحویل</span> {{ order.warehouse|default:'—' }}</div>
+    <div><span class="muted">تاریخ تحویل</span> {{ order.delivery_date|jdate|default:'—' }}</div>
+    <div><span class="muted">درخواست مبدأ</span>
+      {% if order.request %}<a class="row-link" href="{% url 'commerce:detail' order.request.pk %}">{{ order.request.title }}</a>{% else %}—{% endif %}</div>
+    <div><span class="muted">ثبت‌کننده</span> {{ order.created_by|default:'—' }}</div>
+    <div><span class="muted">تخفیف/مالیات/اضافات</span>
+      {{ order.discount_amount|fa }} / {{ order.tax_percent|fa }}٪ / {{ order.extra_costs|fa }}</div>
+    <div><span class="muted">کل قابل پرداخت</span> <strong>{{ order.total|fa }} ریال</strong></div>
+  </div>
+</div>
+
+<h3 style="margin:18px 0 8px">ردیف‌های سفارش</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr>
+    <th>#</th><th>شرح</th><th>تعداد</th><th>واحد</th><th>قیمت واحد</th><th>تخفیف ٪</th>
+    <th>تحویل‌شده</th><th>فاکتورشده</th><th>جمع ردیف</th>
+  </tr></thead>
+  <tbody>
+  {% for line in lines %}
+    <tr>
+      <td class="num">{{ forloop.counter }}</td>
+      <td>{% if line.item %}<a class="row-link" href="{% url 'inventory:detail' line.item.pk %}">{{ line.item.code }} — {{ line.item.name }}</a>{% else %}{{ line.description }}{% endif %}</td>
+      <td class="num">{{ line.quantity|fa }}</td>
+      <td>{{ line.unit_name }}</td>
+      <td class="num">{{ line.unit_price|fa }}</td>
+      <td class="num">{{ line.discount_percent|fa }}</td>
+      <td class="num">{{ line.received_quantity|fa }}</td>
+      <td class="num">{{ line.invoiced_quantity|fa }}</td>
+      <td class="num">{{ line.line_total|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if can_manage and features.commerce.goods_receipt and order.status != 'cancelled' %}
+<div class="card" style="margin-top:12px">
+  <div class="card-head"><div class="card-title">رسید انبار از سفارش</div></div>
+  <p class="tiny muted">تحویل کالا را وارد کنید — سند رسید انبار به‌صورت خودکار در ماژول انبار صادر می‌شود.</p>
+  <form method="post" action="{% url 'commerce:order_receive' order.pk %}">
+    {% csrf_token %}
+    <div class="form-grid">
+      <div class="field">
+        <label>انبار</label>
+        <select name="warehouse_id">
+          {% for w in from_inventory %}<option value="{{ w.pk }}" {% if order.warehouse_id == w.pk %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>تاریخ رسید</label><input type="text" name="date" value="{{ JALALI_TODAY }}"></div>
+      <div class="field"><label>شرح</label><input type="text" name="note"></div>
+    </div>
+    <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>ردیف</th><th>مانده قابل رسید</th><th>تعداد تحویلی</th></tr></thead>
+      <tbody>
+      {% for line in lines %}
+        <tr>
+          <td>{% if line.item %}{{ line.item.name }}{% else %}{{ line.description }}{% endif %}</td>
+          <td class="num">{{ line.remaining_quantity|fa }}</td>
+          <td><input type="text" name="receive_{{ line.pk }}" placeholder="۰" style="width:110px"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p style="margin-top:10px"><button class="btn btn-primary" type="submit">ثبت رسید انبار</button></p>
+  </form>
+</div>
+{% endif %}
+
+{% if receipts %}
+<h3 style="margin:18px 0 8px">رسیدهای انبار</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>تاریخ</th><th>سند انبار</th><th>شرح</th><th>ثبت‌کننده</th></tr></thead>
+  <tbody>
+  {% for receipt in receipts %}
+    <tr>
+      <td class="num">{{ receipt.date|jdate }}</td>
+      <td>
+        {% if receipt.document %}
+        <a class="row-link" href="{% url 'inventory:doc_detail' receipt.document.pk %}">{{ receipt.document.number }}</a>
+        {% else %}—{% endif %}
+      </td>
+      <td>{{ receipt.note|default:'—' }}</td>
+      <td>{{ receipt.created_by|default:'—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if match %}
+<h3 style="margin:18px 0 8px">تطبیق سه‌طرفه (سفارش / رسید / فاکتور)</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>ردیف</th><th>سفارش‌شده</th><th>تحویل‌شده</th><th>فاکتورشده</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for row in match %}
+    <tr>
+      <td>{% if row.line.item %}{{ row.line.item.name }}{% else %}{{ row.line.description }}{% endif %}</td>
+      <td class="num">{{ row.ordered|fa }}</td>
+      <td class="num">{{ row.received|fa }}</td>
+      <td class="num">{{ row.invoiced|fa }}</td>
+      <td>{% if row.match %}<span class="chip chip-success">تطبیق کامل</span>{% else %}<span class="chip chip-warning">ناتمام</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

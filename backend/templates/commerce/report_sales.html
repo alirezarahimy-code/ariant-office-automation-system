@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}گزارش فروش{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گزارش فروش</h1><p class="sub">اسناد فروش قطعی به تفکیک مشتری</p></div>
+  <div class="actions"><a href="{% url 'commerce:dashboard' %}" class="btn">داشبورد بازرگانی</a></div>
+</div>
+
+<form class="filters" method="get">
+  <input type="text" name="date_from" value="{{ date_from }}" placeholder="از تاریخ (1404/01/01)">
+  <input type="text" name="date_to" value="{{ date_to }}" placeholder="تا تاریخ">
+  <button class="btn" type="submit">گزارش</button>
+</form>
+
+<div class="kpis">
+  <div class="kpi"><div class="k-label">جمع فروش (ریال)</div><div class="k-value">{{ total|fa }}</div></div>
+  <div class="kpi"><div class="k-label">مشتریان</div><div class="k-value">{{ rows|length|fa }}</div></div>
+</div>
+
+<h3 style="margin:18px 0 8px">خلاصه به تفکیک مشتری</h3>
+<table class="table">
+  <thead><tr><th>مشتری</th><th>تعداد سند</th><th>جمع مبلغ (ریال)</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td><a class="row-link" href="{% url 'commerce:party_detail' row.customer.pk %}">{{ row.customer.name }}</a></td>
+      <td class="num">{{ row.count|fa }}</td>
+      <td class="num">{{ row.total|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">سند فروش قطعی در این بازه نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3 style="margin:18px 0 8px">ریز اسناد</h3>
+<table class="table">
+  <thead><tr><th>شماره</th><th>نوع</th><th>مشتری</th><th>تاریخ</th><th>کل (ریال)</th></tr></thead>
+  <tbody>
+  {% for doc in docs %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'commerce:sales_detail' doc.pk %}">{{ doc.number }}</a></td>
+      <td>{{ doc.get_kind_display }}</td>
+      <td>{{ doc.customer.name }}</td>
+      <td class="num">{{ doc.date|jdate }}</td>
+      <td class="num">{{ doc.total|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}گزارش خرید{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گزارش خرید</h1><p class="sub">فاکتورهای خرید قطعی به تفکیک تأمین‌کننده</p></div>
+  <div class="actions">
+    {% if features.commerce.excel_reports %}<a href="{% url 'commerce:purchases_excel' %}" class="btn">خروجی اکسل</a>{% endif %}
+    <a href="{% url 'commerce:dashboard' %}" class="btn">داشبورد بازرگانی</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <input type="text" name="date_from" value="{{ date_from }}" placeholder="از تاریخ (1404/01/01)">
+  <input type="text" name="date_to" value="{{ date_to }}" placeholder="تا تاریخ">
+  <button class="btn" type="submit">گزارش</button>
+</form>
+
+<div class="kpis">
+  <div class="kpi"><div class="k-label">جمع خرید (ریال)</div><div class="k-value">{{ total|fa }}</div></div>
+  <div class="kpi"><div class="k-label">تأمین‌کنندگان</div><div class="k-value">{{ rows|length|fa }}</div></div>
+</div>
+
+<h3 style="margin:18px 0 8px">خلاصه به تفکیک تأمین‌کننده</h3>
+<table class="table">
+  <thead><tr><th>تأمین‌کننده</th><th>تعداد فاکتور</th><th>جمع مبلغ (ریال)</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td><a class="row-link" href="{% url 'commerce:party_detail' row.supplier.pk %}">{{ row.supplier.name }}</a></td>
+      <td class="num">{{ row.count|fa }}</td>
+      <td class="num">{{ row.total|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">فاکتور قطعی در این بازه نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3 style="margin:18px 0 8px">ریز فاکتورها</h3>
+<table class="table">
+  <thead><tr><th>شماره</th><th>تأمین‌کننده</th><th>تاریخ</th><th>کل (ریال)</th></tr></thead>
+  <tbody>
+  {% for inv in invoices %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'commerce:invoice_detail' inv.pk %}">{{ inv.number }}</a></td>
+      <td>{{ inv.supplier.name }}</td>
+      <td class="num">{{ inv.date|jdate }}</td>
+      <td class="num">{{ inv.total|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

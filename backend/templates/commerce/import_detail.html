@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}محموله {{ shipment.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>محموله وارداتی {{ shipment.number }}</h1>
+    <p class="sub">{{ shipment.supplier.name }} — {{ shipment.currency }} × {{ shipment.exchange_rate|fa }}
+      {% if shipment.status == 'received' %}<span class="chip chip-success">دریافت‌شده</span>
+      {% elif shipment.status == 'cleared' %}<span class="chip chip-info">ترخیص‌شده</span>
+      {% elif shipment.status == 'shipped' %}<span class="chip chip-warning">ارسال‌شده</span>
+      {% elif shipment.status == 'cancelled' %}<span class="chip chip-danger">لغوشده</span>
+      {% else %}<span class="chip chip-muted">پیش‌نویس</span>{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    <a href="{% url 'commerce:import_list' %}" class="btn">فهرست محموله‌ها</a>
+    {% if can_manage %}
+    <form method="post" action="{% url 'commerce:import_status' shipment.pk %}">{% csrf_token %}
+      <select name="status">
+        {% for value, label in statuses %}<option value="{{ value }}" {% if shipment.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <button class="btn" type="submit">تغییر وضعیت</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="kv">
+    <div><span class="muted">سفارش مرتبط</span>
+      {% if shipment.order %}<a class="row-link" href="{% url 'commerce:order_detail' shipment.order.pk %}">{{ shipment.order.number }}</a>{% else %}—{% endif %}</div>
+    <div><span class="muted">پیش‌فاکتور</span> {{ shipment.proforma_no|default:'—' }} ({{ shipment.proforma_date|jdate|default:'' }})</div>
+    <div><span class="muted">اعتبار/حواله ارزی</span> {{ shipment.lc_no|default:'—' }}</div>
+    <div><span class="muted">بارنامه</span> {{ shipment.bl_no|default:'—' }} ({{ shipment.bl_date|jdate|default:'' }})</div>
+    <div><span class="muted">ترخیص گمرکی</span> {{ shipment.customs_no|default:'—' }} ({{ shipment.customs_date|jdate|default:'' }})</div>
+    <div><span class="muted">ارزش کالا</span> {{ shipment.goods_value|fa }} {{ shipment.currency }}</div>
+  </div>
+</div>
+
+<h3 style="margin:18px 0 8px">هزینه‌های واردات (ریال)</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>عنوان</th><th>مرحله</th><th>مبلغ</th></tr></thead>
+  <tbody>
+    <tr><td>حمل</td><td>حمل و نقل</td><td class="num">{{ shipment.cost_freight|fa }}</td></tr>
+    <tr><td>بیمه</td><td>بیمه</td><td class="num">{{ shipment.cost_insurance|fa }}</td></tr>
+    <tr><td>گمرک</td><td>ترخیص</td><td class="num">{{ shipment.cost_customs|fa }}</td></tr>
+    <tr><td>حق‌العمل ترخیص</td><td>ترخیص</td><td class="num">{{ shipment.cost_clearing|fa }}</td></tr>
+    {% for cost in costs %}
+    <tr><td>{{ cost.title }}</td><td>{{ cost.stage|default:'—' }}</td><td class="num">{{ cost.amount|fa }}</td></tr>
+    {% endfor %}
+    <tr><td colspan="2"><strong>جمع هزینه‌ها</strong></td><td class="num"><strong>{{ shipment.extra_costs_total|fa }}</strong></td></tr>
+  </tbody>
+</table>
+</div>
+
+{% if can_manage %}
+<form method="post" action="{% url 'commerce:import_cost_add' shipment.pk %}" class="form-grid">
+  {% csrf_token %}
+  <div class="field"><label>عنوان هزینه</label><input type="text" name="title"></div>
+  <div class="field"><label>مرحله</label><input type="text" name="stage"></div>
+  <div class="field"><label>مبلغ (ریال)</label><input type="text" name="amount"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn" type="submit">افزودن هزینه</button></div>
+</form>
+{% endif %}
+
+<div class="card" style="margin-top:12px">
+  <div class="card-head"><div class="card-title">فی تمام‌شده</div></div>
+  <p><strong>کل بهای تمام‌شده محموله:</strong> {{ shipment.total_landed_rial|fa }} ریال</p>
+  {% if landed %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>ردیف</th><th>ارزش</th><th>سهم هزینه</th><th>بهای تمام‌شده</th><th>فی واحد</th></tr></thead>
+    <tbody>
+    {% for row in landed %}
+      <tr>
+        <td>{% if row.line.item %}{{ row.line.item.name }}{% else %}{{ row.line.description }}{% endif %}</td>
+        <td class="num">{{ row.value|fa }}</td>
+        <td class="num">{{ row.cost_share|fa }}</td>
+        <td class="num">{{ row.landed_value|fa }}</td>
+        <td class="num">{{ row.unit_cost|fa }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

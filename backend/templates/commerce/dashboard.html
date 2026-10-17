@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}داشبورد بازرگانی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>داشبورد بازرگانی</h1><p class="sub">چرخه خرید، فروش، تعهدات و واردات در یک نگاه</p></div>
+  <div class="actions">
+    <a href="{% url 'commerce:new' %}" class="btn btn-primary">درخواست خرید</a>
+    {% if features.commerce.purchase_orders %}<a href="{% url 'commerce:order_new' %}" class="btn">سفارش خرید</a>{% endif %}
+    {% if features.commerce.purchase_invoices %}<a href="{% url 'commerce:invoice_new' %}" class="btn">فاکتور خرید</a>{% endif %}
+    {% if features.commerce.sales %}<a href="{% url 'commerce:sales_new' %}" class="btn">فاکتور فروش</a>{% endif %}
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="k-label">درخواست‌های اخیر</div><div class="k-value">{{ requests|length|fa }}</div></div>
+  <div class="kpi"><div class="k-label">سفارش‌های اخیر</div><div class="k-value">{{ orders|length|fa }}</div></div>
+  <div class="kpi"><div class="k-label">فاکتورهای اخیر</div><div class="k-value">{{ invoices|length|fa }}</div></div>
+  <div class="kpi"><div class="k-label">تعهدات باز</div><div class="k-value">{{ commitments|length|fa }}</div></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div class="card_title card-title">دسترسی سریع</div></div>
+  <p style="display:flex;gap:8px;flex-wrap:wrap">
+    {% if features.commerce.parties %}<a class="btn" href="{% url 'commerce:party_list' %}">طرف‌های تجاری</a>{% endif %}
+    {% if features.commerce.purchase_orders %}<a class="btn" href="{% url 'commerce:order_list' %}">سفارش‌های خرید</a>{% endif %}
+    {% if features.commerce.purchase_invoices %}<a class="btn" href="{% url 'commerce:invoice_list' %}">فاکتورهای خرید</a>{% endif %}
+    {% if features.commerce.sales %}<a class="btn" href="{% url 'commerce:sales_list' %}">اسناد فروش</a>{% endif %}
+    <a class="btn" href="{% url 'commerce:contract_list' %}">قراردادها</a>
+    {% if features.commerce.import_orders %}<a class="btn" href="{% url 'commerce:import_list' %}">خرید خارجی</a>{% endif %}
+    {% if features.commerce.commitments %}<a class="btn" href="{% url 'commerce:report_commitments' %}">تعهدات باز</a>{% endif %}
+    <a class="btn" href="{% url 'commerce:report_purchases' %}">گزارش خرید</a>
+    <a class="btn" href="{% url 'commerce:report_sales' %}">گزارش فروش</a>
+    {% if features.commerce.excel_reports %}<a class="btn" href="{% url 'commerce:purchases_excel' %}">خروجی اکسل خرید</a>{% endif %}
+  </p>
+</div>
+
+{% if commitments %}
+<h3 style="margin:18px 0 8px">تعهدات باز (اقساط پرداخت‌نشده)</h3>
+<table class="table">
+  <thead><tr><th>مرجع</th><th>طرف</th><th>سررسید</th><th>مبلغ</th></tr></thead>
+  <tbody>
+  {% for row in commitments %}
+    <tr>
+      <td class="num"><a class="row-link" href="{{ row.url }}">{{ row.ref }}</a></td>
+      <td>{{ row.party }}</td>
+      <td class="num">{{ row.installment.due_date|jdate }}</td>
+      <td class="num">{{ row.installment.amount|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h3 style="margin:18px 0 8px">آخرین درخواست‌های خرید</h3>
+<table class="table">
+  <thead><tr><th>عنوان</th><th>درخواست‌کننده</th><th>فوریت</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for req in requests %}
+    <tr>
+      <td><a class="row-link" href="{% url 'commerce:detail' req.pk %}">{{ req.title }}</a></td>
+      <td>{{ req.requested_by }}</td>
+      <td>{% if req.priority == 'immediate' %}<span class="chip chip-danger">آنی</span>{% elif req.priority == 'urgent' %}<span class="chip chip-warning">فوری</span>{% else %}<span class="chip chip-muted">عادی</span>{% endif %}</td>
+      <td>{{ req.get_status_display }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">درخواستی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3 style="margin:18px 0 8px">آخرین سفارش‌های خرید</h3>
+<table class="table">
+  <thead><tr><th>شماره</th><th>تأمین‌کننده</th><th>تاریخ</th><th>کل (ریال)</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for order in orders %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'commerce:order_detail' order.pk %}">{{ order.number }}</a></td>
+      <td>{{ order.supplier.name }}</td>
+      <td class="num">{{ order.date|jdate }}</td>
+      <td class="num">{{ order.total|fa }}</td>
+      <td>{{ order.get_status_display }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">سفارشی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
