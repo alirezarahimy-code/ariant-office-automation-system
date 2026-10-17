@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت طرف تجاری{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت طرف تجاری</h1><p class="sub">کارت تأمین‌کننده/مشتری — کد به‌صورت خودکار صادر می‌شود</p></div>
+  <div class="actions"><a href="{% url 'commerce:party_list' %}" class="btn">فهرست</a></div>
+</div>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>نام/عنوان <span class="req">*</span></label>
+      <input type="text" name="name" required>
+    </div>
+    <div class="field">
+      <label>نوع</label>
+      <select name="kind">
+        {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>کد اقتصادی</label><input type="text" name="economic_code"></div>
+    <div class="field"><label>شناسه ملی/کد ملی</label><input type="text" name="national_id"></div>
+    <div class="field"><label>تلفن</label><input type="text" name="phone"></div>
+    <div class="field"><label>موبایل</label><input type="text" name="mobile"></div>
+    <div class="field"><label>ایمیل</label><input type="text" name="email"></div>
+    <div class="field"><label>شخص رابط</label><input type="text" name="contact_person"></div>
+    <div class="field"><label>نشانی</label><input type="text" name="address"></div>
+    <div class="field"><label>مهلت پرداخت (روز)</label><input type="text" name="payment_terms_days" value="0"></div>
+    <div class="field"><label>شرایط پرداخت</label><input type="text" name="payment_terms_note" placeholder="مثلاً نقدی یا ۳۰ روزه"></div>
+    <div class="field"><label>سقف اعتبار (ریال)</label><input type="text" name="credit_limit"></div>
+    <div class="field">
+      <label>ارز</label>
+      <select name="currency"><option value="IRR">ریال</option><option value="USD">دلار</option><option value="EUR">یورو</option></select>
+    </div>
+    <div class="field"><label>بانک</label><input type="text" name="bank_name"></div>
+    <div class="field"><label>شماره حساب</label><input type="text" name="account_no"></div>
+    <div class="field"><label>شبا</label><input type="text" name="sheba"></div>
+    <div class="field"><label>یادداشت</label><textarea name="notes"></textarea></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ذخیره کارت طرف تجاری</button>
+    <a class="btn btn-ghost" href="{% url 'commerce:party_list' %}">انصراف</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}تعهدات باز{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>تعهدات باز</h1><p class="sub">اقساط پرداخت‌نشده فاکتورهای خرید و فروش</p></div>
+  <div class="actions">
+    <a href="{% url 'commerce:report_purchases' %}" class="btn">گزارش خرید</a>
+    <a href="{% url 'commerce:report_sales' %}" class="btn">گزارش فروش</a>
+    <a href="{% url 'commerce:dashboard' %}" class="btn">داشبورد بازرگانی</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="k-label">تعداد اقساط باز</div><div class="k-value">{{ rows|length|fa }}</div></div>
+  <div class="kpi"><div class="k-label">جمع تعهدات (ریال)</div><div class="k-value">{{ total|fa }}</div></div>
+</div>
+
+<table class="table">
+  <thead><tr><th>مرجع</th><th>طرف</th><th>سررسید</th><th>مبلغ (ریال)</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="num"><a class="row-link" href="{{ row.url }}">{{ row.ref }}</a></td>
+      <td>{{ row.party }}</td>
+      <td class="num">
+        {{ row.installment.due_date|jdate }}
+      </td>
+      <td class="num">{{ row.installment.amount|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">تعهد بازی وجود ندارد.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

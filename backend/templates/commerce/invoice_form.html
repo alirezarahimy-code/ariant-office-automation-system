@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت فاکتور خرید{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت فاکتور خرید</h1><p class="sub">کالا/خدمت/دارایی — با تخفیف، اضافات و مالیات</p></div>
+  <div class="actions"><a href="{% url 'commerce:invoice_list' %}" class="btn">فهرست فاکتورها</a></div>
+</div>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>تأمین‌کننده <span class="req">*</span></label>
+      <select name="supplier_id" required>
+        {% for p in parties %}<option value="{{ p.pk }}">{{ p.code }} — {{ p.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>نوع فاکتور</label>
+      <select name="kind">
+        {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>شماره فاکتور تأمین‌کننده</label><input type="text" name="invoice_no"></div>
+    <div class="field"><label>تاریخ فاکتور</label><input type="text" name="date" value="{{ JALALI_TODAY }}"></div>
+    <div class="field">
+      <label>سفارش خرید (برای تطبیق)</label>
+      <select name="order_id">
+        <option value="">—</option>
+        {% for o in orders %}<option value="{{ o.pk }}">{{ o.number }} — {{ o.supplier.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>تخفیف کل (ریال)</label><input type="text" name="discount_amount" value="0"></div>
+    <div class="field"><label>مالیات/ارزش افزوده (٪)</label><input type="text" name="tax_percent" value="0"></div>
+    <div class="field"><label>اضافات (ریال)</label><input type="text" name="extra_costs" value="0"></div>
+    <div class="field"><label>شرح</label><input type="text" name="description"></div>
+  </div>
+
+  <h3 style="margin:18px 0 8px">ردیف‌های فاکتور</h3>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr>
+      <th>کالا</th><th>شرح <span class="req">*</span></th><th>تعداد <span class="req">*</span></th>
+      <th>واحد</th><th>قیمت واحد (ریال)</th><th>تخفیف ٪</th><th></th>
+    </tr></thead>
+    <tbody id="lines-body">
+      <tr>
+        <td>
+          <select name="line_item_0">
+            <option value="">— کالای انبار —</option>
+            {% for item in items %}<option value="{{ item.pk }}">{{ item.code }} — {{ item.name }}</option>{% endfor %}
+          </select>
+        </td>
+        <td><input type="text" name="line_desc_0" required></td>
+        <td><input type="text" name="line_qty_0" value="1" required></td>
+        <td><input type="text" name="line_unit_0" value="عدد"></td>
+        <td><input type="text" name="line_price_0" required></td>
+        <td><input type="text" name="line_disc_0" value="0"></td>
+        <td><button type="button" class="btn btn-ghost" onclick="this.closest('tr').remove()">حذف</button></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:8px"><button type="button" class="btn" onclick="addLine()">+ ردیف جدید</button></p>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">ثبت پیش‌نویس</button>
+    <button class="btn btn-primary" type="submit" name="action" value="finalize">ثبت و قطعی</button>
+    <a class="btn btn-ghost" href="{% url 'commerce:invoice_list' %}">انصراف</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  var counter = 1;
+  window.addLine = function () {
+    var body = document.getElementById('lines-body');
+    var clone = body.querySelector('tr').cloneNode(true);
+    clone.querySelectorAll('input, select').forEach(function (el) {
+      el.value = el.name.indexOf('line_qty') !== -1 ? '1' :
+                 (el.name.indexOf('line_disc') !== -1 ? '0' :
+                 (el.name.indexOf('line_unit') !== -1 ? 'عدد' : ''));
+      if (el.name) el.name = el.name.replace(/_\d+$/, '_' + counter);
+    });
+    counter += 1;
+    body.appendChild(clone);
+  };
+})();
+</script>
+{% endblock %}

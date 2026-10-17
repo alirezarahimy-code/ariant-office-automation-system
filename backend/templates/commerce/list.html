@@ -4,11 +4,24 @@
 {% block content %}
 <div class="page-head">
   <div><h1>امور بازرگانی</h1><p class="sub">درخواست خرید، استعلام قیمت و قراردادها</p></div>
+
   <div style="display:flex;gap:.5rem">
     <a href="{% url 'commerce:contract_list' %}" class="btn">قراردادها</a>
     <a href="{% url 'commerce:new' %}" class="btn btn-primary">درخواست خرید</a>
   </div>
 </div>
+
+<p style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+  <a class="btn" href="{% url 'commerce:dashboard' %}">داشبورد بازرگانی</a>
+  {% if features.commerce.parties %}<a class="btn" href="{% url 'commerce:party_list' %}">طرف‌های تجاری</a>{% endif %}
+  {% if features.commerce.purchase_orders %}<a class="btn" href="{% url 'commerce:order_list' %}">سفارش‌های خرید</a>{% endif %}
+  {% if features.commerce.purchase_invoices %}<a class="btn" href="{% url 'commerce:invoice_list' %}">فاکتورهای خرید</a>{% endif %}
+  {% if features.commerce.sales %}<a class="btn" href="{% url 'commerce:sales_list' %}">اسناد فروش</a>{% endif %}
+  {% if features.commerce.import_orders %}<a class="btn" href="{% url 'commerce:import_list' %}">خرید خارجی</a>{% endif %}
+  {% if features.commerce.commitments %}<a class="btn" href="{% url 'commerce:report_commitments' %}">تعهدات باز</a>{% endif %}
+  <a class="btn" href="{% url 'commerce:report_purchases' %}">گزارش خرید</a>
+  <a class="btn" href="{% url 'commerce:report_sales' %}">گزارش فروش</a>
+</p>
 
 <div class="tabs">
   <a class="tab{% if tab == 'mine' %} is-active{% endif %}" href="?tab=mine">درخواست‌های من</a>

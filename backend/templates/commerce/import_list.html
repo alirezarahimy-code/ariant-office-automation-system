@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}خرید خارجی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>خرید خارجی</h1><p class="sub">پیش‌فاکتور ارزی، بارنامه، ترخیص گمرکی و فی تمام‌شده</p></div>
+  <div class="actions">
+    <a href="{% url 'commerce:import_new' %}" class="btn btn-primary">ثبت محموله وارداتی</a>
+    <a href="{% url 'commerce:dashboard' %}" class="btn">داشبورد بازرگانی</a>
+  </div>
+</div>
+
+<table class="table">
+  <thead><tr><th>شماره</th><th>تأمین‌کننده</th><th>ارز/نرخ</th><th>ارزش کالا</th><th>هزینه‌ها (ریال)</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for s in shipments %}
+    <tr>
+      <td class="num"><a class="row-link" href="{% url 'commerce:import_detail' s.pk %}">{{ s.number }}</a></td>
+      <td>{{ s.supplier.name }}</td>
+      <td class="num">{{ s.currency }} × {{ s.exchange_rate|fa }}</td>
+      <td class="num">{{ s.goods_value|fa }}</td>
+      <td class="num">{{ s.extra_costs_total|fa }}</td>
+      <td>
+        {% if s.status == 'received' %}<span class="chip chip-success">دریافت‌شده</span>
+        {% elif s.status == 'cleared' %}<span class="chip chip-info">ترخیص‌شده</span>
+        {% elif s.status == 'shipped' %}<span class="chip chip-warning">ارسال‌شده</span>
+        {% elif s.status == 'cancelled' %}<span class="chip chip-danger">لغوشده</span>
+        {% else %}<span class="chip chip-muted">پیش‌نویس</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">محموله‌ای ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

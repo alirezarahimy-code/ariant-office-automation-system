@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}فاکتور {{ invoice.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>فاکتور خرید {{ invoice.number }}</h1>
+    <p class="sub">{{ invoice.supplier.name }} — {{ invoice.get_kind_display }} — {{ invoice.date|jdate }}
+      {% if invoice.status == 'final' %}<span class="chip chip-success">قطعی</span>
+      {% elif invoice.status == 'cancelled' %}<span class="chip chip-danger">ابطال‌شده</span>
+      {% else %}<span class="chip chip-warning">پیش‌نویس</span>{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    <a href="{% url 'commerce:invoice_print' invoice.pk %}" class="btn">چاپ فاکتور</a>
+    {% if can_manage and invoice.status == 'draft' %}
+    <form method="post" action="{% url 'commerce:invoice_finalize' invoice.pk %}">{% csrf_token %}
+      <button class="btn btn-primary" type="submit">قطعی فاکتور</button>
+    </form>
+    {% endif %}
+    {% if can_manage and invoice.status != 'cancelled' %}
+    <form method="post" action="{% url 'commerce:invoice_cancel' invoice.pk %}"
+          onsubmit="return confirm('فاکتور ابطال شود؟');">{% csrf_token %}
+      <input type="text" name="reason" placeholder="علت ابطال">
+      <button class="btn btn-ghost" type="submit">ابطال</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="kv">
+    <div><span class="muted">شماره فاکتور تأمین‌کننده</span> {{ invoice.invoice_no|default:'—' }}</div>
+    <div><span class="muted">سفارش مرتبط</span>
+      {% if invoice.order %}<a class="row-link" href="{% url 'commerce:order_detail' invoice.order.pk %}">{{ invoice.order.number }}</a>{% else %}—{% endif %}</div>
+    <div><span class="muted">تخفیف/مالیات/اضافات</span>
+      {{ invoice.discount_amount|fa }} / {{ invoice.tax_percent|fa }}٪ / {{ invoice.extra_costs|fa }}</div>
+    <div><span class="muted">کل قابل پرداخت</span> <strong>{{ invoice.total|fa }} ریال</strong></div>
+    <div><span class="muted">ثبت‌کننده</span> {{ invoice.created_by|default:'—' }}</div>
+    {% if invoice.status == 'cancelled' %}
+    <div><span class="muted">علت ابطال</span> {{ invoice.cancel_reason|default:'—' }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<h3 style="margin:18px 0 8px">ردیف‌های فاکتور</h3>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>#</th><th>شرح</th><th>تعداد</th><th>واحد</th><th>قیمت واحد</th><th>تخفیف ٪</th><th>جمع ردیف</th></tr></thead>
+  <tbody>
+  {% for line in lines %}
+    <tr>
+      <td class="num">{{ forloop.counter }}</td>
+      <td>
+        {% if line.item %}{{ line.item.code }} — {{ line.item.name }}{% else %}{{ line.description }}{% endif %}
+        {% if line.order_line %}<span class="chip chip-info">ردیف سفارش</span>{% endif %}
+      </td>
+      <td class="num">{{ line.quantity|fa }}</td>
+      <td>{{ line.unit_name }}</td>
+      <td class="num">{{ line.unit_price|fa }}</td>
+      <td class="num">{{ line.discount_percent|fa }}</td>
+      <td class="num">{{ line.quantity|mul:line.unit_price|fa }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if features.commerce.commitments %}
+<div class="card" style="margin-top:12px">
+  <div class="card-head"><div class="card-title">اقساط / تعهد پرداخت</div></div>
+  {% if installments %}
+  <table class="table">
+    <thead><tr><th>سررسید</th><th>مبلغ</th><th>وضعیت</th><th></th></tr></thead>
+    <tbody>
+    {% for inst in installments %}
+      <tr>
+        <td class="num">{{ inst.due_date|jdate }}</td>
+        <td class="num">{{ inst.amount|fa }}</td>
+        <td>{% if inst.is_paid %}<span class="chip chip-success">پرداخت‌شده</span>{% else %}<span class="chip chip-warning">باز</span>{% endif %}</td>
+        <td>
+          {% if can_manage and not inst.is_paid %}
+          <form method="post" action="{% url 'commerce:installment_pay' invoice.pk inst.pk %}">{% csrf_token %}
+            <input type="text" name="paid_date" placeholder="تاریخ پرداخت" style="width:110px">
+            <button class="btn btn-ghost" type="submit">ثبت پرداخت</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">قسطی ثبت نشده است.</p>
+  {% endif %}
+  {% if can_manage %}
+  <form method="post" action="{% url 'commerce:invoice_installments' invoice.pk %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>مبلغ قسط (ریال)</label><input type="text" name="inst_amount_0"></div>
+    <div class="field"><label>سررسید</label><input type="text" name="inst_date_0"></div>
+    <div class="field"><label>مبلغ قسط دوم</label><input type="text" name="inst_amount_1"></div>
+    <div class="field"><label>سررسید دوم</label><input type="text" name="inst_date_1"></div>
+    <div class="field"><label>مبلغ قسط سوم</label><input type="text" name="inst_amount_2"></div>
+    <div class="field"><label>سررسید سوم</label><input type="text" name="inst_date_2"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn" type="submit">ثبت اقساط</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
