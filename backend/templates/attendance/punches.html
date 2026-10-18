@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}رویدادهای تردد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>رویدادهای تردد</h1><p class="sub">ثبت ورود/خروج تکی — با موقعیت و محدوده مجاز</p></div>
+  <div class="actions"><a href="{% url 'attendance:dashboard' %}" class="btn">داشبورد</a></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div class="card-title">ثبت رویداد تردد</div></div>
+  <form method="post" action="{% url 'attendance:punch_add' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>تاریخ</label><input type="text" name="date"></div>
+    <div class="field"><label>ساعت</label><input type="text" name="time" placeholder="08:00"></div>
+    <div class="field">
+      <label>نوع</label>
+      <select name="direction"><option value="in">ورود</option><option value="out">خروج</option></select>
+    </div>
+    <div class="field"><label>عرض جغرافیایی (اختیاری)</label><input type="text" name="lat"></div>
+    <div class="field"><label>طول جغرافیایی (اختیاری)</label><input type="text" name="lng"></div>
+    <div class="field"><label>شرح</label><input type="text" name="description"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت رویداد</button></div>
+  </form>
+</div>
+
+<h3 style="margin:18px 0 8px">آخرین رویدادها</h3>
+<table class="table">
+  <thead><tr><th>کاربر</th><th>تاریخ</th><th>ساعت</th><th>نوع</th><th>محدوده</th><th>شرح</th></tr></thead>
+  <tbody>
+  {% for p in punches %}
+    <tr>
+      <td>{{ p.user }}</td>
+      <td class="num">{{ p.date|jdate }}</td>
+      <td class="num">{{ p.time|time:'H:i' }}</td>
+      <td>{% if p.direction == 'in' %}<span class="chip chip-success">ورود</span>{% else %}<span class="chip chip-warning">خروج</span>{% endif %}</td>
+      <td>{{ p.area|default:'—' }}</td>
+      <td>{{ p.description|default:'—' }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">رویدادی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

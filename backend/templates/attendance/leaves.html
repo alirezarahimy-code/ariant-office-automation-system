@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}مانده مرخصی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>مانده مرخصی</h1><p class="sub">سهمیه، مصرف و مانده به تفکیک نوع مرخصی — سال {{ year|fa }}</p></div>
+  <div class="actions">
+    <a href="{% url 'attendance:request_new' %}" class="btn btn-primary">درخواست مرخصی</a>
+    <a href="{% url 'attendance:dashboard' %}" class="btn">داشبورد</a>
+  </div>
+</div>
+
+<table class="table">
+  <thead><tr><th>نوع مرخصی</th><th>اعتبار (روز)</th><th>مصرف‌شده</th><th>مانده</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.leave_type.name }}</td>
+      <td class="num">{{ row.granted|fa }}</td>
+      <td class="num">{{ row.used|fa }}</td>
+      <td class="num"><strong>{{ row.remaining|fa }}</strong></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">نوع مرخصی تعریف نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3 style="margin:18px 0 8px">درخواست‌های مرخصی من</h3>
+<table class="table">
+  <thead><tr><th>نوع</th><th>بازه</th><th>روز</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for req in requests %}
+    <tr>
+      <td><a class="row-link" href="{% url 'attendance:request_detail' req.pk %}">{{ req.get_kind_display }}</a>
+        {% if req.leave_type %}({{ req.leave_type.name }}){% endif %}</td>
+      <td class="num">
+        {% if req.from_date %}{{ req.from_date|jdate }} تا {{ req.to_date|jdate }}
+        {% else %}{{ req.for_date|jdate }} ({{ req.hours|fa }} ساعت){% endif %}
+      </td>
+      <td class="num">{{ req.days|fa }}</td>
+      <td>{{ req.get_status_display }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">درخواستی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

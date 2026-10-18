@@ -50,7 +50,26 @@
         <a class="side-link {% if request.resolver_match.app_name == 'meetings' %}active{% endif %}" href="{% url 'meetings:list' %}">جلسات و مصوبات</a>
         <a class="side-link {% if request.resolver_match.app_name == 'archive' %}active{% endif %}" href="{% url 'archive:list' %}">بایگانی و امحا</a>
         <a class="side-link {% if request.resolver_match.app_name == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}">تیکت‌ها</a>
-        <a class="side-link {% if request.resolver_match.app_name == 'attendance' %}active{% endif %}" href="{% url 'attendance:list' %}">کنترل تردد</a>
+      </div>
+      <div class="side-group">
+        <div class="label">حضور و غیاب</div>
+        <a class="side-link {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.app_name == 'attendance' %}active{% endif %}" href="{% url 'attendance:dashboard' %}">داشبورد حضور و غیاب</a>
+        <a class="side-link {% if request.resolver_match.app_name == 'attendance' and request.resolver_match.url_name == 'list' %}active{% endif %}" href="{% url 'attendance:list' %}">کارکرد ماه</a>
+        {% if features.attendance.request_workflow %}
+        <a class="side-link {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}" href="{% url 'attendance:request_list' %}">درخواست‌ها</a>
+        {% endif %}
+        {% if features.attendance.punches %}
+        <a class="side-link {% if request.resolver_match.url_name == 'punches' %}active{% endif %}" href="{% url 'attendance:punches' %}">رویدادهای تردد</a>
+        {% endif %}
+        {% if features.attendance.leave_balance %}
+        <a class="side-link {% if request.resolver_match.url_name == 'leaves' %}active{% endif %}" href="{% url 'attendance:leaves' %}">مانده مرخصی</a>
+        {% endif %}
+        {% if features.attendance.overtime %}
+        <a class="side-link {% if request.resolver_match.url_name == 'overtime' %}active{% endif %}" href="{% url 'attendance:overtime' %}">اضافه‌کاری</a>
+        {% endif %}
+        {% if features.attendance.geo_fence %}
+        <a class="side-link {% if request.resolver_match.url_name == 'geo' %}active{% endif %}" href="{% url 'attendance:geo' %}">محدوده‌های مجاز</a>
+        {% endif %}
       </div>
       <div class="side-group">
         <div class="label">بازرگانی</div>

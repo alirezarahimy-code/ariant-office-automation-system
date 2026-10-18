@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}اضافه‌کاری{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>گزارش اضافه‌کاری</h1><p class="sub">{{ month_name }} {{ year|fa }} — به تفکیک کاربر</p></div>
+  <div class="actions">
+    <a href="{% url 'attendance:request_new' %}" class="btn btn-primary">درخواست اضافه‌کاری</a>
+    <a href="{% url 'attendance:dashboard' %}" class="btn">داشبورد</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <input type="text" name="year" value="{{ year }}" placeholder="سال" style="width:90px">
+  <input type="text" name="month" value="{{ month }}" placeholder="ماه" style="width:70px">
+  <button class="btn" type="submit">نمایش</button>
+</form>
+
+<table class="table">
+  <thead><tr><th>کاربر</th><th>اضافه‌کاری (ساعت)</th><th>دقیقه</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.user }}</td>
+      <td class="num">{{ row.overtime_hours|fa }}</td>
+      <td class="num">{{ row.overtime_minutes|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">اضافه‌کاری ثبت‌شده‌ای در این ماه نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if constants %}
+<h3 style="margin:18px 0 8px">ثابت‌های اضافه‌کاری</h3>
+<table class="table">
+  <thead><tr><th>کلید</th><th>عنوان</th><th>مقدار</th><th>شرح</th></tr></thead>
+  <tbody>
+  {% for c in constants %}
+    <tr><td class="num">{{ c.key }}</td><td>{{ c.title }}</td><td class="num">{{ c.value|fa }}</td><td>{{ c.description|default:'—' }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<form method="post" action="{% url 'attendance:overtime_constant_add' %}" class="form-grid">
+  {% csrf_token %}
+  <div class="field"><label>کلید</label><input type="text" name="key"></div>
+  <div class="field"><label>عنوان</label><input type="text" name="title"></div>
+  <div class="field"><label>مقدار</label><input type="text" name="value"></div>
+  <div class="field"><label>شرح</label><input type="text" name="description"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn" type="submit">افزودن ثابت</button></div>
+</form>
+{% endif %}
+{% endblock %}

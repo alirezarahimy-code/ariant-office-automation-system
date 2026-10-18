@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}پاداش و تنبیه{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>پاداش / تنبیه</h1><p class="sub">ثبت موردی پاداش‌ها و تنبیه‌ها</p></div>
+  <div class="actions"><a href="{% url 'attendance:dashboard' %}" class="btn">داشبورد</a></div>
+</div>
+
+{% if can_manage %}
+<div class="card">
+  <div class="card-head"><div class="card-title">ثبت مورد تازه</div></div>
+  <form method="post" action="{% url 'attendance:reward_add' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field">
+      <label>نوع</label>
+      <select name="kind"><option value="reward">پاداش</option><option value="penalty">تنبیه</option></select>
+    </div>
+    <div class="field"><label>کاربر (نام کاربری)</label><input type="text" name="user_id" placeholder="شناسه عددی کاربر"></div>
+    <div class="field"><label>تاریخ</label><input type="text" name="date"></div>
+    <div class="field"><label>عنوان</label><input type="text" name="title"></div>
+    <div class="field"><label>مبلغ/امتیاز</label><input type="text" name="amount"></div>
+    <div class="field"><label>شرح</label><input type="text" name="description"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+{% endif %}
+
+<h3 style="margin:18px 0 8px">فهرست</h3>
+<table class="table">
+  <thead><tr><th>کاربر</th><th>نوع</th><th>تاریخ</th><th>عنوان</th><th>مبلغ/امتیاز</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.user }}</td>
+      <td>{% if row.kind == 'reward' %}<span class="chip chip-success">پاداش</span>{% else %}<span class="chip chip-danger">تنبیه</span>{% endif %}</td>
+      <td class="num">{{ row.date|jdate }}</td>
+      <td>{{ row.title }}</td>
+      <td class="num">{{ row.amount|fa }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">موردی ثبت نشده است.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

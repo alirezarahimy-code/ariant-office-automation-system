@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}درخواست‌های حضور و غیاب{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>درخواست‌ها</h1><p class="sub">مرخصی، ماموریت، اضافه‌کاری و اصلاح رکورد</p></div>
+  <div class="actions">
+    <a href="{% url 'attendance:request_new' %}" class="btn btn-primary">ثبت درخواست</a>
+    <a href="{% url 'attendance:dashboard' %}" class="btn">داشبورد</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab{% if tab == 'mine' %} is-active{% endif %}" href="?tab=mine">درخواست‌های من</a>
+  <a class="tab{% if tab == 'pending' %} is-active{% endif %}" href="?tab=pending">در انتظار تأیید</a>
+  {% if can_manage %}<a class="tab{% if tab == 'all' %} is-active{% endif %}" href="?tab=all">همه</a>{% endif %}
+</div>
+
+<table class="table">
+  <thead><tr><th>درخواست‌کننده</th><th>نوع</th><th>بازه</th><th>شرح</th><th>وضعیت</th><th>تصمیم‌گیرنده</th></tr></thead>
+  <tbody>
+  {% for req in requests %}
+    <tr>
+      <td>{{ req.user }}</td>
+      <td><a class="row-link" href="{% url 'attendance:request_detail' req.pk %}">{{ req.get_kind_display }}</a></td>
+      <td class="num">
+        {% if req.from_date %}{{ req.from_date|jdate }} تا {{ req.to_date|jdate }}
+        {% elif req.for_date %}{{ req.for_date|jdate }}
+          {% if req.from_time %} — {{ req.from_time|time:'H:i' }} تا {{ req.to_time|time:'H:i' }}{% endif %}
+        {% else %}—{% endif %}
+      </td>
+      <td>{{ req.description|default:'—' }}</td>
+      <td>
+        {% if req.status == 'approved' %}<span class="chip chip-success">تأییدشده</span>
+        {% elif req.status == 'pending' %}<span class="chip chip-warning">در انتظار</span>
+        {% elif req.status == 'rejected' %}<span class="chip chip-danger">ردشده</span>
+        {% else %}<span class="chip chip-muted">لغوشده</span>{% endif %}
+      </td>
+      <td>{{ req.decided_by|default:'—' }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">درخواستی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
