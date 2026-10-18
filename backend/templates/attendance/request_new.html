@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static persian_tags %}
+{% block title %}ثبت درخواست{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>ثبت درخواست</h1><p class="sub">مرخصی ساعتی/روزانه، ماموریت، اضافه‌کاری، اصلاح رکورد</p></div>
+  <div class="actions"><a href="{% url 'attendance:request_list' %}" class="btn">فهرست درخواست‌ها</a></div>
+</div>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field">
+      <label>نوع درخواست <span class="req">*</span></label>
+      <select name="kind" required>
+        {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>نوع مرخصی (برای مرخصی)</label>
+      <select name="leave_type_id">
+        <option value="">—</option>
+        {% for lt in leave_types %}<option value="{{ lt.pk }}">{{ lt.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>تاریخ (برای ماموریت/اضافه‌کاری/اصلاح رکورد)</label><input type="text" name="for_date" value="{{ today }}"></div>
+    <div class="field"><label>از تاریخ (مرخصی روزانه)</label><input type="text" name="from_date"></div>
+    <div class="field"><label>تا تاریخ (مرخصی روزانه)</label><input type="text" name="to_date"></div>
+    <div class="field"><label>از ساعت (ساعتی)</label><input type="text" name="from_time" placeholder="08:00"></div>
+    <div class="field"><label>تا ساعت (ساعتی)</label><input type="text" name="to_time" placeholder="12:00"></div>
+    <div class="field"><label>روز (مرخصی روزانه)</label><input type="text" name="days" value="1"></div>
+    <div class="field"><label>ساعت (اضافه‌کاری/ساعتی)</label><input type="text" name="hours"></div>
+    {% if users %}
+    <div class="field">
+      <label>برای کاربر (مدیر)</label>
+      <select name="user_id">
+        <option value="">خودم</option>
+        {% for u in users %}<option value="{{ u.pk }}">{{ u }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="field"><label>شرح</label><input type="text" name="description"></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">ثبت درخواست</button>
+    <a class="btn btn-ghost" href="{% url 'attendance:request_list' %}">انصراف</a>
+  </div>
+</form>
+{% endblock %}
