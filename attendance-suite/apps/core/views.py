@@ -53,3 +53,23 @@ def audit_list(request):
     return render(request, 'core/audit.html', {
         'logs': AuditLog.objects.select_related('user')[:300],
     })
+
+
+@login_required
+def notifications(request):
+    """قالب‌های اعلان (NotificationTemplate)."""
+    from .models import NotificationTemplate
+    from .services import has_perm
+    if not has_perm(request.user, 'core', 'manage'):
+        return render(request, 'core/forbidden.html')
+    if request.method == 'POST':
+        NotificationTemplate.objects.update_or_create(
+            kind=request.POST.get('kind', '').strip(),
+            defaults={'title': request.POST.get('title', ''),
+                      'body': request.POST.get('body', '')})
+        audit(request.user, 'change', 'NotificationTemplate')
+        from django.contrib import messages as dj_messages
+        dj_messages.success(request, 'قالب ذخیره شد.')
+        return redirect('core:notifications')
+    return render(request, 'core/notifications.html', {
+        'rows': NotificationTemplate.objects.all()})

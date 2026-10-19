@@ -9,6 +9,11 @@
     <a class="btn" href="{% url 'reports:index' %}">فهرست گزارش‌ها</a>
   </div>
 </div>
+<form class="card form-grid" method="get" style="margin-bottom:14px">
+  <div class="field"><label>از تاریخ (اختیاری)</label><input name="date_from" value="{{ request.GET.date_from }}" placeholder="1404/07/01"></div>
+  <div class="field"><label>تا تاریخ (اختیاری)</label><input name="date_to" value="{{ request.GET.date_to }}" placeholder="1404/07/30"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn" type="submit">اعمال بازه</button></div>
+</form>
 <table class="table">
   <thead><tr>{% for h in header %}<th>{{ h }}</th>{% endfor %}</tr></thead>
   <tbody>

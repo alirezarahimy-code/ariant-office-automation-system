@@ -200,14 +200,22 @@ def builder(request):
             invalid = [c for c in columns if c not in MODEL_MAP[model_key][1]]
             if invalid:
                 raise ValueError(f'ستون نامعتبر: {invalid}')
+            sum_columns = [c.strip() for c in
+                           request.POST.get('sum_columns', '').split(',')
+                           if c.strip()]
+            bad_sum = [c for c in sum_columns if c not in columns]
+            if bad_sum:
+                raise ValueError(f'ستون مجموع باید از ستون‌ها انتخاب شود: {bad_sum}')
             ReportDef.objects.update_or_create(
                 code=request.POST.get('code', '').strip(),
                 defaults={
                     'title': request.POST.get('title', '').strip(),
                     'module': model_key,
                     'columns_json': columns,
+                    'filters_json': ['date_from', 'date_to'],
                     'definition_json': {
                         'model': model_key,
+                        'sum': sum_columns,
                         'order_by': request.POST.get('order_by', '').strip()},
                 })
             messages.success(request, 'گزارش ذخیره شد.')
@@ -233,6 +241,18 @@ def run_def(request, code):
     if model_key in ('daily_record', 'request'):
         employees = scoped_employees(request.user, 'reports', Employee.objects.all())
         qs = qs.filter(employee__in=employees)
+    date_field = {'daily_record': 'date', 'punch': 'date',
+                  'request': 'for_date'}[model_key]
+    try:
+        if request.GET.get('date_from'):
+            qs = qs.filter(**{f'{date_field}__gte':
+                              parse_jalali(request.GET['date_from'])})
+        if request.GET.get('date_to'):
+            qs = qs.filter(**{f'{date_field}__lte':
+                              parse_jalali(request.GET['date_to'])})
+    except ValueError:
+        messages.error(request, 'بازه تاریخ نامعتبر است.')
+        return redirect('reports:builder')
     order = definition.definition_json.get('order_by') or ''
     if order.lstrip('-') in fields:
         qs = qs.order_by(order)
@@ -240,6 +260,8 @@ def run_def(request, code):
 
     header = columns
     rows = []
+    totals = {c: 0.0 for c in (definition.definition_json.get('sum') or [])
+              if c in columns}
     for obj in qs:
         row = []
         for c in columns:
@@ -248,7 +270,15 @@ def run_def(request, code):
             if fields[c].endswith('__last_name'):
                 value = obj.employee.last_name if obj.employee else ''
             row.append(str(value) if value is not None else '')
+            if c in totals:
+                try:
+                    totals[c] += float(value or 0)
+                except (TypeError, ValueError):
+                    pass
         rows.append(row)
+    if totals:
+        rows.append(['مجموع'] + [
+            (f'{totals[c]:g}' if c in totals else '') for c in columns[1:]])
 
     if request.GET.get('export') == 'csv' and has_perm(request.user, 'reports',
                                                        'export'):

@@ -205,11 +205,17 @@ def create_request(kind, employee, *, leave_type=None, for_date=None,
         age = (gregorian.date.today() - for_date).days
         if age > policy.max_request_age_days:
             raise ValueError('قدمت درخواست بیش از حد مجاز است.')
-    return cls.objects.create(
+    request = cls.objects.create(
         kind=kind, employee=employee, leave_type=leave_type, for_date=for_date,
         from_date=from_date, to_date=to_date, from_time=from_time,
         to_time=to_time, hours=hours or 0, days=days or 0,
         description=(description or '')[:300])
+    from .models import WorkflowRule
+    rule = WorkflowRule.objects.filter(kind=kind).first()
+    if rule and not rule.needs_approval:
+        request.status = cls.Status.APPROVED
+        request.save(update_fields=['status'])
+    return request
 
 
 def _leave_days(request: Request) -> Decimal:
