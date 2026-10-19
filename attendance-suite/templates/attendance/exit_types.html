@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}انواع خروج{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>انواع خروج اداری</h1></div></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نام</label><input name="name"></div>
+    <div class="field"><label>کد</label><input name="code"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>نام</th><th>کد</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td>{{ r.name }}</td><td>{{ r.code }}</td>
+    <td>{% if r.is_active %}<span class="chip chip-success">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">موردی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

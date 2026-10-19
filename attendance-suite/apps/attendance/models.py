@@ -202,6 +202,21 @@ class DailyRecord(models.Model):
         ordering = ['-date']
 
 
+class ExitType(models.Model):
+    """نوع خروج اداری (ExitType مرجع)."""
+
+    name = models.CharField('نام', max_length=120)
+    code = models.CharField('کد', max_length=24, unique=True)
+    is_active = models.BooleanField('فعال', default=True)
+
+    class Meta:
+        verbose_name = 'نوع خروج'
+        verbose_name_plural = 'انواع خروج'
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class LeaveType(models.Model):
     name = models.CharField('نام', max_length=100)
     code = models.CharField('کد', max_length=24, unique=True)
@@ -266,6 +281,9 @@ class Request(models.Model):
         related_name='requests')
     leave_type = models.ForeignKey(
         LeaveType, verbose_name='نوع مرخصی', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='requests')
+    exit_type = models.ForeignKey(
+        ExitType, verbose_name='نوع خروج', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='requests')
     for_date = models.DateField('تاریخ', null=True, blank=True)
     from_date = models.DateField('از تاریخ', null=True, blank=True)

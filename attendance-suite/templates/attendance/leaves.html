@@ -3,7 +3,10 @@
 {% block title %}مانده مرخصی{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>مانده مرخصی</h1><p class="sub">سال {{ year|fa }}</p></div>
-<div class="actions"><a class="btn btn-primary" href="{% url 'attendance:request_new' %}">درخواست مرخصی</a></div></div>
+<div class="actions">
+  <a class="btn btn-primary" href="{% url 'attendance:request_new' %}">درخواست مرخصی</a>
+  <a class="btn" href="{% url 'attendance:leave_transfer' %}">انتقال مانده سال قبل</a>
+</div></div>
 <table class="table">
   <thead><tr><th>نوع</th><th>اعتبار</th><th>مصرف</th><th>مانده</th></tr></thead>
   <tbody>

@@ -294,3 +294,25 @@ def monthly_summary(employee, jyear: int, jmonth: int) -> dict:
         'jyear': jyear, 'jmonth': jmonth, 'employee': employee,
     }
     return summary
+
+
+# ---------- انتقال مانده مرخصی (TransferRemainedLeave) ----------
+
+def transfer_leave_balances(from_year: int, to_year: int) -> dict:
+    """انتقال مانده مرخصی سال قبل به سال تازه (به‌روزرسانی یا ایجاد)."""
+    transferred = updated = 0
+    for balance in LeaveBalance.objects.filter(jyear=from_year):
+        remaining = balance.remaining
+        if remaining <= 0:
+            continue
+        obj, created = LeaveBalance.objects.update_or_create(
+            employee=balance.employee, leave_type=balance.leave_type,
+            jyear=to_year,
+            defaults={'granted': remaining, 'used': 0})
+        if created:
+            transferred += 1
+        else:
+            obj.granted = remaining
+            obj.save(update_fields=['granted'])
+            updated += 1
+    return {'transferred': transferred, 'updated': updated}

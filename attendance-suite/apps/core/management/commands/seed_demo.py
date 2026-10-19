@@ -92,5 +92,17 @@ class Command(BaseCommand):
         LeaveType.objects.get_or_create(
             code='mission', defaults={'name': 'ماموریت', 'needs_balance': False})
 
+        # انواع خروج + علت مراجعه + دستگاه نمونه
+        from apps.attendance.models import ExitType
+        from apps.device.models import Device, VisitReason
+        ExitType.objects.get_or_create(code='hourly', defaults={'name': 'خروج ساعتی'})
+        ExitType.objects.get_or_create(code='daily', defaults={'name': 'خروج روزانه'})
+        ExitType.objects.get_or_create(code='medical', defaults={'name': 'استعلاجی'})
+        VisitReason.objects.get_or_create(name='ملاقات اداری')
+        VisitReason.objects.get_or_create(name='پیمانکار')
+        Device.objects.get_or_create(
+            serial='SN-DEMO-1', defaults={'name': 'ترمینال ورودی',
+                                          'ip': '192.168.1.20'})
+
         self.stdout.write(self.style.SUCCESS(
             'داده‌های نمایشی آماده: admin/admin — manager/manager — employee/employee'))

@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.attendance.models import (AttendancePolicy, DailyRecord, Punch,
-                                    Request)
+                                    Request, RewardPenalty)
 from apps.attendance.services import monthly_summary, parse_jalali
 from apps.core.services import (audit, data_scope, has_perm, require_perm,
                                 scoped_employees)
@@ -49,7 +49,7 @@ def index(request):
             ('overtime', 'اضافه‌کاری'), ('requests', 'درخواست‌ها'),
             ('balances', 'مانده مرخصی'), ('daily', 'کارکرد روزانه'),
             ('raw', 'تردد خام دستگاه‌ها'), ('devices', 'وضعیت دستگاه‌ها'),
-            ('visitors', 'بازدیدکنندگان')],
+            ('visitors', 'بازدیدکنندگان'), ('cardex', 'کارنامه فرد (Cardex)')],
         'defs': ReportDef.objects.all(),
         'can_build': has_perm(request.user, 'reports', 'manage'),
     })
@@ -136,6 +136,34 @@ def run_standard(request, code):
                 enter_time__gte=start, enter_time__lt=end).select_related('host'):
             rows.append([v.name, str(v.host or '—'), str(v.reason or '—'),
                          str(v.enter_time), str(v.leave_time or '—')])
+
+    elif code == 'cardex':
+        title = 'کارنامه فرد (Cardex)'
+        header = ['تاریخ', 'نوع رویداد', 'جزئیات']
+        emp_id = request.GET.get('employee_id')
+        base_qs = DailyRecord.objects.filter(
+            employee__in=employees, date__gte=start, date__lt=end)
+        if emp_id:
+            base_qs = base_qs.filter(employee_id=emp_id)
+        for r in base_qs.select_related('employee').order_by('date'):
+            rows.append([str(r.date), f'کارکرد — {r.employee}',
+                         f'{r.get_state_display()}، {r.worked_minutes} دقیقه'])
+        req_qs = Request.objects.filter(
+            employee__in=employees, created_at__date__gte=start,
+            created_at__date__lt=end)
+        if emp_id:
+            req_qs = req_qs.filter(employee_id=emp_id)
+        for req in req_qs.select_related('employee'):
+            rows.append([str(req.created_at.date()), f'درخواست — {req.employee}',
+                         f'{req.get_kind_display()} ({req.get_status_display()})'])
+        rp_qs = RewardPenalty.objects.filter(
+            employee__in=employees, date__gte=start, date__lt=end)
+        if emp_id:
+            rp_qs = rp_qs.filter(employee_id=emp_id)
+        for rp in rp_qs.select_related('employee'):
+            rows.append([str(rp.date), f'پاداش/تنبیه — {rp.employee}',
+                         f'{rp.get_kind_display()}: {rp.title}'])
+        rows.sort(key=lambda row: row[0])
 
     if request.GET.get('export') == 'csv' and has_perm(request.user, 'reports',
                                                        'export'):

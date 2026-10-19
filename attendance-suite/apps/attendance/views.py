@@ -91,9 +91,11 @@ def request_new(request):
             return redirect('attendance:request_detail', pk=req.pk)
         except (ValueError, TypeError) as exc:
             messages.error(request, str(exc))
+    from .models import ExitType
     return render(request, 'attendance/request_form.html', {
         'kinds': Request.Kind.choices,
         'leave_types': LeaveType.objects.filter(is_active=True),
+        'exit_types': ExitType.objects.filter(is_active=True),
         'today': jdatetime.date.today().strftime('%Y/%m/%d'),
     })
 
@@ -390,3 +392,40 @@ def deputy(request):
         'deputies': Deputy.objects.select_related('employee', 'for_employee'),
         'employees': Employee_qs().filter(is_active=True),
     })
+
+
+@require_perm('attendance', 'manage')
+def leave_transfer(request):
+    """انتقال مانده مرخصی سال قبل به سال تازه (TransferRemainedLeave)."""
+    if request.method == 'POST':
+        from .services import transfer_leave_balances
+        from_year = int(request.POST.get('from_year') or 0)
+        to_year = int(request.POST.get('to_year') or 0)
+        if not (from_year and to_year):
+            messages.error(request, 'سال مبدأ و مقصد الزامی است.')
+        else:
+            result = transfer_leave_balances(from_year, to_year)
+            audit(request.user, 'leave_transfer', detail=str(result))
+            messages.success(
+                request,
+                f"انتقال انجام شد: {result['transferred']} تازه، "
+                f"{result['updated']} به‌روزرسانی.")
+        return redirect('attendance:leaves')
+    return render(request, 'attendance/leave_transfer.html', {
+        'from_year': jdatetime.date.today().year - 1,
+        'to_year': jdatetime.date.today().year,
+    })
+
+
+@require_perm('attendance', 'manage')
+def exit_type_list(request):
+    """مدیریت انواع خروج (ExitType)."""
+    from .models import ExitType
+    if request.method == 'POST':
+        ExitType.objects.get_or_create(
+            code=request.POST.get('code', '').strip(),
+            defaults={'name': request.POST.get('name', '').strip()})
+        messages.success(request, 'نوع خروج ثبت شد.')
+        return redirect('attendance:exit_types')
+    return render(request, 'attendance/exit_types.html', {
+        'rows': ExitType.objects.all()})

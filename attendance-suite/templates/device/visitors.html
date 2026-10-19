@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}بازدیدکنندگان{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>بازدیدکنندگان</h1></div>
+<div class="actions"><a class="btn" href="{% url 'device:index' %}">دستگاه‌ها</a></div></div>
+{% if can_add %}
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نام *</label><input name="name" required></div>
+    <div class="field"><label>شماره کارت</label><input name="card_no"></div>
+    <div class="field"><label>علت مراجعه</label><select name="reason_id"><option value="">—</option>
+      {% for r in reasons %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>میزبان</label><select name="host_id"><option value="">—</option>
+      {% for e in employees %}<option value="{{ e.pk }}">{{ e }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>شرح</label><input name="description"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت ورود</button></div>
+  </form>
+</div>
+{% endif %}
+<table class="table">
+  <thead><tr><th>نام</th><th>کارت</th><th>میزبان</th><th>علت</th><th>ورود</th></tr></thead>
+  <tbody>
+  {% for v in visitors %}
+    <tr><td>{{ v.name }}</td><td>{{ v.card_no|default:'—' }}</td><td>{{ v.host|default:'—' }}</td>
+    <td>{{ v.reason|default:'—' }}</td><td>{{ v.enter_time }}</td></tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">بازدیدکننده‌ای نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

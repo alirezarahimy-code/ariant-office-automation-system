@@ -26,4 +26,6 @@ urlpatterns = [
     path('geo/', views.geo, name='geo'),
     path('geo/add/', views.geo_add, name='geo_add'),
     path('deputy/', views.deputy, name='deputy'),
+    path('leaves/transfer/', views.leave_transfer, name='leave_transfer'),
+    path('exit-types/', views.exit_type_list, name='exit_types'),
 ]
