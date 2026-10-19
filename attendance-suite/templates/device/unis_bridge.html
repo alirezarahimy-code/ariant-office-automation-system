@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}پل یونیس{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>پل یونیس (Virdi)</h1>
+  <p class="sub">دریافت لاگ تردد دستگاه‌های Virdi از نرم‌افزار یونیس — بانک اطلاعاتی یا پوشه خروجی</p></div>
+  <div class="actions"><a class="btn" href="{% url 'device:index' %}">دستگاه‌ها</a></div>
+</div>
+
+<div class="card">
+  <div class="card-title">افزودن/ویرایش پل</div>
+  <form method="post" action="{% url 'device:unis_bridge' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نام پل</label><input name="name" required></div>
+    <div class="field"><label>دستگاه مقصد</label>
+      <select name="device_id" required>
+        {% for d in devices %}<option value="{{ d.id }}">{{ d.name }} ({{ d.serial }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>حالت دریافت</label>
+      <select name="mode">
+        <option value="db">بانک اطلاعاتی یونیس (SQL Server / MySQL / Oracle)</option>
+        <option value="dir">پوشه خروجی فایل (CSV/USB)</option>
+      </select>
+    </div>
+    <div class="field"><label>جدول لاگ (حالت بانک)</label><input name="table_name" placeholder="T_LOG"></div>
+    <div class="field"><label>ستون کد پرسنلی</label><input name="col_pin" placeholder="USER_ID"></div>
+    <div class="field"><label>ستون زمان</label><input name="col_time" placeholder="ATT_TIME"></div>
+    <div class="field"><label>ستون جهت (اختیاری)</label><input name="col_direction" placeholder="IN_OUT"></div>
+    <div class="field"><label>مسیر پوشه خروجی (حالت فایل)</label><input name="dir_path" placeholder="/srv/unis-export"></div>
+    <div class="field"><label>فعال</label><input type="checkbox" name="is_active" checked></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+
+<table class="table">
+  <thead><tr><th>نام</th><th>دستگاه مقصد</th><th>حالت</th><th>منبع</th><th>آخرین همگام‌سازی</th><th>آخرین نتیجه</th><th>وضعیت</th><th></th></tr></thead>
+  <tbody>
+  {% for b in bridges %}
+    <tr>
+      <td>{{ b.name }}</td>
+      <td>{{ b.device.name }}</td>
+      <td>{{ b.get_mode_display }}</td>
+      <td class="mono">{{ b.table_name|default:b.dir_path|default:'—' }}</td>
+      <td>{{ b.last_sync_at|default:'—' }}</td>
+      <td class="mono">{{ b.last_result|default:'—' }}</td>
+      <td>{% if b.is_active %}<span class="chip chip-success">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td>
+      <td>
+        <form method="post" action="{% url 'device:unis_sync' b.id %}">{% csrf_token %}
+          <button class="btn" type="submit">همگام‌سازی اکنون</button>
+        </form>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="8" class="empty">پلی ثبت نشده — برای دستگاه‌های Virdi یک پل یونیس بسازید.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="card">
+  <div class="card-title">راهنمای سریع</div>
+  <p class="sub">۱) در نرم‌افزار یونیس، بانک (MS SQL/MySQL/Oracle) یا خروجی فایل را در دسترس بگذارید.
+  ۲) برای حالت بانک، متغیرهای محیطی <span class="mono">UNIS_DB_*</span> را روی سرور سامانه تنظیم کنید (راهنمای ۰۵).
+  ۳) برای حالت فایل، پوشه خروجی مشترک را به‌عنوان مسیر پل بدهید.
+  ۴) «همگام‌سازی اکنون» یا فرمان دوره‌ای <span class="mono">manage.py run_device_bridge</span> — بدون هیچ سرویس ویندوزی.</p>
+</div>
+{% endblock %}

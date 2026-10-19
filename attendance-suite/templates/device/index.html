@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>دستگاه‌های تردد</h1><p class="sub">وضعیت و آخرین ارتباط</p></div>
-  <div class="actions"><a class="btn" href="{% url 'device:raw_records' %}">رکوردهای خام</a></div>
+  <div class="actions"><form method="post" action="{% url 'device:gateway_sync' %}" style="display:inline">{% csrf_token %}<button class="btn btn-primary" type="submit">همگام‌سازی دروازه</button></form><a class="btn" href="{% url 'device:unis_bridge' %}">پل یونیس (Virdi)</a><a class="btn" href="{% url 'device:raw_records' %}">رکوردهای خام</a></div>
 </div>
 {% if can_manage %}
 <div class="card">
@@ -16,6 +16,9 @@
     <div class="field"><label>مدل</label><input name="model"></div>
     <div class="field"><label>آی‌پی</label><input name="ip" placeholder="192.168.1.20"></div>
     <div class="field"><label>پورت</label><input name="port" value="437"></div>
+    <div class="field"><label>برند</label>
+      <select name="brand"><option value="zk">ZKTeco / سازگار</option><option value="virdi">Virdi (یونیس)</option><option value="other">سایر</option></select>
+    </div>
     <div class="field"><label>نوع اتصال</label>
       <select name="conn_type"><option value="tcp">TCP</option><option value="udp">UDP</option><option value="push">Push</option></select>
     </div>
@@ -24,14 +27,14 @@
 </div>
 {% endif %}
 <table class="table">
-  <thead><tr><th>نام</th><th>سریال</th><th>نوع اتصال</th><th>آخرین آنلاین</th><th>وضعیت</th></tr></thead>
+  <thead><tr><th>نام</th><th>برند</th><th>سریال</th><th>نوع اتصال</th><th>آخرین آنلاین</th><th>وضعیت</th></tr></thead>
   <tbody>
   {% for d in devices %}
-    <tr><td>{{ d.name }}</td><td>{{ d.serial }}</td><td>{{ d.get_conn_type_display }}</td>
+    <tr><td>{{ d.name }}</td><td>{{ d.get_brand_display }}</td><td>{{ d.serial }}</td><td>{{ d.get_conn_type_display }}</td>
     <td>{{ d.last_online_at|default:'—' }}</td>
     <td>{% if d.is_active %}<span class="chip chip-success">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td></tr>
   {% empty %}
-    <tr><td colspan="5" class="empty">دستگاهی ثبت نشده.</td></tr>
+    <tr><td colspan="6" class="empty">دستگاهی ثبت نشده.</td></tr>
   {% endfor %}
   </tbody>
 </table>

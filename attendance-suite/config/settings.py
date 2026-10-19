@@ -85,3 +85,29 @@ if os.environ.get('SUITE_HTTPS', '0') == '1':
 
 # محدودسازی نرخ ورود (در services)
 LOGIN_RATE_LIMIT = 5
+
+
+# --- پل یونیس (بانک نرم‌افزار UNIS ویردی) ---
+# اتصال بانک یونیس با متغیرهای محیطی (راهنمای 05) — رمز فقط از env، هرگز در کد/لاگ:
+#   UNIS_DB_ENGINE=mssql|mysql|oracle|sqlite   UNIS_DB_NAME=UNIS   UNIS_DB_HOST=...
+#   UNIS_DB_USER=...   UNIS_DB_PASSWORD=...
+# بدون env: پیش‌فرض SQLite بی‌اثر (فقط برای سلامت ساختار) — تا پیکربندی نشود خوانده نمی‌شود.
+_unis_engine_name = os.environ.get('UNIS_DB_ENGINE', 'sqlite').lower()
+_unis_engine = {
+    'mssql': 'mssql_django', 'sqlserver': 'mssql_django',
+    'mysql': 'django.db.backends.mysql',
+    'oracle': 'django.db.backends.oracle',
+    'sqlite': 'django.db.backends.sqlite3',
+}[_unis_engine_name]
+DATABASES['unis'] = {
+    'ENGINE': _unis_engine,
+    'NAME': os.environ.get('UNIS_DB_NAME', str(BASE_DIR / 'db_unis.sqlite3')),
+    'HOST': os.environ.get('UNIS_DB_HOST', ''),
+    'PORT': os.environ.get('UNIS_DB_PORT', ''),
+    'USER': os.environ.get('UNIS_DB_USER', ''),
+    'PASSWORD': os.environ.get('UNIS_DB_PASSWORD', ''),
+}
+if _unis_engine == 'mssql_django':
+    DATABASES['unis']['OPTIONS'] = {
+        'driver': os.environ.get(
+            'UNIS_DB_DRIVER', 'ODBC Driver 17 for SQL Server')}

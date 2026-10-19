@@ -11,8 +11,15 @@ class Device(models.Model):
         UDP = 'udp', 'UDP'
         PUSH = 'push', 'Push (اتصال از دستگاه)'
 
+    class Brand(models.TextChoices):
+        ZK = 'zk', 'ZKTeco / سازگار (ZK)'
+        VIRDI = 'virdi', 'Virdi (از طریق یونیس)'
+        OTHER = 'other', 'سایر'
+
     name = models.CharField('نام', max_length=120)
     serial = models.CharField('سریال', max_length=60, unique=True)
+    brand = models.CharField(
+        'برند', max_length=10, choices=Brand.choices, default=Brand.ZK)
     model = models.CharField('مدل', max_length=60, blank=True, default='')
     ip = models.GenericIPAddressField('آی‌پی', null=True, blank=True)
     port = models.PositiveIntegerField('پورت', default=437)
@@ -230,3 +237,48 @@ class AccessGroup(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class UnisBridge(models.Model):
+    """پل نرم‌افزار یونیس (UNIS Manager — Union Community / Virdi).
+
+    دستگاه‌های Virdi به نرم‌افزار یونیس وصل‌اند و لاگ تردد در بانک یونیس
+    (MS SQL / MySQL / Oracle / Access) یا خروجی فایل آن می‌نشیند؛ این مدل
+    همگام‌سازی آن لاگ‌ها را به خط لوله واحد سامانه تعریف می‌کند.
+    """
+
+    class Mode(models.TextChoices):
+        DB = 'db', 'بانک اطلاعاتی یونیس'
+        DIR = 'dir', 'پوشه خروجی فایل (CSV/USB)'
+
+    name = models.CharField('نام', max_length=120)
+    device = models.ForeignKey(
+        Device, verbose_name='دستگاه مقصد', on_delete=models.CASCADE,
+        related_name='unis_bridges',
+        help_text='دستگاهی که رکوردها به نام آن ثبت می‌شوند (می‌تواند مجازی باشد).')
+    mode = models.CharField(
+        'حالت دریافت', max_length=4, choices=Mode.choices, default=Mode.DB)
+    table_name = models.CharField(
+        'جدول لاگ در یونیس', max_length=120, blank=True, default='',
+        help_text='مثلاً T_LOG — فقط نام معتبر شناسه‌ای SQL')
+    col_pin = models.CharField('ستون کد پرسنلی', max_length=64, blank=True, default='')
+    col_time = models.CharField('ستون زمان', max_length=64, blank=True, default='')
+    col_direction = models.CharField(
+        'ستون جهت (اختیاری)', max_length=64, blank=True, default='')
+    dir_path = models.CharField(
+        'مسیر پوشه خروجی', max_length=255, blank=True, default='',
+        help_text='پوشه‌ای که یونیس/دستگاه در آن فایل CSV می‌گذارد.')
+    batch_limit = models.PositiveIntegerField('سقف هر نوبت خواندن', default=5000)
+    is_active = models.BooleanField('فعال', default=True)
+    last_sync_at = models.DateTimeField('آخرین همگام‌سازی', null=True, blank=True)
+    last_watermark = models.CharField(
+        'نشانگر آخرین رکورد', max_length=40, blank=True, default='')
+    last_result = models.CharField('آخرین نتیجه', max_length=200, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'پل یونیس'
+        verbose_name_plural = 'پل‌های یونیس'
+        ordering = ['name']
+
+    def __str__(self) -> str:
+        return f'{self.name} ({self.get_mode_display()})'

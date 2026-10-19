@@ -11,4 +11,7 @@ urlpatterns = [
     path('api/records/', views.api_ingest, name='api_ingest'),
     path('visitors/', views.visitors, name='visitors'),
     path('cards/', views.cards, name='cards'),
+    path('sync-gateway/', views.gateway_sync, name='gateway_sync'),
+    path('unis/', views.unis_bridge, name='unis_bridge'),
+    path('unis/<int:bridge_id>/sync/', views.unis_sync, name='unis_sync'),
 ]
