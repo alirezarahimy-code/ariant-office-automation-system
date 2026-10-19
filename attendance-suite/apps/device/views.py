@@ -58,8 +58,11 @@ def sync_punches(request):
     return redirect('device:raw_records')
 
 
+@csrf_exempt
 def api_ingest(request):
     """API ورود رکورد دستگاه — سازگار با قرارداد Link5.RecordTransfer.
+
+    احراز هویت با هدر `X-Device-Token` (نه کوکی) → بنابراین CSRF معاف است.
 
     POST /device/api/records/ با هدر `X-Device-Token` (توکن ثبت‌شده در AppSetting)
     بدنه: {"serial": "...", "records": [{"pin": "1002", "time": "2026-10-19 08:00:00"}]}

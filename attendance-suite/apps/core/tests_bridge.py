@@ -68,6 +68,19 @@ class DeviceBridgeTests(TestCase):
         self.assertEqual(data['created'], 1)
         self.assertEqual(data['converted'], 1)
 
+    def test_api_works_with_csrf_enforced(self):
+        """رگرسیون: POST واقعی HTTP (با CSRF فعال) باید ۲۰۰ بگیرد — معافیت CSRF اعمال شده."""
+        from django.test import Client
+        AppSetting.objects.create(key='device_api_token', value='secret-token')
+        c = Client(enforce_csrf_checks=True)
+        payload = {'serial': 'SN-100',
+                   'records': [{'pin': '1002', 'time': '2026-10-19 08:00:00'}]}
+        resp = c.post(reverse('device:api_ingest'), data=json.dumps(payload),
+                      content_type='application/json',
+                      HTTP_X_DEVICE_TOKEN='secret-token')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['ok'])
+
     def test_api_bad_payload(self):
         AppSetting.objects.create(key='device_api_token', value='t')
         resp = self.client.post(
