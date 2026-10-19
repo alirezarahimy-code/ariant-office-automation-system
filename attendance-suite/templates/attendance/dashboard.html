@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}داشبورد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>داشبورد حضور و غیاب</h1>
+  <p class="sub">امروز: {{ today|jdate }}</p></div>
+</div>
+{% if summary %}
+<div class="grid">
+  <div class="kpi"><div class="label">روزهای حاضر</div><div class="value">{{ summary.present_days|fa }}</div></div>
+  <div class="kpi"><div class="label">روزهای با تأخیر</div><div class="value">{{ summary.late_days|fa }}</div></div>
+  <div class="kpi"><div class="label">غیبت</div><div class="value">{{ summary.absent_days|fa }}</div></div>
+  <div class="kpi"><div class="label">اضافه‌کاری (ساعت)</div><div class="value">{{ summary.overtime_minutes|hours|fa }}</div></div>
+</div>
+<div class="card" style="margin-top:16px">
+  <div class="card-title">کارکرد ماه جاری</div>
+  <table class="table">
+    <thead><tr><th>تاریخ</th><th>ورود</th><th>خروج</th><th>تأخیر</th><th>کارکرد</th><th>وضعیت</th></tr></thead>
+    <tbody>
+    {% for r in summary.rows %}
+      <tr>
+        <td>{{ r.date|jdate }}</td>
+        <td>{{ r.check_in|time:'H:i' }}</td>
+        <td>{{ r.check_out|time:'H:i' }}</td>
+        <td>{{ r.late_minutes|fa }}</td>
+        <td>{{ r.worked_minutes|fa }}</td>
+        <td>{{ r.get_state_display }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="empty">رکوردی برای این ماه نیست.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">پروفایل پرسنلی به حساب شما متصل نیست.</div>
+{% endif %}
+{% endblock %}

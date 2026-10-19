@@ -1,0 +1,31 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}سامانه یکپارچه حضور و غیاب{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'suite.css' %}">
+</head>
+<body>
+{% if user.is_authenticated %}
+<header class="topbar">
+  <div class="brand">سامانه یکپارچه حضور و غیاب</div>
+  <nav class="topnav">
+    <a href="{% url 'attendance:dashboard' %}">داشبورد</a>
+    <a href="{% url 'org:index' %}">پرسنل</a>
+    <a href="{% url 'device:index' %}">دستگاه‌ها</a>
+    <a href="{% url 'reports:index' %}">گزارش‌ها</a>
+  </nav>
+  <div class="userbox">{{ user }}
+    <form method="post" action="{% url 'core:logout' %}" class="inline">{% csrf_token %}
+      <button class="btn btn-ghost" type="submit">خروج</button>
+    </form>
+  </div>
+</header>
+{% endif %}
+<main class="container">
+  {% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
