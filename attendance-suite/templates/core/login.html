@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}ورود — سامانه حضور و غیاب{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card">
+    <div class="card-title">ورود به سامانه</div>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn btn-primary" type="submit" style="width:100%">ورود</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

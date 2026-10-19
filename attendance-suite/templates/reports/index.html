@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}گزارش‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>گزارش‌ها</h1><p class="sub">گزارش‌های سیستمی و سفارشی</p></div></div>
+<div class="grid">
+{% for r in reports %}
+  <div class="kpi"><div class="label">{{ r.module }}</div><div class="value" style="font-size:16px">{{ r.title }}</div></div>
+{% empty %}
+  <div class="card">گزارشی تعریف نشده.</div>
+{% endfor %}
+</div>
+{% endblock %}
