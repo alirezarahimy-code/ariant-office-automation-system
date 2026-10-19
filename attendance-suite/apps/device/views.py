@@ -2,7 +2,7 @@
 import json
 
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
@@ -30,7 +30,8 @@ def device_add(request):
                 model=request.POST.get('model', '').strip(),
                 ip=request.POST.get('ip') or None,
                 port=int(request.POST.get('port') or 437),
-                conn_type=request.POST.get('conn_type', 'tcp'))
+                conn_type=request.POST.get('conn_type', 'tcp'),
+                brand=request.POST.get('brand') or 'zk')
             audit(request.user, 'add', 'Device')
             messages.success(request, 'دستگاه ثبت شد.')
         except Exception as exc:
@@ -129,3 +130,78 @@ def cards(request):
         'employees': Employee.objects.filter(is_active=True),
         'can_add': has_perm(request.user, 'device', 'add'),
     })
+
+
+@require_perm('device', 'manage')
+def unis_bridge(request):
+    """پل یونیس: تنظیم منبع لاگ دستگاه‌های Virdi (بانک یونیس یا پوشه خروجی)."""
+    from .models import UnisBridge
+    if request.method == 'POST':
+        bridge_id = request.POST.get('bridge_id') or None
+        defaults = dict(
+            name=request.POST.get('name', '').strip(),
+            device_id=request.POST.get('device_id') or None,
+            mode=request.POST.get('mode') or 'db',
+            table_name=request.POST.get('table_name', '').strip(),
+            col_pin=request.POST.get('col_pin', '').strip(),
+            col_time=request.POST.get('col_time', '').strip(),
+            col_direction=request.POST.get('col_direction', '').strip(),
+            dir_path=request.POST.get('dir_path', '').strip(),
+            is_active=request.POST.get('is_active') == 'on')
+        if not defaults['name'] or not defaults['device_id']:
+            messages.error(request, 'نام و دستگاه مقصد الزامی است.')
+        elif bridge_id:
+            UnisBridge.objects.filter(pk=bridge_id).update(**defaults)
+            audit(request.user, 'change', 'UnisBridge', int(bridge_id))
+            messages.success(request, 'پل یونیس به‌روزرسانی شد.')
+        else:
+            obj = UnisBridge.objects.create(**defaults)
+            audit(request.user, 'add', 'UnisBridge', obj.pk)
+            messages.success(request, 'پل یونیس ثبت شد.')
+        return redirect('device:unis_bridge')
+    from .models import Device, UnisBridge
+    return render(request, 'device/unis_bridge.html', {
+        'bridges': UnisBridge.objects.select_related('device'),
+        'devices': Device.objects.filter(is_active=True),
+    })
+
+
+@require_perm('device', 'manage')
+def unis_sync(request, bridge_id):
+    """اجرای فوری یک نوبت همگام‌سازی پل یونیس."""
+    if request.method != 'POST':
+        return redirect('device:unis_bridge')
+    from .gateway import BridgeError, sync_bridge
+    from .models import UnisBridge
+    bridge = UnisBridge.objects.filter(pk=bridge_id).select_related('device').first()
+    if not bridge:
+        raise Http404('پل یافت نشد')
+    try:
+        result = sync_bridge(bridge)
+        audit(request.user, 'change', 'UnisBridge', bridge.pk, detail=str(result))
+        messages.success(
+            request,
+            f"همگام‌سازی «{bridge.name}»: {result['created']} تازه، "
+            f"{result['skipped']} تکراری، {result['converted']} تبدیل.")
+    except BridgeError as exc:
+        messages.error(request, str(exc))
+    return redirect('device:unis_bridge')
+
+
+@require_perm('device', 'manage')
+def gateway_sync(request):
+    """اجرای فوری یک نوبت دروازه چندبرند (ZK + یونیس)."""
+    if request.method != 'POST':
+        return redirect('device:index')
+    from .gateway import run_gateway
+    result = run_gateway()
+    audit(request.user, 'change', 'Device', detail=str(result)[:500])
+    zk_ok = sum(1 for x in result['zk'] if 'error' not in x)
+    zk_err = len(result['zk']) - zk_ok
+    messages.success(
+        request,
+        f"دروازه دستگاه: {zk_ok} دستگاه ZK همگام"
+        + (f"، {zk_err} خطا" if zk_err else '')
+        + f" | {len(result['unis'])} پل یونیس | "
+        f"{result['converted'].get('converted', 0)} تبدیل تردد.")
+    return redirect('device:index')
