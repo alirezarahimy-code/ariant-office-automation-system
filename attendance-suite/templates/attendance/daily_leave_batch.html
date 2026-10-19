@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}مرخصی گروهی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>ثبت مرخصی گروهی</h1><p class="sub">InsertDailyLeave — برای چند نفر و یک بازه</p></div></div>
+<form method="post" action="{% url 'attendance:daily_leave_batch' %}">{% csrf_token %}
+<div class="card"><div class="card-title">پرسنل</div>
+  <div style="max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
+    {% for e in employees %}
+      <label style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px">
+        <input type="checkbox" name="selectedBadgeNumbers" value="{{ e.badge_no }}">
+        {{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</label>
+    {% endfor %}
+  </div>
+</div>
+<div class="card"><div class="form-grid">
+  <div class="field"><label>نوع مرخصی</label><select name="leave_type_id">
+    {% for t in leave_types %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}</select></div>
+  <div class="field"><label>از تاریخ</label><input name="date_from" placeholder="1405-07-28" required></div>
+  <div class="field"><label>تا تاریخ</label><input name="date_to" placeholder="1405-07-30"></div>
+  <div class="field"><label>شرح</label><input name="description"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت گروهی</button></div>
+</div></div>
+</form>
+{% endblock %}

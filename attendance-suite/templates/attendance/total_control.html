@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}کنترل جامع{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>کنترل جامع روزانه</h1><p class="sub">TotalControl — تأخیر/زود/غیاب/مرخصی/مأموریت/اضافه‌کار همه پرسنل در یک نگاه</p></div>
+<div class="actions">
+  <form method="get" class="inline"><input name="day" value="{{ day }}" placeholder="1405-07-28">
+  <button class="btn" type="submit">نمایش</button></form>
+  <a class="btn" href="{% url 'attendance:insert_record' %}">ثبت تردد</a>
+</div></div>
+<table class="table">
+  <thead><tr><th>پرسنل</th><th>واحد</th><th>ورود</th><th>خروج</th><th>کارکرد</th><th>تأخیر</th><th>زود</th><th>اضافه‌کار</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.emp.badge_no }} — {{ r.emp.first_name }} {{ r.emp.last_name }}</td>
+      <td>{{ r.emp.department.name|default:'—' }}</td>
+      <td>{{ r.d.check_in|default:'—' }}</td>
+      <td>{{ r.d.check_out|default:'—' }}</td>
+      <td>{{ r.d.worked_minutes|default:0 }} دقیقه</td>
+      <td>{% if r.d.late_minutes %}<span class="chip chip-warn">{{ r.d.late_minutes }} دقیقه</span>{% else %}—{% endif %}</td>
+      <td>{% if r.d.early_minutes %}<span class="chip chip-warn">{{ r.d.early_minutes }} دقیقه</span>{% else %}—{% endif %}</td>
+      <td>{{ r.d.overtime_minutes|default:0 }}</td>
+      <td>{% if r.d %}{{ r.d.get_state_display }}{% else %}<span class="chip chip-muted">بدون رکورد</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}پارامترهای محاسباتی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>پارامترهای محاسباتی</h1><p class="sub">Parameters — فرمول‌های قابل تعریف برای محاسبات ماهانه/فیش</p></div></div>
+{% if can_manage %}
+<div class="card"><div class="card-title">پارامتر جدید</div>
+<form method="post" action="{% url 'attendance:calc_parameters' %}" class="form-grid">{% csrf_token %}
+  <div class="field"><label>نام</label><input name="name" required></div>
+  <div class="field"><label>نماد یکتا</label><input name="symbol" placeholder="WorkedH" required></div>
+  <div class="field"><label>فرمول</label><input name="formula" placeholder="[WorkedHours]-[MissionHours]" style="direction:ltr"></div>
+  <div class="field"><label>جمع‌شونده</label><input type="checkbox" name="is_sum"></div>
+  <div class="field"><label>تابع تجمیع</label><select name="sum_function">
+    <option>SUM</option><option>AVG</option><option>MAX</option><option>MIN</option></select></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+</form></div>
+{% endif %}
+<table class="table"><thead><tr><th>نام</th><th>نماد</th><th>فرمول</th><th>تجمیع</th></tr></thead>
+<tbody>{% for p in params %}<tr><td>{{ p.name }}</td><td class="mono">{{ p.symbol }}</td>
+<td class="mono" style="direction:ltr">{{ p.formula|default:'—' }}</td>
+<td>{% if p.is_sum %}{{ p.sum_function }}{% else %}—{% endif %}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">پارامتری تعریف نشده.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

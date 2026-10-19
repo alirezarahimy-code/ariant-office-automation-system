@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ title }}</h1></div></div>
+<div class="card"><div class="card-title">افزودن</div>
+<form method="post" class="form-grid">{% csrf_token %}
+  {% for f in form_fields %}
+  <div class="field"><label>{{ f.1 }}</label>
+    {% if f.2 == 'bool' %}<input type="checkbox" name="{{ f.0 }}">
+    {% elif f.2 == 'dept' %}<select name="{{ f.0 }}"><option value="">—</option>
+      {% for d in depts %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select>
+    {% else %}<input name="{{ f.0 }}">{% endif %}
+  </div>
+  {% endfor %}
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+</form></div>
+<table class="table"><thead><tr>{% for c in cols %}<th>{{ c.1 }}</th>{% endfor %}</tr></thead>
+<tbody>{% for r in rows_data %}<tr>{% for cell in r %}<td>{{ cell }}</td>{% endfor %}</tr>
+{% empty %}<tr><td colspan="{{ cols|length }}" class="empty">موردی نیست.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

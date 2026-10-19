@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}تغییر رمز{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>تغییر رمز عبور</h1></div></div>
+<div class="card"><form method="post" class="form-grid">{% csrf_token %}
+  <div class="field"><label>رمز فعلی</label><input type="password" name="old_password" required></div>
+  <div class="field"><label>رمز جدید</label><input type="password" name="new_password1" required></div>
+  <div class="field"><label>تکرار رمز جدید</label><input type="password" name="new_password2" required></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">تغییر رمز</button></div>
+</form></div>
+{% endblock %}

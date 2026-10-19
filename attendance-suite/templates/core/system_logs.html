@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}لاگ سیستم{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>لاگ سیستم</h1><p class="sub">ViewSystemLogs — آخرین رویدادهای سامانه</p></div></div>
+<table class="table"><thead><tr><th>زمان</th><th>کاربر</th><th>عملیات</th><th>موجودیت</th><th>جزئیات</th><th>IP</th></tr></thead>
+<tbody>{% for l in logs %}<tr><td>{{ l.at }}</td><td>{{ l.user|default:'—' }}</td>
+<td>{{ l.action }}</td><td>{{ l.model|default:'—' }} {{ l.object_id|default:'' }}</td>
+<td class="mono">{{ l.detail|truncatechars:60 }}</td><td class="mono">{{ l.ip|default:'—' }}</td></tr>
+{% empty %}<tr><td colspan="6" class="empty">لاگی نیست.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}ثبت تردد دستی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>ثبت تردد دستی</h1><p class="sub">InsertRecord — برای چند پرسنل همزمان</p></div></div>
+<form method="post" action="{% url 'attendance:insert_record' %}">{% csrf_token %}
+<div class="card">
+  <div class="card-title">۱) انتخاب پرسنل (چندتایی)</div>
+  <div style="max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
+    {% for e in employees %}
+      <label style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px">
+        <input type="checkbox" name="selectedBadgeNumbers" value="{{ e.badge_no }}">
+        {{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</label>
+    {% endfor %}
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">۲) مشخصات تردد</div>
+  <div class="form-grid">
+    <div class="field"><label>تاریخ (جلالی)</label><input name="date" placeholder="1405-07-28" required></div>
+    <div class="field"><label>ساعت</label><input name="time" value="08:00" required></div>
+    <div class="field"><label>نوع</label><select name="check_type">
+      <option value="in">ورود</option><option value="out">خروج</option></select></div>
+    <div class="field"><label>شرح</label><input name="description"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت تردد</button></div>
+  </div>
+</div>
+</form>
+{% endblock %}

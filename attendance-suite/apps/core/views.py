@@ -1,10 +1,11 @@
 """ویوهای هسته: ورود امن (محدودسازی نرخ + گزارش دسترسی) و خانه."""
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from .services import (audit, clear_login_failures, login_throttled,
-                       record_login_failure, _client_ip)
+                       record_login_failure, require_perm, _client_ip)
 
 
 def login_view(request):
@@ -73,3 +74,33 @@ def notifications(request):
         return redirect('core:notifications')
     return render(request, 'core/notifications.html', {
         'rows': NotificationTemplate.objects.all()})
+
+
+@require_perm('core', 'view')
+def system_logs(request):
+    """لاگ سیستم (ViewSystemLogs)."""
+    from .models import AuditLog
+    logs = AuditLog.objects.order_by('-at')[:300]
+    return render(request, 'core/system_logs.html', {'logs': logs})
+
+
+@require_perm('core', 'view')
+def change_pass(request):
+    """تغییر رمز (Home/ChangePass)."""
+    if request.method == 'POST':
+        old = request.POST.get('old_password', '')
+        new1 = request.POST.get('new_password1', '')
+        new2 = request.POST.get('new_password2', '')
+        if not request.user.check_password(old):
+            messages.error(request, 'رمز فعلی نادرست است.')
+        elif len(new1) < 6:
+            messages.error(request, 'رمز جدید حداقل ۶ کاراکتر.')
+        elif new1 != new2:
+            messages.error(request, 'تکرار رمز مطابقت ندارد.')
+        else:
+            request.user.set_password(new1)
+            request.user.save()
+            audit(request.user, 'change', 'User', request.user.pk, detail='password')
+            messages.success(request, 'رمز با موفقیت تغییر کرد.')
+            return redirect('attendance:dashboard')
+    return render(request, 'core/change_pass.html')

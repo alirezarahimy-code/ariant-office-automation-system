@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}ماه رمضان{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>تنظیمات ماه رمضان</h1><p class="sub">Ramezan — کاهش ساعات کاری در بازه رمضان</p></div></div>
+{% if can_manage %}
+<div class="card"><form method="post" class="form-grid">{% csrf_token %}
+  <div class="field"><label>شیفت</label><select name="shift_id">
+    {% for s in shifts %}<option value="{{ s.pk }}">{{ s.name }}</option>{% endfor %}</select></div>
+  <div class="field"><label>از تاریخ</label><input name="from_date" placeholder="1405-02-01" required></div>
+  <div class="field"><label>تا تاریخ</label><input name="to_date" placeholder="1405-03-01" required></div>
+  <div class="field"><label>کاهش (دقیقه)</label><input name="reduced_minutes" value="60"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن</button></div>
+</form></div>
+{% endif %}
+<table class="table"><thead><tr><th>شیفت</th><th>از</th><th>تا</th><th>کاهش (دقیقه)</th></tr></thead>
+<tbody>{% for r in rules %}<tr><td>{{ r.shift.name }}</td><td>{{ r.from_date }}</td>
+<td>{{ r.to_date }}</td><td>{{ r.reduced_minutes }}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">موردی نیست.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

@@ -80,6 +80,31 @@ class Employee(models.Model):
         'self', verbose_name='مدیر مستقیم', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='subordinates')
     hire_date = models.DateField('تاریخ استخدام', null=True, blank=True)
+    # --- فیلدهای کامل فایل پرسنلی (مطابق UserInfo در T5Web) ---
+    personnel_no = models.CharField('شماره پرسنلی', max_length=24, blank=True, default='')
+    father_name = models.CharField('نام پدر', max_length=60, blank=True, default='')
+    gender = models.CharField(
+        'جنسیت', max_length=1, blank=True, default='',
+        choices=[('M', 'مرد'), ('F', 'زن')])
+    birthday = models.DateField('تاریخ تولد', null=True, blank=True)
+    certificate = models.CharField('مدرک تحصیلی', max_length=60, blank=True, default='')
+    email = models.EmailField('ایمیل', blank=True, default='')
+    tel = models.CharField('تلفن', max_length=30, blank=True, default='')
+    address = models.TextField('نشانی', blank=True, default='')
+    janbaz_code = models.CharField('کد جانبازی', max_length=30, blank=True, default='')
+    photo = models.CharField('عکس (مسیر/آدرس)', max_length=255, blank=True, default='')
+    end_work_date = models.DateField('تاریخ پایان همکاری', null=True, blank=True)
+    # --- کارت/دستگاه ---
+    device_card_no = models.CharField('شماره کارت دستگاه', max_length=24, blank=True, default='')
+    device_enable = models.BooleanField('فعال روی دستگاه', default=True)
+    device_group = models.PositiveSmallIntegerField('گروه دستگاه', default=1)
+    device_password = models.CharField('رمز دستگاه', max_length=24, blank=True, default='')
+    device_privilege = models.PositiveSmallIntegerField('سطح دسترسی دستگاه', default=0)
+    # --- کاربر سامانه/اعتبار دسترسی ---
+    web_user = models.BooleanField('کاربر وب', default=False)
+    program_user = models.BooleanField('کاربر برنامه', default=False)
+    valid_from = models.DateTimeField('شروع اعتبار', null=True, blank=True)
+    valid_to = models.DateTimeField('پایان اعتبار', null=True, blank=True)
     is_active = models.BooleanField('فعال', default=True)
 
     class Meta:

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}مدارک تحصیلی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>مدارک تحصیلی</h1></div></div>
+<div class="card"><form method="post" class="form-grid">{% csrf_token %}
+  <div class="field"><label>عنوان مدرک</label><input name="name" required></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن</button></div>
+</form></div>
+<table class="table"><thead><tr><th>#</th><th>عنوان</th></tr></thead><tbody>
+{% for i in items %}<tr><td>{{ forloop.counter }}</td><td>{{ i }}</td></tr>
+{% empty %}<tr><td colspan="2" class="empty">موردی ثبت نشده.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

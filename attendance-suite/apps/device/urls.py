@@ -14,4 +14,6 @@ urlpatterns = [
     path('sync-gateway/', views.gateway_sync, name='gateway_sync'),
     path('unis/', views.unis_bridge, name='unis_bridge'),
     path('unis/<int:bridge_id>/sync/', views.unis_sync, name='unis_sync'),
+    path('device-users/', views.device_users, name='device_users'),
+    path('gates/', views.gates, name='gates'),
 ]

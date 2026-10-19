@@ -3,13 +3,12 @@ import datetime as gregorian
 
 import jdatetime
 from django.contrib import messages
+from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.services import audit, has_perm, require_perm, scoped_employees
 
-from .models import (AttendancePolicy, DailyRecord, Deputy, GeoArea, Holiday,
-                     LeaveBalance, LeaveType, OvertimeConstant, Punch, Request,
-                     RewardPenalty, Shift, ShiftAssignment)
+from .models import (AttendancePolicy, CalcParameter, DailyRecord, Deputy, GeoArea, Holiday, LeaveBalance, LeaveType, OvertimeConstant, Punch, RamadanRule, Request, RewardPenalty, ScheduleRule, Shift, ShiftAssignment)
 from .services import (approve_request, create_request, monthly_summary,
                        parse_jalali, register_punch, reject_request,
                        undo_request)
@@ -429,3 +428,152 @@ def exit_type_list(request):
         return redirect('attendance:exit_types')
     return render(request, 'attendance/exit_types.html', {
         'rows': ExitType.objects.all()})
+
+
+@require_perm('attendance', 'view')
+def total_control(request):
+    """کنترل جامع روزانه (TotalControl) — جدول روزانه با تأخیر/زود/غیاب/مرخصی/مأموریت/اضافه‌کار."""
+    from apps.org.models import Employee
+    from .models import DailyRecord
+    import jdatetime
+    day = request.GET.get('day', '')
+    if not day:
+        day = jdatetime.date.today().strftime('%Y-%m-%d')
+    emps = Employee.objects.filter(is_active=True).select_related('department')[:300]
+    rows = []
+    for e in emps:
+        d = DailyRecord.objects.filter(employee=e, date=day).first()
+        rows.append({'emp': e, 'd': d})
+    return render(request, 'attendance/total_control.html', {
+        'rows': rows, 'day': day})
+
+
+@require_perm('attendance', 'add')
+def insert_record(request):
+    """ثبت تردد دستی (InsertRecord) — چند پرسنل + نوع تردد + تاریخ/ساعت."""
+    from apps.org.models import Employee
+    if request.method == 'POST':
+        badges = request.POST.getlist('selectedBadgeNumbers')
+        date = request.POST.get('date', '')
+        tm = request.POST.get('time', '08:00')
+        check_type = request.POST.get('check_type', 'in')
+        desc = request.POST.get('description', '')
+        n = 0
+        for b in badges:
+            emp = Employee.objects.filter(badge_no=b).first()
+            if not emp:
+                continue
+            Punch.objects.create(
+                employee=emp, date=date, time=tm, direction=check_type,
+                source='web', description=desc)
+            n += 1
+        audit(request.user, 'add', 'Punch', detail=f'{n} manual punches {date}')
+        messages.success(request, f'{n} تردد ثبت شد.')
+        return redirect('attendance:insert_record')
+    return render(request, 'attendance/insert_record.html', {
+        'employees': Employee.objects.filter(is_active=True)[:400]})
+
+
+@require_perm('attendance', 'change')
+def edit_late_early(request):
+    """اصلاح تأخیر/خروج زودهنگام (EditLateEarly) — با سهمیه روزانه/ماهانه."""
+    from apps.org.models import Employee
+    from .models import DailyRecord
+    if request.method == 'POST':
+        emp_id = request.POST.get('employee_id')
+        date = request.POST.get('date', '')
+        reason = request.POST.get('reason', '')
+        obj = DailyRecord.objects.filter(employee_id=emp_id, date=date).first()
+        if obj:
+            obj.late_minutes = int(request.POST.get('late_minutes', 0) or 0)
+            obj.early_minutes = int(request.POST.get('early_minutes', 0) or 0)
+            obj.save()
+            audit(request.user, 'change', 'DailyRecord', obj.pk, detail=reason)
+            messages.success(request, 'اصلاح ثبت شد.')
+        else:
+            messages.error(request, 'رکورد روز موردنظر یافت نشد — ابتدا تردد ثبت کنید.')
+        return redirect('attendance:edit_late_early')
+    recent = DailyRecord.objects.select_related('employee').order_by('-date')[:100]
+    return render(request, 'attendance/edit_late_early.html', {
+        'employees': Employee.objects.filter(is_active=True)[:400],
+        'recent': recent})
+
+
+@require_perm('attendance', 'add')
+def daily_leave_batch(request):
+    """مرخصی گروهی (InsertDailyLeave/AddDailyLeave) — ثبت گروهی بازه برای چند نفر."""
+    from apps.org.models import Employee
+    from .models import LeaveBalance, LeaveType, Request
+    if request.method == 'POST':
+        badges = request.POST.getlist('selectedBadgeNumbers')
+        lt = LeaveType.objects.filter(pk=request.POST.get('leave_type_id')).first()
+        date_from, date_to = request.POST.get('date_from'), request.POST.get('date_to')
+        desc = request.POST.get('description', '')
+        n = 0
+        for b in badges:
+            emp = Employee.objects.filter(badge_no=b).first()
+            if not emp:
+                continue
+            Request.objects.create(
+                employee=emp, kind=Request.Kind.LEAVE, leave_type=lt,
+                from_date=date_from, to_date=date_to or date_from,
+                description=desc, status=Request.Status.APPROVED,
+                decided_at=timezone.now())
+            n += 1
+        audit(request.user, 'add', 'Request', detail=f'batch leave {n} emp')
+        messages.success(request, f'مرخصی برای {n} نفر ثبت شد.')
+        return redirect('attendance:daily_leave_batch')
+    return render(request, 'attendance/daily_leave_batch.html', {
+        'employees': Employee.objects.filter(is_active=True)[:400],
+        'leave_types': LeaveType.objects.filter(is_active=True)})
+
+
+@require_perm('attendance', 'view')
+def calc_parameters(request):
+    """پارامترهای محاسباتی با فرمول (Parameters)."""
+    from .models import CalcParameter
+    if request.method == 'POST' and has_perm(request.user, 'attendance', 'manage'):
+        CalcParameter.objects.create(
+            name=request.POST.get('name', '').strip(),
+            symbol=request.POST.get('symbol', '').strip(),
+            formula=request.POST.get('formula', '').strip(),
+            is_sum=request.POST.get('is_sum') == 'on',
+            sum_function=request.POST.get('sum_function') or 'SUM')
+        audit(request.user, 'add', 'CalcParameter')
+        return redirect('attendance:calc_parameters')
+    return render(request, 'attendance/calc_parameters.html', {
+        'params': CalcParameter.objects.all(),
+        'can_manage': has_perm(request.user, 'attendance', 'manage')})
+
+
+@require_perm('attendance', 'view')
+def rules(request):
+    """قواعد زمان‌بندی (Rule/AssignRule)."""
+    from .models import ScheduleRule
+    if request.method == 'POST' and has_perm(request.user, 'attendance', 'manage'):
+        ScheduleRule.objects.create(
+            name=request.POST.get('name', '').strip(),
+            priority=int(request.POST.get('priority', 100) or 100))
+        audit(request.user, 'add', 'ScheduleRule')
+        return redirect('attendance:rules')
+    return render(request, 'attendance/rules.html', {
+        'rules': ScheduleRule.objects.all(),
+        'can_manage': has_perm(request.user, 'attendance', 'manage')})
+
+
+@require_perm('attendance', 'view')
+def ramadan(request):
+    """تنظیمات ماه رمضان (Ramezan)."""
+    from .models import RamadanRule
+    if request.method == 'POST' and has_perm(request.user, 'attendance', 'manage'):
+        RamadanRule.objects.create(
+            shift_id=request.POST.get('shift_id'),
+            from_date=request.POST.get('from_date'),
+            to_date=request.POST.get('to_date'),
+            reduced_minutes=int(request.POST.get('reduced_minutes', 0) or 0))
+        audit(request.user, 'add', 'RamadanRule')
+        return redirect('attendance:ramadan')
+    return render(request, 'attendance/ramadan.html', {
+        'rules': RamadanRule.objects.select_related('shift'),
+        'shifts': Shift.objects.filter(is_active=True),
+        'can_manage': has_perm(request.user, 'attendance', 'manage')})
