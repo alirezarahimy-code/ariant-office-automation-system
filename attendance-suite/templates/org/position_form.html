@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}سمت تازه{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>ثبت سمت</h1></div>
+<div class="actions"><a class="btn" href="{% url 'org:index' %}">بازگشت</a></div></div>
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field"><label>عنوان سمت *</label><input name="title" required></div>
+    <div class="field"><label>سمت بالادست</label><select name="parent_id"><option value="">—</option>
+      {% for p in positions %}<option value="{{ p.pk }}">{{ p.title }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>واحد</label><select name="department_id"><option value="">—</option>
+      {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>وضعیت</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="is_manager"> سمت مدیریتی</label>
+    </div>
+  </div>
+  <div style="margin-top:16px"><button class="btn btn-primary" type="submit">ذخیره</button></div>
+</form>
+{% endblock %}

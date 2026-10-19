@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}درخواست{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ req.get_kind_display }}</h1>
+  <p class="sub">{{ req.employee }} —
+    {% if req.status == 'approved' %}<span class="chip chip-success">تأییدشده</span>
+    {% elif req.status == 'pending' %}<span class="chip chip-warning">در انتظار تأیید</span>
+    {% elif req.status == 'rejected' %}<span class="chip chip-danger">ردشده</span>
+    {% else %}<span class="chip chip-muted">لغوشده</span>{% endif %}
+  </p></div>
+  <div class="actions"><a class="btn" href="{% url 'attendance:request_list' %}">بازگشت</a></div>
+</div>
+<div class="card">
+  <div class="form-grid">
+    <div><span class="sub">نوع مرخصی</span><br>{{ req.leave_type|default:'—' }}</div>
+    <div><span class="sub">تاریخ</span><br>{% if req.for_date %}{{ req.for_date|jdate }}{% else %}—{% endif %}</div>
+    <div><span class="sub">بازه</span><br>{% if req.from_date %}{{ req.from_date|jdate }} تا {{ req.to_date|jdate }}{% else %}—{% endif %}</div>
+    <div><span class="sub">ساعت</span><br>{% if req.from_time %}{{ req.from_time|time:'H:i' }} تا {{ req.to_time|time:'H:i' }}{% else %}—{% endif %}</div>
+    <div><span class="sub">روز/ساعت</span><br>{{ req.days|fa }} روز / {{ req.hours|fa }} ساعت</div>
+    <div><span class="sub">شرح</span><br>{{ req.description|default:'—' }}</div>
+    <div><span class="sub">تصمیم‌گیرنده</span><br>{{ req.decided_by|default:'—' }}</div>
+    <div><span class="sub">یادداشت تصمیم</span><br>{{ req.decision_note|default:'—' }}</div>
+  </div>
+</div>
+{% if can_decide and req.status == 'pending' %}
+<div class="card">
+  <div class="card-title">بررسی درخواست</div>
+  <form method="post" action="{% url 'attendance:request_decide' req.pk %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>یادداشت</label><input name="note"></div>
+    <div class="field"><label>&nbsp;</label>
+      <button class="btn btn-primary" type="submit" name="action" value="approve">تأیید</button>
+      <button class="btn" type="submit" name="action" value="reject">رد</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% if req.status != 'cancelled' %}
+<form method="post" action="{% url 'attendance:request_decide' req.pk %}" style="margin-top:12px">
+  {% csrf_token %}
+  <button class="btn btn-ghost" type="submit" name="action" value="cancel"
+          onclick="return confirm('درخواست ابطال شود؟');">ابطال درخواست (Undo)</button>
+</form>
+{% endif %}
+{% endblock %}

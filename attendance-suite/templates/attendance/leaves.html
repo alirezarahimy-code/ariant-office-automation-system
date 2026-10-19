@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}مانده مرخصی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>مانده مرخصی</h1><p class="sub">سال {{ year|fa }}</p></div>
+<div class="actions"><a class="btn btn-primary" href="{% url 'attendance:request_new' %}">درخواست مرخصی</a></div></div>
+<table class="table">
+  <thead><tr><th>نوع</th><th>اعتبار</th><th>مصرف</th><th>مانده</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr><td>{{ row.leave_type.name }}</td><td>{{ row.granted|fa }}</td><td>{{ row.used|fa }}</td><td><strong>{{ row.remaining|fa }}</strong></td></tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">نوع مرخصی تعریف نشده.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<h3 style="margin:18px 0 8px">درخواست‌های مرخصی من</h3>
+<table class="table">
+  <thead><tr><th>نوع</th><th>بازه</th><th>روز</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for req in requests %}
+    <tr><td><a href="{% url 'attendance:request_detail' req.pk %}">{{ req.get_kind_display }}</a></td>
+    <td>{% if req.from_date %}{{ req.from_date|jdate }} تا {{ req.to_date|jdate }}{% else %}{{ req.for_date|jdate }}{% endif %}</td>
+    <td>{{ req.days|fa }}</td><td>{{ req.get_status_display }}</td></tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">درخواستی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

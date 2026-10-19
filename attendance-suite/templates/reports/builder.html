@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}گزارش‌ساز{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>گزارش‌ساز</h1>
+<p class="sub">تعریف گزارش سفارشی — ستون‌ها از فهرست مجاز انتخاب می‌شوند</p></div>
+<div class="actions"><a class="btn" href="{% url 'reports:index' %}">بازگشت</a></div></div>
+<div class="card">
+  <div class="card-title">تعریف تازه</div>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>کد یکتا *</label><input name="code" required></div>
+    <div class="field"><label>عنوان *</label><input name="title" required></div>
+    <div class="field"><label>منبع داده</label>
+      <select name="model_key">
+        {% for key, cols in models.items %}<option value="{{ key }}">{{ key }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>ستون‌ها (با ویرگول)</label>
+      <input name="columns" placeholder="employee, date, late_minutes"></div>
+    <div class="field"><label>مرتب‌سازی</label><input name="order_by" placeholder="date یا -date"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ذخیره گزارش</button></div>
+  </form>
+  <p class="sub" style="margin-top:10px">ستون‌های مجاز:
+    {% for key, cols in models.items %}<strong>{{ key }}</strong>: {{ cols|join:", " }} — {% endfor %}
+  </p>
+</div>
+<table class="table">
+  <thead><tr><th>عنوان</th><th>کد</th><th>منبع</th><th>ستون‌ها</th><th>اجرا</th></tr></thead>
+  <tbody>
+  {% for d in defs %}
+    <tr><td>{{ d.title }}</td><td>{{ d.code }}</td><td>{{ d.module }}</td>
+    <td>{{ d.columns_json|join:", " }}</td>
+    <td><a class="btn" href="{% url 'reports:run_def' d.code %}">اجرا</a></td></tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">گزارشی تعریف نشده.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

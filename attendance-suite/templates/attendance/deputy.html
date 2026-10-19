@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}جانشین‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>جانشین تأیید</h1></div></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>جانشین</label><select name="employee_id">
+      {% for e in employees %}<option value="{{ e.pk }}">{{ e }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>به‌جای</label><select name="for_employee_id">
+      {% for e in employees %}<option value="{{ e.pk }}">{{ e }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>از تاریخ</label><input name="from_date" placeholder="1404/07/30"></div>
+    <div class="field"><label>تا تاریخ</label><input name="to_date" placeholder="1404/08/30"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>جانشین</th><th>به‌جای</th><th>بازه</th></tr></thead>
+  <tbody>
+  {% for d in deputies %}
+    <tr><td>{{ d.employee }}</td><td>{{ d.for_employee }}</td>
+    <td>{{ d.from_date|jdate }} تا {{ d.to_date|jdate }}</td></tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">جانشینی ثبت نشده.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}واحد تازه{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>ثبت واحد سازمانی</h1></div>
+<div class="actions"><a class="btn" href="{% url 'org:index' %}">بازگشت</a></div></div>
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field"><label>نام واحد *</label><input name="name" required></div>
+    <div class="field"><label>کد *</label><input name="code" required></div>
+    <div class="field"><label>واحد بالادست</label><select name="parent_id"><option value="">—</option>
+      {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}
+    </select></div>
+  </div>
+  <div style="margin-top:16px"><button class="btn btn-primary" type="submit">ذخیره</button></div>
+</form>
+{% endblock %}

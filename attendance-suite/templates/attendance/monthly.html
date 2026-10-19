@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}کارکرد ماهانه{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>کارکرد ماهانه</h1>
+<p class="sub">{{ jmonth|fa }} / {{ jyear|fa }}</p></div></div>
+<form class="card form-grid" method="get">
+  <div class="field"><label>سال</label><input name="year" value="{{ jyear }}" style="width:90px"></div>
+  <div class="field"><label>ماه</label><input name="month" value="{{ jmonth }}" style="width:70px"></div>
+  {% if employees %}<div class="field"><label>کارمند</label>
+    <select name="employee_id"><option value="">خودم</option>
+      {% for e in employees %}<option value="{{ e.pk }}">{{ e }}</option>{% endfor %}
+    </select></div>{% endif %}
+  <div class="field"><label>&nbsp;</label><button class="btn" type="submit">نمایش</button></div>
+</form>
+{% if summary %}
+<div class="grid" style="margin:16px 0">
+  <div class="kpi"><div class="label">حاضر</div><div class="value">{{ summary.present_days|fa }}</div></div>
+  <div class="kpi"><div class="label">تأخیر</div><div class="value">{{ summary.late_days|fa }}</div></div>
+  <div class="kpi"><div class="label">غیبت</div><div class="value">{{ summary.absent_days|fa }}</div></div>
+  <div class="kpi"><div class="label">کارکرد (ساعت)</div><div class="value">{{ summary.worked_minutes|hours|fa }}</div></div>
+</div>
+<table class="table">
+  <thead><tr><th>تاریخ</th><th>ورود</th><th>خروج</th><th>تأخیر</th><th>تعجیل</th><th>اضافه‌کاری</th><th>کارکرد</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for r in summary.rows %}
+    <tr><td>{{ r.date|jdate }}</td><td>{{ r.check_in|time:'H:i' }}</td><td>{{ r.check_out|time:'H:i' }}</td>
+    <td>{{ r.late_minutes|fa }}</td><td>{{ r.early_minutes|fa }}</td><td>{{ r.overtime_minutes|fa }}</td>
+    <td>{{ r.worked_minutes|fa }}</td><td>{{ r.get_state_display }}</td></tr>
+  {% empty %}
+    <tr><td colspan="8" class="empty">رکوردی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

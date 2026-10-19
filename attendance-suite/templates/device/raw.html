@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}رکوردهای خام{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>رکوردهای خام دستگاه</h1>
+<p class="sub">با وضعیت انتقال (ضدتکرار)</p></div>
+<div class="actions"><a class="btn" href="{% url 'device:index' %}">دستگاه‌ها</a></div></div>
+<table class="table">
+  <thead><tr><th>دستگاه</th><th>کد</th><th>زمان</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for r in records %}
+    <tr><td>{{ r.device.name }}</td><td>{{ r.pin|fa }}</td><td>{{ r.punch_time }}</td>
+    <td>{% if r.state == 'new' %}<span class="chip chip-warning">تازه</span>
+        {% elif r.state == 'transfered' %}<span class="chip chip-success">منتقل‌شده</span>
+        {% else %}<span class="chip chip-danger">خطا</span>{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">رکوردی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

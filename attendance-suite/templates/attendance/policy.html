@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}سیاست‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>سیاست‌های حضور و غیاب</h1>
+<p class="sub">تنظیمات سازمانی — آینه کلیدهای سامانه مرجع</p></div></div>
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field"><label>ساعت کاری روزانه</label><input name="hours_per_day" value="{{ policy.hours_per_day }}"></div>
+    <div class="field"><label>بازه نمایش (روز)</label><input name="show_days" value="{{ policy.show_days }}"></div>
+    <div class="field"><label>آخرین روز ماه برای درخواست</label><input name="last_day_for_request" value="{{ policy.last_day_for_request }}"></div>
+    <div class="field"><label>حداکثر قدمت درخواست (روز)</label><input name="max_request_age_days" value="{{ policy.max_request_age_days }}"></div>
+    <div class="field"><label>سهمیه اصلاح رکورد روزانه</label><input name="record_fix_daily_limit" value="{{ policy.record_fix_daily_limit }}"></div>
+    <div class="field"><label>سهمیه اصلاح رکورد ماهانه</label><input name="record_fix_monthly_limit" value="{{ policy.record_fix_monthly_limit }}"></div>
+    <div class="field"><label>ضریب تعطیل</label><input name="overtime_holiday_rate" value="{{ policy.overtime_holiday_rate }}"></div>
+    <div class="field"><label>ضریب شب</label><input name="overtime_night_rate" value="{{ policy.overtime_night_rate }}"></div>
+    <div class="field"><label>اعتبارسنجی تأخیر/تعجیل</label>
+      <select name="valid_late_early"><option value="0" {% if not policy.valid_late_early %}selected{% endif %}>خاموش</option>
+      <option value="1" {% if policy.valid_late_early %}selected{% endif %}>روشن</option></select></div>
+    <div class="field"><label>مرخصی ساعتی بدون کسر مانده</label>
+      <select name="allow_hourly_free"><option value="0" {% if not policy.allow_hourly_free %}selected{% endif %}>خاموش</option>
+      <option value="1" {% if policy.allow_hourly_free %}selected{% endif %}>روشن</option></select></div>
+  </div>
+  <div style="margin-top:16px"><button class="btn btn-primary" type="submit">ذخیره سیاست‌ها</button></div>
+</form>
+{% endblock %}

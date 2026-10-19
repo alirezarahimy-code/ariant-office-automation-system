@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}پاداش و تنبیه{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>پاداش / تنبیه</h1></div></div>
+{% if can_manage %}
+<div class="card">
+  <div class="card-title">ثبت مورد تازه</div>
+  <form method="post" action="{% url 'attendance:reward_add' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نوع</label><select name="kind"><option value="reward">پاداش</option><option value="penalty">تنبیه</option></select></div>
+    <div class="field"><label>شناسه کارمند</label><input name="employee_id" placeholder="شناسه عددی"></div>
+    <div class="field"><label>تاریخ</label><input name="date" placeholder="1404/07/30"></div>
+    <div class="field"><label>عنوان</label><input name="title"></div>
+    <div class="field"><label>مبلغ/امتیاز</label><input name="amount"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+{% endif %}
+<table class="table">
+  <thead><tr><th>کارمند</th><th>نوع</th><th>تاریخ</th><th>عنوان</th><th>مبلغ</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr><td>{{ row.employee }}</td>
+    <td>{% if row.kind == 'reward' %}<span class="chip chip-success">پاداش</span>{% else %}<span class="chip chip-danger">تنبیه</span>{% endif %}</td>
+    <td>{{ row.date|jdate }}</td><td>{{ row.title }}</td><td>{{ row.amount|fa }}</td></tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">موردی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

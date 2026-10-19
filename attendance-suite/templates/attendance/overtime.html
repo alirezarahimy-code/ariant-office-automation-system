@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}اضافه‌کاری{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>گزارش اضافه‌کاری</h1><p class="sub">{{ month|fa }} / {{ year|fa }}</p></div></div>
+<form class="card form-grid" method="get">
+  <div class="field"><label>سال</label><input name="year" value="{{ year }}" style="width:90px"></div>
+  <div class="field"><label>ماه</label><input name="month" value="{{ month }}" style="width:70px"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn" type="submit">نمایش</button></div>
+</form>
+<table class="table">
+  <thead><tr><th>کارمند</th><th>اضافه‌کاری (دقیقه)</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr><td>{{ row.employee }}</td><td>{{ row.overtime_minutes|fa }}</td></tr>
+  {% empty %}
+    <tr><td colspan="2" class="empty">موردی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if can_manage %}
+<div class="card" style="margin-top:16px">
+  <div class="card-title">ثابت‌های اضافه‌کاری</div>
+  <table class="table">
+    <thead><tr><th>کلید</th><th>عنوان</th><th>مقدار</th></tr></thead>
+    <tbody>{% for c in constants %}<tr><td>{{ c.key }}</td><td>{{ c.title }}</td><td>{{ c.value|fa }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <form method="post" action="{% url 'attendance:overtime_constant_add' %}" class="form-grid" style="margin-top:12px">
+    {% csrf_token %}
+    <div class="field"><label>کلید</label><input name="key"></div>
+    <div class="field"><label>عنوان</label><input name="title"></div>
+    <div class="field"><label>مقدار</label><input name="value"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn" type="submit">افزودن</button></div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

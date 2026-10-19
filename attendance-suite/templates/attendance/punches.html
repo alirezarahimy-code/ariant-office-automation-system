@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}رویدادهای تردد{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>رویدادهای تردد</h1></div></div>
+{% if can_add %}
+<div class="card">
+  <div class="card-title">ثبت رویداد</div>
+  <form method="post" action="{% url 'attendance:punch_add' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>تاریخ</label><input name="date" placeholder="1404/07/30"></div>
+    <div class="field"><label>ساعت</label><input name="time" placeholder="08:00"></div>
+    <div class="field"><label>نوع</label><select name="direction"><option value="in">ورود</option><option value="out">خروج</option></select></div>
+    <div class="field"><label>عرض (اختیاری)</label><input name="lat"></div>
+    <div class="field"><label>طول (اختیاری)</label><input name="lng"></div>
+    <div class="field"><label>شرح</label><input name="description"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+{% endif %}
+<table class="table">
+  <thead><tr><th>کارمند</th><th>تاریخ</th><th>ساعت</th><th>نوع</th><th>منبع</th><th>محدوده</th></tr></thead>
+  <tbody>
+  {% for p in punches %}
+    <tr><td>{{ p.employee }}</td><td>{{ p.date|jdate }}</td><td>{{ p.time|time:'H:i' }}</td>
+    <td>{% if p.direction == 'in' %}<span class="chip chip-success">ورود</span>{% else %}<span class="chip chip-warning">خروج</span>{% endif %}</td>
+    <td>{{ p.get_source_display }}</td><td>{{ p.area|default:'—' }}</td></tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">رویدادی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
