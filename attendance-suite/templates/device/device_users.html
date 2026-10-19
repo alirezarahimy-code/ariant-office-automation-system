@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}کاربران دستگاه{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>کاربران دستگاه</h1><p class="sub">ShowUsers / DownloadUsers / UploadUsers — همگام‌سازی کاربران و کارت‌ها</p></div></div>
+{% if can_manage %}
+<div class="card"><div class="card-title">همگام‌سازی گروهی</div>
+<form method="post" action="{% url 'device:device_users' %}" class="form-grid">{% csrf_token %}
+  <div class="field"><label>دستگاه</label><select name="device_id">
+    {% for d in devices %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.serial }})</option>{% endfor %}</select></div>
+  <div class="field"><label>عملیات</label><select name="action">
+    <option value="download">دریافت از دستگاه (DownloadUsers)</option>
+    <option value="upload">ارسال به دستگاه (UploadUsers)</option></select></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">اجرا</button></div>
+</form></div>
+{% endif %}
+<div class="card"><div class="card-title">پرسنل فعال روی دستگاه‌ها</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+{% for e in employees %}<span class="chip">{{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }} {{ e.device_card_no }}</span>{% endfor %}
+</div></div>
+<table class="table"><thead><tr><th>دستگاه</th><th>پرسنل</th><th>جهت</th><th>وضعیت</th></tr></thead>
+<tbody>{% for s in syncs %}<tr><td>{{ s.device.name }}</td><td>{{ s.employee.badge_no }}</td>
+<td>{% if s.direction == 'down' %}دریافت از دستگاه{% else %}ارسال به دستگاه{% endif %}</td>
+<td>{{ s.state }}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">صف همگام‌سازی خالی است.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

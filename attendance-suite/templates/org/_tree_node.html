@@ -1,0 +1,4 @@
+<li><strong>{{ n.d.name }}</strong> <span class="chip">{{ n.d.code }}</span>
+{% if n.kids %}<ul style="list-style:none;margin-right:24px">
+{% for c in n.kids %}{% include 'org/_tree_node.html' with n=c %}{% endfor %}
+</ul>{% endif %}</li>

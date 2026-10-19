@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}گیت‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>گیت‌ها و درب‌ها</h1><p class="sub">Gate / MapDoor — نقاط کنترل تردد</p></div></div>
+{% if can_manage %}
+<div class="card"><form method="post" class="form-grid">{% csrf_token %}
+  <div class="field"><label>نام گیت</label><input name="name" required></div>
+  <div class="field"><label>دستگاه</label><select name="device_id"><option value="">—</option>
+    {% for d in devices %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}</select></div>
+  <div class="field"><label>شرح</label><input name="description"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن</button></div>
+</form></div>
+{% endif %}
+<table class="table"><thead><tr><th>نام</th><th>دستگاه</th><th>شرح</th></tr></thead>
+<tbody>{% for g in gates %}<tr><td>{{ g.name }}</td><td>{{ g.device.name|default:'—' }}</td>
+<td>{{ g.description|default:'—' }}</td></tr>
+{% empty %}<tr><td colspan="3" class="empty">گیتی ثبت نشده.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

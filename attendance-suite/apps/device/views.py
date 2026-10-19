@@ -205,3 +205,45 @@ def gateway_sync(request):
         + f" | {len(result['unis'])} پل یونیس | "
         f"{result['converted'].get('converted', 0)} تبدیل تردد.")
     return redirect('device:index')
+
+
+@require_perm('device', 'view')
+def device_users(request):
+    """کاربران دستگاه (ShowUsers/DownloadUsers/UploadUsers) — همگام‌سازی کارت/اثر."""
+    from apps.org.models import Employee
+    from .models import DeviceUserSync
+    if request.method == 'POST' and has_perm(request.user, 'device', 'manage'):
+        device_id = request.POST.get('device_id')
+        action = request.POST.get('action')  # download | upload
+        n = 0
+        for e in Employee.objects.filter(is_active=True, device_enable=True)[:500]:
+            DeviceUserSync.objects.update_or_create(
+                device_id=device_id, employee=e,
+                defaults={'state': 'pending',
+                          'direction': 'down' if action == 'download' else 'up'})
+            n += 1
+        audit(request.user, 'change', 'DeviceUserSync', detail=f'{action} {n}')
+        messages.success(request, f'{n} کاربر برای همگام‌سازی ({action}) صف شد.')
+        return redirect('device:device_users')
+    return render(request, 'device/device_users.html', {
+        'devices': Device.objects.filter(is_active=True),
+        'syncs': DeviceUserSync.objects.select_related('device', 'employee')[:200],
+        'employees': Employee.objects.filter(is_active=True, device_enable=True)[:400],
+        'can_manage': has_perm(request.user, 'device', 'manage')})
+
+
+@require_perm('device', 'view')
+def gates(request):
+    """گیت‌ها/درب‌ها (Gate)."""
+    from .models import AccessPoint
+    if request.method == 'POST' and has_perm(request.user, 'device', 'manage'):
+        AccessPoint.objects.create(
+            name=request.POST.get('name', '').strip(),
+            device_id=request.POST.get('device_id') or None,
+            description=request.POST.get('description', '').strip())
+        audit(request.user, 'add', 'AccessPoint')
+        return redirect('device:gates')
+    return render(request, 'device/gates.html', {
+        'gates': AccessPoint.objects.select_related('device'),
+        'devices': Device.objects.filter(is_active=True),
+        'can_manage': has_perm(request.user, 'device', 'manage')})

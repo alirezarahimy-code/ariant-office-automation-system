@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}چارت واحدها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>چارت سازمانی واحدها</h1><p class="sub">{{ count }} واحد فعال</p></div>
+<div class="actions"><a class="btn" href="{% url 'org:department_new' %}">واحد جدید</a></div></div>
+<div class="card"><ul style="list-style:none;line-height:2.4">
+{% for n in tree %}{% include 'org/_tree_node.html' with n=n %}{% endfor %}
+</ul></div>
+{% endblock %}

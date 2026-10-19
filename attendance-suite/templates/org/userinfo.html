@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}فایل پرسنلی{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>فایل پرسنلی</h1><p class="sub">اطلاعات کامل پرسنل — تب‌دار (مطابق UserInfo مرجع)</p></div>
+  <div class="actions"><a class="btn" href="{% url 'org:userinfo' %}">جدید</a><a class="btn" href="{% url 'org:index' %}">فهرست</a></div>
+</div>
+<div class="card">
+  <div class="card-title">جستجو / انتخاب پرسنل</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    {% for e in employees %}
+      <a class="chip" style="text-decoration:none" href="{% url 'org:userinfo_edit' e.pk %}">{{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</a>
+    {% endfor %}
+  </div>
+</div>
+<form method="post" action="{% if emp %}{% url 'org:userinfo_edit' emp.pk %}{% else %}{% url 'org:userinfo' %}{% endif %}">
+  {% csrf_token %}
+  <div class="card">
+    <div class="card-title">۱) هویتی</div>
+    <div class="form-grid">
+      <div class="field"><label>شماره کارگری *</label><input name="badge_no" value="{{ emp.badge_no }}" required></div>
+      <div class="field"><label>شماره پرسنلی</label><input name="personnel_no" value="{{ emp.personnel_no }}"></div>
+      <div class="field"><label>نام *</label><input name="first_name" value="{{ emp.first_name }}" required></div>
+      <div class="field"><label>نام خانوادگی *</label><input name="last_name" value="{{ emp.last_name }}" required></div>
+      <div class="field"><label>نام پدر</label><input name="father_name" value="{{ emp.father_name }}"></div>
+      <div class="field"><label>کد ملی</label><input name="national_id" value="{{ emp.national_id }}"></div>
+      <div class="field"><label>جنسیت</label><select name="gender">
+        <option value="">—</option>
+        <option value="M" {% if emp.gender == 'M' %}selected{% endif %}>مرد</option>
+        <option value="F" {% if emp.gender == 'F' %}selected{% endif %}>زن</option></select></div>
+      <div class="field"><label>تاریخ تولد (جلالی)</label><input name="birthday" value="{{ emp.birthday|default:'' }}" placeholder="1365-01-15"></div>
+      <div class="field"><label>مدرک تحصیلی</label><input name="certificate" value="{{ emp.certificate }}"></div>
+      <div class="field"><label>کد جانبازی</label><input name="janbaz_code" value="{{ emp.janbaz_code }}"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">۲) تماس</div>
+    <div class="form-grid">
+      <div class="field"><label>ایمیل</label><input name="email" value="{{ emp.email }}"></div>
+      <div class="field"><label>تلفن</label><input name="tel" value="{{ emp.tel }}"></div>
+      <div class="field" style="grid-column:1/-1"><label>نشانی</label><input name="address" value="{{ emp.address }}"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">۳) اشتغال</div>
+    <div class="form-grid">
+      <div class="field"><label>واحد</label><select name="dept_id"><option value="">—</option>
+        {% for d in depts %}<option value="{{ d.id }}" {% if emp.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label>سمت</label><select name="position_id"><option value="">—</option>
+        {% for p in positions %}<option value="{{ p.id }}" {% if emp.position_id == p.id %}selected{% endif %}>{{ p.title }}</option>{% endfor %}</select></div>
+      <div class="field"><label>نوع استخدام</label><select name="emp_type_id"><option value="">—</option>
+        {% for t in emp_types %}<option value="{{ t.id }}" {% if emp.emp_type_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label>تاریخ استخدام</label><input name="hire_date" value="{{ emp.hire_date|default:'' }}" placeholder="1398-07-01"></div>
+      <div class="field"><label>تاریخ پایان همکاری</label><input name="end_work_date" value="{{ emp.end_work_date|default:'' }}"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">۴) کارت و دستگاه</div>
+    <div class="form-grid">
+      <div class="field"><label>شماره کارت</label><input name="device_card_no" value="{{ emp.device_card_no }}"></div>
+      <div class="field"><label>گروه دستگاه</label><input name="device_group" value="{{ emp.device_group|default:1 }}"></div>
+      <div class="field"><label>رمز دستگاه</label><input name="device_password" value="{{ emp.device_password }}"></div>
+      <div class="field"><label>سطح دسترسی دستگاه</label><input name="device_privilege" value="{{ emp.device_privilege|default:0 }}"></div>
+      <div class="field"><label>فعال روی دستگاه</label><input type="checkbox" name="device_enable" {% if not emp or emp.device_enable %}checked{% endif %}></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">۵) کاربر سامانه</div>
+    <div class="form-grid">
+      <div class="field"><label>کاربر وب</label><input type="checkbox" name="web_user" {% if emp.web_user %}checked{% endif %}></div>
+      <div class="field"><label>کاربر برنامه</label><input type="checkbox" name="program_user" {% if emp.program_user %}checked{% endif %}></div>
+    </div>
+  </div>
+  {% if cf_defs %}
+  <div class="card">
+    <div class="card-title">۶) فیلدهای سفارشی</div>
+    <div class="form-grid">
+      {% for pair in cf_pairs %}
+        <div class="field"><label>{{ pair.0.title }}</label>
+          {% if pair.0.field_type == 'bool' %}
+            <input type="checkbox" name="cf_{{ pair.0.pk }}" {% if pair.1 == 'on' or pair.1 == '1' %}checked{% endif %}>
+          {% else %}
+            <input name="cf_{{ pair.0.pk }}" value="{{ pair.1 }}">
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  <button class="btn btn-primary" type="submit">ذخیره فایل پرسنلی</button>
+</form>
+{% endblock %}

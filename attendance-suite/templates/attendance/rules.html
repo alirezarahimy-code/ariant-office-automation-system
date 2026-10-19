@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}قواعد زمان‌بندی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>قواعد زمان‌بندی</h1><p class="sub">Rule / AssignRule — اولویت‌بندی انتساب خودکار شیفت</p></div></div>
+{% if can_manage %}
+<div class="card"><form method="post" class="form-grid">{% csrf_token %}
+  <div class="field"><label>نام قاعده</label><input name="name" required></div>
+  <div class="field"><label>اولویت</label><input name="priority" value="100"></div>
+  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن</button></div>
+</form></div>
+{% endif %}
+<table class="table"><thead><tr><th>نام</th><th>اولویت</th><th>فعال</th></tr></thead>
+<tbody>{% for r in rules %}<tr><td>{{ r.name }}</td><td>{{ r.priority }}</td>
+<td>{% if r.is_active %}بله{% else %}خیر{% endif %}</td></tr>
+{% empty %}<tr><td colspan="3" class="empty">قاعده‌ای نیست.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

@@ -119,3 +119,67 @@ class NotificationTests(TestCase):
             'kind': 'approved', 'title': 'تأیید شد', 'body': 'متن'})
         resp = self.client.get(reverse('core:notifications'))
         self.assertContains(resp, 'تأیید شد')
+
+
+class NewPagesSmokeTests(TestCase):
+    """دود آزمون صفحات تازه (بازسازی عمق — مطابق T5Web)."""
+
+    def setUp(self):
+        from apps.core.models import User
+        self.admin = User.objects.create_superuser('admin2', password='x')
+        self.client.force_login(self.admin)
+
+    def test_all_new_pages_load(self):
+        from django.urls import reverse
+        names = [
+            ('org:org_chart', []), ('org:titles', []), ('org:emp_types', []),
+            ('org:certificates', []), ('org:custom_fields', []),
+            ('org:userinfo', []), ('attendance:total_control', []),
+            ('attendance:insert_record', []), ('attendance:edit_late_early', []),
+            ('attendance:daily_leave_batch', []), ('attendance:calc_parameters', []),
+            ('attendance:rules', []), ('attendance:ramadan', []),
+            ('core:system_logs', []), ('core:change_pass', []),
+            ('device:device_users', []), ('device:gates', []),
+        ]
+        for name, args in names:
+            resp = self.client.get(reverse(name, args=args))
+            self.assertIn(resp.status_code, (200, 302), f'{name} -> {resp.status_code}')
+
+    def test_userinfo_create_and_edit(self):
+        from django.urls import reverse
+        resp = self.client.post(reverse('org:userinfo'), {
+            'badge_no': '9001', 'first_name': 'ن', 'last_name': 'تست',
+            'gender': 'M', 'hire_date': '1400-01-01'})
+        self.assertEqual(resp.status_code, 302)
+        from apps.org.models import Employee
+        e = Employee.objects.get(badge_no='9001')
+        self.assertEqual(e.gender, 'M')
+        resp = self.client.post(reverse('org:userinfo_edit', args=[e.pk]), {
+            'badge_no': '9001', 'first_name': 'نام', 'last_name': 'تستی',
+            'father_name': 'پدر', 'gender': 'M', 'web_user': 'on'})
+        self.assertEqual(resp.status_code, 302)
+        e.refresh_from_db()
+        self.assertEqual(e.father_name, 'پدر')
+        self.assertTrue(e.web_user)
+
+    def test_calc_parameter_create(self):
+        from django.urls import reverse
+        resp = self.client.post(reverse('attendance:calc_parameters'), {
+            'name': 'کارکرد خالص', 'symbol': 'NetWork',
+            'formula': '[WorkedHours]-[LeaveHours]', 'is_sum': 'on',
+            'sum_function': 'SUM'})
+        self.assertEqual(resp.status_code, 302)
+        from apps.attendance.models import CalcParameter
+        self.assertTrue(CalcParameter.objects.filter(symbol='NetWork').exists())
+
+    def test_insert_record_creates_punch(self):
+        from django.urls import reverse
+        from apps.org.models import Employee
+        Employee.objects.create(badge_no='9002', first_name='ر', last_name='ت')
+        resp = self.client.post(reverse('attendance:insert_record'), {
+            'selectedBadgeNumbers': ['9002'], 'date': '2026-10-20',
+            'time': '08:00', 'check_type': 'in', 'description': 'دستی'})
+        self.assertEqual(resp.status_code, 302)
+        from apps.attendance.models import Punch
+        self.assertTrue(Punch.objects.filter(employee__badge_no='9002',
+                                             source='web').exists())

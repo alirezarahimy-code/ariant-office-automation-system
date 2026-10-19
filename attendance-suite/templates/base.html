@@ -5,19 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}سامانه یکپارچه حضور و غیاب{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'suite.css' %}">
+
+<style>
+.topnav{display:flex;gap:4px;flex-wrap:wrap}
+.navgrp{position:relative}
+.navgrp>span{cursor:pointer;padding:8px 14px;border-radius:10px;display:inline-block;color:inherit;text-decoration:none}
+.navgrp:hover>span{background:rgba(37,99,235,.10)}
+.navdrop{display:none;position:absolute;top:100%;right:0;background:#fff;min-width:210px;
+  border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.14);padding:8px;z-index:60}
+.navgrp:hover .navdrop{display:block}
+.navdrop a{display:block;padding:9px 12px;border-radius:8px;color:#1e293b;text-decoration:none;font-size:14px}
+.navdrop a:hover{background:#f1f5f9}
+</style>
 </head>
 <body>
 {% if user.is_authenticated %}
 <header class="topbar">
   <div class="brand">سامانه یکپارچه حضور و غیاب</div>
   <nav class="topnav">
-    <a href="{% url 'attendance:dashboard' %}">داشبورد</a>
-    <a href="{% url 'attendance:request_list' %}">درخواست‌ها</a>
-    <a href="{% url 'attendance:punches' %}">تردد</a>
-    <a href="{% url 'attendance:monthly' %}">کارکرد ماه</a>
-    <a href="{% url 'org:index' %}">پرسنل</a>
-    <a href="{% url 'device:index' %}">دستگاه‌ها</a>
-    <a href="{% url 'reports:index' %}">گزارش‌ها</a>
+    <div class="navgrp"><span>میز کار</span><div class="navdrop">
+      <a href="{% url 'attendance:dashboard' %}">داشبورد</a>
+      <a href="{% url 'attendance:request_list' %}">درخواست‌ها</a>
+      <a href="{% url 'attendance:request_new' %}">ثبت درخواست</a>
+    </div></div>
+    <div class="navgrp"><span>تردد و کارکرد</span><div class="navdrop">
+      <a href="{% url 'attendance:total_control' %}">کنترل جامع روزانه</a>
+      <a href="{% url 'attendance:punches' %}">رکوردهای تردد</a>
+      <a href="{% url 'attendance:insert_record' %}">ثبت تردد دستی</a>
+      <a href="{% url 'attendance:edit_late_early' %}">اصلاح تأخیر/خروج زود</a>
+      <a href="{% url 'attendance:daily_leave_batch' %}">مرخصی گروهی</a>
+      <a href="{% url 'attendance:leaves' %}">مرخصی‌ها</a>
+      <a href="{% url 'attendance:overtime' %}">اضافه‌کاری</a>
+      <a href="{% url 'attendance:monthly' %}">کارکرد ماه</a>
+      <a href="{% url 'attendance:personnel_status' %}">وضعیت پرسنل</a>
+    </div></div>
+    <div class="navgrp"><span>پرسنل</span><div class="navdrop">
+      <a href="{% url 'org:index' %}">فایل پرسنلی</a>
+      <a href="{% url 'org:org_chart' %}">چارت واحدها</a>
+      <a href="{% url 'org:titles' %}">سمت‌ها</a>
+      <a href="{% url 'org:emp_types' %}">انواع استخدام</a>
+      <a href="{% url 'org:certificates' %}">مدارک تحصیلی</a>
+      <a href="{% url 'org:custom_fields' %}">فیلدهای سفارشی</a>
+    </div></div>
+    <div class="navgrp"><span>برنامه‌ریزی</span><div class="navdrop">
+      <a href="{% url 'attendance:shifts' %}">شیفت‌ها</a>
+      <a href="{% url 'attendance:shift_assign' %}">انتساب شیفت</a>
+      <a href="{% url 'attendance:rules' %}">قواعد زمان‌بندی</a>
+      <a href="{% url 'attendance:holidays' %}">تقویم و تعطیلات</a>
+      <a href="{% url 'attendance:ramadan' %}">ماه رمضان</a>
+      <a href="{% url 'attendance:leave_transfer' %}">انتقال مرخصی</a>
+      <a href="{% url 'attendance:calc_parameters' %}">پارامترهای محاسباتی</a>
+    </div></div>
+    <div class="navgrp"><span>دستگاه‌ها</span><div class="navdrop">
+      <a href="{% url 'device:index' %}">دستگاه‌ها</a>
+      <a href="{% url 'device:device_users' %}">کاربران دستگاه</a>
+      <a href="{% url 'device:gates' %}">گیت‌ها</a>
+      <a href="{% url 'device:cards' %}">کارت‌ها</a>
+      <a href="{% url 'device:visitors' %}">بازدیدکنندگان</a>
+      <a href="{% url 'attendance:import_csv' %}">ورود CSV/USB</a>
+      <a href="{% url 'device:unis_bridge' %}">پل یونیس (Virdi)</a>
+      <a href="{% url 'device:raw_records' %}">رکوردهای خام</a>
+    </div></div>
+    <div class="navgrp"><span>گزارش‌ها</span><div class="navdrop">
+      <a href="{% url 'reports:index' %}">مرکز گزارش‌ها</a>
+      <a href="{% url 'reports:builder' %}">طراح گزارش</a>
+      <a href="{% url 'reports:run_standard' 'monthly' %}">کارکرد ماهانه</a>
+      <a href="{% url 'reports:run_standard' 'cardex' %}">کارتکس</a>
+      <a href="{% url 'reports:run_standard' 'absent' %}">عدم‌حضور</a>
+    </div></div>
+    <div class="navgrp"><span>مدیریت</span><div class="navdrop">
+      <a href="{% url 'attendance:custom_wf' %}">گردش‌کار تأیید</a>
+      <a href="{% url 'attendance:deputy' %}">جانشین‌ها</a>
+      <a href="{% url 'attendance:exit_types' %}">انواع خروج</a>
+      <a href="{% url 'attendance:rewards' %}">پاداش/توبیخ</a>
+      <a href="{% url 'core:notifications' %}">اعلان‌ها</a>
+      <a href="{% url 'attendance:policy' %}">سیاست‌ها و تنظیمات</a>
+      <a href="{% url 'core:system_logs' %}">لاگ سیستم</a>
+      <a href="{% url 'core:audit' %}">ممیزی</a>
+      <a href="{% url 'core:change_pass' %}">تغییر رمز</a>
+    </div></div>
   </nav>
   <div class="userbox">{{ user }}
     <form method="post" action="{% url 'core:logout' %}" class="inline">{% csrf_token %}

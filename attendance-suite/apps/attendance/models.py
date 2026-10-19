@@ -34,6 +34,19 @@ class Shift(models.Model):
         help_text='0=شنبه … 6=جمعه')
     grace_minutes = models.PositiveSmallIntegerField('مهلت (دقیقه)', default=15)
     overnight = models.BooleanField('شیفت شبانه (عبور از نیمه‌شب)', default=False)
+    # --- جزئیات شیفت (مطابق Schedule در T5Web) ---
+    symbol = models.CharField('نماد', max_length=4, blank=True, default='')
+    color = models.CharField('رنگ', max_length=7, blank=True, default='#1e88e5')
+    in_from = models.TimeField('ورود: از', null=True, blank=True)
+    in_to = models.TimeField('ورود: تا', null=True, blank=True)
+    out_from = models.TimeField('خروج: از', null=True, blank=True)
+    out_to = models.TimeField('خروج: تا', null=True, blank=True)
+    launch_minutes = models.PositiveSmallIntegerField('ناهار (دقیقه)', default=0)
+    rest_intervals = models.JSONField(
+        'بازه‌های استراحت', default=list, blank=True,
+        help_text='[{"from":"10:00","to":"10:15"}]')
+    margin_before = models.PositiveSmallIntegerField('Interval قبل (دقیقه)', default=0)
+    margin_after = models.PositiveSmallIntegerField('Interval بعد (دقیقه)', default=0)
     is_active = models.BooleanField('فعال', default=True)
 
     class Meta:
@@ -401,3 +414,26 @@ class WorkflowRule(models.Model):
 
     def __str__(self) -> str:
         return self.get_kind_display()
+
+
+class CalcParameter(models.Model):
+    """پارامتر محاسباتی با فرمول (Parameters در T5Web) — خروجی ماهانه/فیش."""
+
+    name = models.CharField('نام پارامتر', max_length=120)
+    symbol = models.CharField('نماد یکتا', max_length=24, unique=True)
+    formula = models.TextField(
+        'فرمول', blank=True, default='',
+        help_text='ترکیب نمادها/فیلدها؛ مثلاً [WorkedHours]-[MissionHours]')
+    is_sum = models.BooleanField('جمع‌شونده', default=False)
+    sum_function = models.CharField(
+        'تابع تجمیع', max_length=8, blank=True, default='SUM',
+        choices=[('SUM', 'SUM'), ('AVG', 'AVG'), ('MAX', 'MAX'), ('MIN', 'MIN')])
+    is_active = models.BooleanField('فعال', default=True)
+
+    class Meta:
+        verbose_name = 'پارامتر محاسباتی'
+        verbose_name_plural = 'پارامترهای محاسباتی'
+        ordering = ['name']
+
+    def __str__(self) -> str:
+        return f'{self.name} ({self.symbol})'
