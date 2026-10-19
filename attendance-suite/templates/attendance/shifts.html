@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}شیفت‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>شیفت‌ها و انتساب</h1></div></div>
+<div class="card">
+  <div class="card-title">شیفت تازه</div>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نام شیفت</label><input name="name"></div>
+    <div class="field"><label>شروع</label><input name="start_time" placeholder="08:00"></div>
+    <div class="field"><label>پایان</label><input name="end_time" placeholder="16:00"></div>
+    <div class="field"><label>مهلت (دقیقه)</label><input name="grace_minutes" value="15"></div>
+    <div class="field"><label>روزهای کاری</label>
+      <select name="work_days" multiple size="4">
+        <option value="0" selected>شنبه</option><option value="1" selected>یکشنبه</option>
+        <option value="2" selected>دوشنبه</option><option value="3" selected>سه‌شنبه</option>
+        <option value="4" selected>چهارشنبه</option><option value="5">پنجشنبه</option><option value="6">جمعه</option>
+      </select>
+    </div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت شیفت</button></div>
+  </form>
+</div>
+<div class="card">
+  <div class="card-title">انتساب شیفت</div>
+  <form method="post" action="{% url 'attendance:shift_assign' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>کارمند</label><select name="employee_id">
+      {% for e in employees %}<option value="{{ e.pk }}">{{ e }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>شیفت</label><select name="shift_id">
+      {% for s in shifts %}<option value="{{ s.pk }}">{{ s.name }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>از تاریخ</label><input name="from_date" placeholder="1404/07/30"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn" type="submit">انتساب</button></div>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>کارمند</th><th>شیفت</th><th>از تاریخ</th></tr></thead>
+  <tbody>
+  {% for a in assignments %}
+    <tr><td>{{ a.employee }}</td><td>{{ a.shift.name }}</td><td>{{ a.from_date|jdate }}</td></tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">انتسابی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

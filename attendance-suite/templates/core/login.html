@@ -4,10 +4,13 @@
 <div class="login-wrap">
   <div class="card">
     <div class="card-title">ورود به سامانه</div>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
     <form method="post">
       {% csrf_token %}
-      {{ form.as_p }}
-      <button class="btn btn-primary" type="submit" style="width:100%">ورود</button>
+      <div class="field"><label>نام کاربری</label><input name="username" required autofocus></div>
+      <div class="field" style="margin-top:12px"><label>گذرواژه</label><input name="password" type="password" required></div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn btn-primary" type="submit" style="width:100%;margin-top:16px">ورود</button>
     </form>
   </div>
 </div>

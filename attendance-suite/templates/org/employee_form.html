@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}{% if emp %}ویرایش کارمند{% else %}کارمند تازه{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{% if emp %}ویرایش: {{ emp }}{% else %}ثبت کارمند تازه{% endif %}</h1></div>
+<div class="actions"><a class="btn" href="{% url 'org:index' %}">فهرست پرسنل</a></div></div>
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field"><label>شماره کارگری *</label><input name="badge_no" value="{{ emp.badge_no|default:'' }}" required {% if emp %}readonly{% endif %}></div>
+    <div class="field"><label>نام *</label><input name="first_name" value="{{ emp.first_name|default:'' }}" required></div>
+    <div class="field"><label>نام خانوادگی *</label><input name="last_name" value="{{ emp.last_name|default:'' }}" required></div>
+    <div class="field"><label>کد ملی</label><input name="national_id" value="{{ emp.national_id|default:'' }}"></div>
+    <div class="field"><label>واحد</label><select name="department_id"><option value="">—</option>
+      {% for d in departments %}<option value="{{ d.pk }}" {% if emp.department_id == d.pk %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>سمت</label><select name="position_id"><option value="">—</option>
+      {% for p in positions %}<option value="{{ p.pk }}" {% if emp.position_id == p.pk %}selected{% endif %}>{{ p.title }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>نوع استخدام</label><select name="emp_type_id"><option value="">—</option>
+      {% for t in emp_types %}<option value="{{ t.pk }}" {% if emp.emp_type_id == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>مدیر مستقیم</label><select name="manager_id"><option value="">—</option>
+      {% for e in employees %}<option value="{{ e.pk }}" {% if emp.manager_id == e.pk %}selected{% endif %}>{{ e }}</option>{% endfor %}
+    </select></div>
+    {% if emp %}<div class="field"><label>وضعیت</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="is_active" {% if emp.is_active %}checked{% endif %}> فعال</label>
+    </div>{% endif %}
+  </div>
+  <div style="margin-top:16px"><button class="btn btn-primary" type="submit">ذخیره</button></div>
+</form>
+{% endblock %}

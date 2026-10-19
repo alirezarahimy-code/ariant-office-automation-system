@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}گزارش دسترسی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>گزارش دسترسی</h1><p class="sub">آخرین رویدادهای امنیتی و عملیاتی</p></div></div>
+<table class="table">
+  <thead><tr><th>زمان</th><th>کاربر</th><th>عمل</th><th>مدل</th><th>جزئیات</th><th>IP</th></tr></thead>
+  <tbody>
+  {% for log in logs %}
+    <tr><td>{{ log.at }}</td><td>{{ log.user|default:'—' }}</td><td>{{ log.action }}</td>
+    <td>{{ log.model }}</td><td>{{ log.detail|truncatechars:60 }}</td><td>{{ log.ip|default:'—' }}</td></tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">رویدادی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

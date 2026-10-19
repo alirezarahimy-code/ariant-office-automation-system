@@ -71,3 +71,17 @@ LOGIN_REDIRECT_URL = 'attendance:dashboard'
 LOGOUT_REDIRECT_URL = 'core:login'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --- امنیت نشست و کوکی ---
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+if os.environ.get('SUITE_HTTPS', '0') == '1':
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 86400
+
+# محدودسازی نرخ ورود (در services)
+LOGIN_RATE_LIMIT = 5

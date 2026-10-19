@@ -2,7 +2,27 @@
 {% load suite_tags %}
 {% block title %}دستگاه‌ها{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>دستگاه‌های تردد</h1><p class="sub">وضعیت و آخرین ارتباط</p></div></div>
+<div class="page-head">
+  <div><h1>دستگاه‌های تردد</h1><p class="sub">وضعیت و آخرین ارتباط</p></div>
+  <div class="actions"><a class="btn" href="{% url 'device:raw_records' %}">رکوردهای خام</a></div>
+</div>
+{% if can_manage %}
+<div class="card">
+  <div class="card-title">ثبت دستگاه تازه</div>
+  <form method="post" action="{% url 'device:device_add' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نام</label><input name="name"></div>
+    <div class="field"><label>سریال</label><input name="serial"></div>
+    <div class="field"><label>مدل</label><input name="model"></div>
+    <div class="field"><label>آی‌پی</label><input name="ip" placeholder="192.168.1.20"></div>
+    <div class="field"><label>پورت</label><input name="port" value="437"></div>
+    <div class="field"><label>نوع اتصال</label>
+      <select name="conn_type"><option value="tcp">TCP</option><option value="udp">UDP</option><option value="push">Push</option></select>
+    </div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+{% endif %}
 <table class="table">
   <thead><tr><th>نام</th><th>سریال</th><th>نوع اتصال</th><th>آخرین آنلاین</th><th>وضعیت</th></tr></thead>
   <tbody>

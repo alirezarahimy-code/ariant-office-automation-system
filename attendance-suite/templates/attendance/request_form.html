@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}ثبت درخواست{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>ثبت درخواست</h1></div>
+<div class="actions"><a class="btn" href="{% url 'attendance:request_list' %}">بازگشت</a></div></div>
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="field"><label>نوع درخواست *</label>
+      <select name="kind" required>{% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    </div>
+    <div class="field"><label>نوع مرخصی</label>
+      <select name="leave_type_id"><option value="">—</option>
+        {% for lt in leave_types %}<option value="{{ lt.pk }}">{{ lt.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>تاریخ (ماموریت/اضافه‌کاری/اصلاح/خروج)</label><input name="for_date" value="{{ today }}" placeholder="1404/07/30"></div>
+    <div class="field"><label>از تاریخ (مرخصی روزانه)</label><input name="from_date" placeholder="1404/07/30"></div>
+    <div class="field"><label>تا تاریخ (مرخصی روزانه)</label><input name="to_date" placeholder="1404/08/01"></div>
+    <div class="field"><label>از ساعت (ساعتی)</label><input name="from_time" placeholder="08:00"></div>
+    <div class="field"><label>تا ساعت (ساعتی)</label><input name="to_time" placeholder="12:00"></div>
+    <div class="field"><label>روز</label><input name="days" value="1"></div>
+    <div class="field"><label>ساعت</label><input name="hours"></div>
+    <div class="field"><label>شرح</label><input name="description"></div>
+  </div>
+  <div style="margin-top:16px"><button class="btn btn-primary" type="submit">ثبت درخواست</button></div>
+</form>
+{% endblock %}

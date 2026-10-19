@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}محدوده‌های مجاز{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>محدوده‌های مجاز (geo-fence)</h1></div></div>
+{% if can_manage %}
+<div class="card">
+  <form method="post" action="{% url 'attendance:geo_add' %}" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>نام محدوده</label><input name="name"></div>
+    <div class="field"><label>عرض جغرافیایی</label><input name="lat" placeholder="35.7"></div>
+    <div class="field"><label>طول جغرافیایی</label><input name="lng" placeholder="51.4"></div>
+    <div class="field"><label>شعاع (متر)</label><input name="radius_m" value="100"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت محدوده</button></div>
+  </form>
+</div>
+{% endif %}
+<table class="table">
+  <thead><tr><th>نام</th><th>مرکز</th><th>شعاع</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for a in areas %}
+    <tr><td>{{ a.name }}</td><td>{{ a.lat|fa }} , {{ a.lng|fa }}</td><td>{{ a.radius_m|fa }} متر</td>
+    <td>{% if a.is_active %}<span class="chip chip-success">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="4" class="empty">محدوده‌ای نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

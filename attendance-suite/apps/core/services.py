@@ -1,7 +1,15 @@
-"""خدمات هسته: کنترل دسترسی (RBAC + دامنه داده) و گزارش دسترسی."""
+"""خدمات هسته: کنترل دسترسی (RBAC + دامنه داده)، گزارش دسترسی، محدودسازی نرخ."""
 from __future__ import annotations
 
+from functools import wraps
+
+from django.core.cache import cache
+from django.shortcuts import redirect
+
 from .models import AuditLog, Permission, RoleDataScope, UserRole
+
+RATE_LIMIT_ATTEMPTS = 5          # تعداد تلاش مجاز
+RATE_LIMIT_WINDOW = 300          # بازه ثانیه
 
 
 def user_permissions(user) -> set[str]:
@@ -21,6 +29,31 @@ def user_permissions(user) -> set[str]:
 def has_perm(user, module: str, action: str) -> bool:
     return (user.is_superuser
             or f'{module}.{action}' in user_permissions(user))
+
+
+def require_perm(module: str, action: str):
+    """دکوراتور: الزام مجوز + ثبت در گزارش دسترسی."""
+
+    def decorator(view):
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('core:login')
+            if not has_perm(request.user, module, action):
+                audit(request.user, 'denied', model=f'{module}.{action}',
+                      detail=request.path, ip=_client_ip(request))
+                return _forbidden(request)
+            return view(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def _forbidden(request):
+    from django.http import HttpResponseForbidden
+    return HttpResponseForbidden(
+        '<div dir="rtl" style="font-family:Tahoma;padding:40px">'
+        'شما مجوز دسترسی به این بخش را ندارید. '
+        '<a href="/">بازگشت</a></div>')
 
 
 def data_scope(user, module: str) -> str:
@@ -56,5 +89,28 @@ def audit(user, action: str, model: str = '', object_id='', detail: str = '',
           ip=None) -> None:
     AuditLog.objects.create(
         user=user if getattr(user, 'is_authenticated', False) else None,
-        action=action, model=model, object_id=str(object_id),
-        detail=detail, ip=ip)
+        action=action, model=model, object_id=str(object_id)[:40],
+        detail=detail[:1000], ip=ip)
+
+
+def _client_ip(request) -> str | None:
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
+
+
+def login_throttled(username: str, ip: str) -> bool:
+    """True یعنی محدود شده (بیش از حد مجاز در بازه)."""
+    key = f'login-fail:{username}:{ip}'
+    fails = cache.get(key, 0)
+    return fails >= RATE_LIMIT_ATTEMPTS
+
+
+def record_login_failure(username: str, ip: str) -> None:
+    key = f'login-fail:{username}:{ip}'
+    cache.set(key, cache.get(key, 0) + 1, RATE_LIMIT_WINDOW)
+
+
+def clear_login_failures(username: str, ip: str) -> None:
+    cache.delete(f'login-fail:{username}:{ip}')
