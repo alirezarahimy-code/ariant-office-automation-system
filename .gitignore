@@ -63,3 +63,6 @@ backend/media/
 
 # پایگاه‌داده محلی/نمایشی
 backend/db.sqlite3
+
+# بسته استقرار مرجع IO (فقط برای مهندسی معکوس محلی — در گیت ثبت نمی‌شود)
+reference/IO-deployment/
