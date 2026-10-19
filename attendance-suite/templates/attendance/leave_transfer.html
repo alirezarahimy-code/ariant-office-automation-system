@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}انتقال مانده مرخصی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>انتقال مانده مرخصی</h1>
+<p class="sub">مانده سال مبدأ به‌صورت اعتبار سال مقصد ثبت می‌شود</p></div>
+<div class="actions"><a class="btn" href="{% url 'attendance:leaves' %}">بازگشت</a></div></div>
+<form method="post" class="card form-grid">
+  {% csrf_token %}
+  <div class="field"><label>سال مبدأ</label><input name="from_year" value="{{ from_year }}"></div>
+  <div class="field"><label>سال مقصد</label><input name="to_year" value="{{ to_year }}"></div>
+  <div class="field"><label>&nbsp;</label>
+    <button class="btn btn-primary" type="submit"
+            onclick="return confirm('انتقال مانده‌ها انجام شود؟');">انتقال</button>
+  </div>
+</form>
+{% endblock %}

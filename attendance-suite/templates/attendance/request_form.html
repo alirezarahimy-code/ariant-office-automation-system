@@ -21,6 +21,11 @@
     <div class="field"><label>تا ساعت (ساعتی)</label><input name="to_time" placeholder="12:00"></div>
     <div class="field"><label>روز</label><input name="days" value="1"></div>
     <div class="field"><label>ساعت</label><input name="hours"></div>
+    <div class="field"><label>نوع خروج (برای خروج اداری)</label>
+      <select name="exit_type_id"><option value="">—</option>
+        {% for et in exit_types %}<option value="{{ et.pk }}">{{ et.name }}</option>{% endfor %}
+      </select>
+    </div>
     <div class="field"><label>شرح</label><input name="description"></div>
   </div>
   <div style="margin-top:16px"><button class="btn btn-primary" type="submit">ثبت درخواست</button></div>

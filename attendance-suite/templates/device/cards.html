@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}کارت‌ها{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>کارت‌ها</h1></div>
+<div class="actions"><a class="btn" href="{% url 'device:index' %}">دستگاه‌ها</a></div></div>
+{% if can_add %}
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>شماره کارت *</label><input name="card_no" required></div>
+    <div class="field"><label>کارمند</label><select name="employee_id"><option value="">—</option>
+      {% for e in employees %}<option value="{{ e.pk }}">{{ e }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت</button></div>
+  </form>
+</div>
+{% endif %}
+<table class="table">
+  <thead><tr><th>شماره کارت</th><th>کارمند</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for c in cards %}
+    <tr><td>{{ c.card_no|fa }}</td><td>{{ c.employee|default:'—' }}</td>
+    <td>{% if c.is_active %}<span class="chip chip-success">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">کارتی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
