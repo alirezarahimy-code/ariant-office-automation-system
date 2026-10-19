@@ -93,6 +93,15 @@ LOGIN_RATE_LIMIT = 5
 #   UNIS_DB_USER=...   UNIS_DB_PASSWORD=...
 # بدون env: پیش‌فرض SQLite بی‌اثر (فقط برای سلامت ساختار) — تا پیکربندی نشود خوانده نمی‌شود.
 _unis_engine_name = os.environ.get('UNIS_DB_ENGINE', 'sqlite').lower()
+if _unis_engine_name == 'access':
+    # بانک Access نرم‌افزار یونیس (unis.mdb) — بدون درایور جنگو؛ خواندن با pyodbc.
+    # رمز بانک فقط از env (UNIS_DB_PASSWORD) — هرگز در کد/لاگ/UI.
+    UNIS_ACCESS = {
+        'name': os.environ.get('UNIS_DB_NAME', ''),
+        'password': os.environ.get('UNIS_DB_PASSWORD', ''),
+    }
+    _unis_engine_name = 'sqlite'  # alias رسمی جنگو فقط برای سلامت ساختار/تست
+
 _unis_engine = {
     'mssql': 'mssql_django', 'sqlserver': 'mssql_django',
     'mysql': 'django.db.backends.mysql',

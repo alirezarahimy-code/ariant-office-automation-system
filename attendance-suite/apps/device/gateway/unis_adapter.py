@@ -61,6 +61,11 @@ def sync_bridge(bridge) -> dict:
 # ---------- حالت بانک یونیس ----------
 
 def _pull_db(bridge) -> dict:
+    from django.conf import settings
+    access_cfg = getattr(settings, 'UNIS_ACCESS', None)
+    if access_cfg:
+        return _pull_access(bridge, access_cfg)
+
     from django.db import connections
 
     if 'unis' not in connections.databases:
@@ -158,3 +163,62 @@ def _pull_dir(bridge) -> dict:
         except Exception as exc:
             raise BridgeError(f'خطای خواندن فایل {fname}: {exc}') from exc
     return {'records': records, 'watermark': bridge.last_watermark}
+
+
+# ---------- بانک Access نرم‌افزار یونیس (unis.mdb) ----------
+
+def _pull_access(bridge, cfg) -> dict:
+    """خواندن مستقیم از unis.mdb (Access) با pyodbc — فقط‌خواندنی (SELECT)."""
+    table = _ident(bridge.table_name, 'نام جدول')
+    col_pin = _ident(bridge.col_pin, 'ستون کد پرسنلی')
+    col_time = _ident(bridge.col_time, 'ستون زمان')
+    col_dir = _ident(bridge.col_direction, 'ستون جهت') if bridge.col_direction else ''
+    try:
+        import pyodbc
+    except ImportError as exc:
+        raise BridgeError(
+            'درایور pyodbc برای خواندن unis.mdb در دسترس نیست.') from exc
+
+    name = (cfg.get('name') or '').strip()
+    if not name:
+        raise BridgeError(
+            'مسیر بانک یونیس (unis.mdb) تنظیم نشده — UNIS_DB_NAME را ببینید.')
+    password = cfg.get('password') or ''
+    # رمز فقط در رشته اتصال ODBC؛ هرگز ثبت/چاپ نمی‌شود.
+    conn_str = (f'DRIVER={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={name};'
+                f'PWD={password}')
+
+    limit = max(1, int(bridge.batch_limit or 5000))
+    cols = (f'{col_pin} AS pin, {col_time} AS tseen'
+            + (f', {col_dir} AS dseen' if col_dir else ''))
+    watermark_text = bridge.last_watermark or '1970-01-01 00:00:00'
+    try:
+        watermark = gregorian.datetime.strptime(
+            watermark_text[:19], '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        watermark = gregorian.datetime(1970, 1, 1)
+    sql = (f'SELECT TOP {limit} {cols} FROM {table} '
+           f'WHERE {col_time} >= ? ORDER BY {col_time} ASC')
+
+    try:
+        cn = pyodbc.connect(conn_str, autocommit=True)
+        try:
+            cur = cn.cursor()
+            cur.execute(sql, [watermark])
+            rows = cur.fetchall()
+        finally:
+            cn.close()
+    except Exception as exc:
+        raise BridgeError(f'خطای خواندن بانک یونیس ({table}): {exc}') from exc
+
+    records, max_seen = [], watermark_text
+    for row in rows:
+        pin, tseen = str(row[0]).strip(), _norm_time(row[1])
+        if not pin:
+            continue
+        item = {'pin': pin, 'time': tseen, 'payload': f'unis:{bridge.name}'}
+        if col_dir and len(row) > 2 and row[2] is not None:
+            item['payload'] += f'|dir={row[2]}'
+        records.append(item)
+        max_seen = max(max_seen, tseen)
+    return {'records': records, 'watermark': max_seen}

@@ -2,6 +2,7 @@
 import os
 import shutil
 import sqlite3
+import sys
 import tempfile
 
 from django.db import connections
@@ -191,3 +192,111 @@ class UnisViewTests(TestCase):
         self.client.force_login(user)
         resp = self.client.get(reverse('device:unis_bridge'))
         self.assertIn(resp.status_code, (302, 403))
+
+
+class UnisAccessMdbTests(TestCase):
+    """بانک Access یونیس (unis.mdb) — با pyodbc ساختگی (بدون درایور واقعی)."""
+
+    def setUp(self):
+        self.employee = Employee.objects.create(
+            badge_no='3001', first_name='و', last_name='ی')
+        self.device = Device.objects.create(
+            name='Virdi-MDB', serial='UNIS-MDB', brand=Device.Brand.VIRDI)
+        self.bridge = UnisBridge.objects.create(
+            name='unis.mdb', device=self.device, mode=UnisBridge.Mode.DB,
+            table_name='T_LOG', col_pin='USER_ID', col_time='ATT_TIME')
+
+    def _fake_pyodbc(self, rows):
+        """ماژول pyodbc ساختگی که رشته اتصال و SQL را ضبط می‌کند."""
+        import sys
+        from types import ModuleType, SimpleNamespace
+        captured = {}
+        mod = ModuleType('pyodbc')
+
+        def connect(conn_str, autocommit=False):
+            captured['conn_str'] = conn_str
+            captured['autocommit'] = autocommit
+
+            class Cursor:
+                def execute(self, sql, params=None):
+                    captured['sql'] = sql
+                    captured['params'] = params
+
+                def fetchall(self):
+                    return rows
+
+            class Conn:
+                def cursor(self):
+                    return Cursor()
+
+                def close(self):
+                    captured['closed'] = True
+            return Conn()
+        mod.connect = connect
+        return mod, captured
+
+    def test_access_pull_uses_password_and_top(self):
+        from unittest import mock
+        from django.conf import settings
+        mod, captured = self._fake_pyodbc(
+            [('3001', '2026-10-20 08:00:00'), ('3001', '2026-10-20 17:05:00')])
+        cfg = {'name': r'C:\UNIS\unis.mdb', 'password': 'env-only-secret'}
+        with mock.patch.dict(sys.modules, {'pyodbc': mod}), \
+                mock.patch.object(settings, 'UNIS_ACCESS', cfg, create=True):
+            from apps.device.gateway.unis_adapter import sync_bridge
+            result = sync_bridge(self.bridge)
+        self.assertEqual(result['created'], 2)
+        self.assertIn('PWD=env-only-secret', captured['conn_str'])
+        self.assertIn('unis.mdb', captured['conn_str'])
+        self.assertIn('TOP 5000', captured['sql'])
+        self.assertIn('WHERE ATT_TIME >= ?', captured['sql'])
+        self.assertTrue(captured['closed'])
+        # رمز هرگز در نتیجه/نشانگر ثبت نمی‌شود
+        self.assertNotIn('secret', self.bridge.last_result)
+        self.assertNotIn('secret', self.bridge.last_watermark)
+
+    def test_access_requires_path(self):
+        from unittest import mock
+        from django.conf import settings
+        mod, _ = self._fake_pyodbc([])
+        with mock.patch.dict(sys.modules, {'pyodbc': mod}), \
+                mock.patch.object(settings, 'UNIS_ACCESS', {'name': ''},
+                                  create=True):
+            from apps.device.gateway.unis_adapter import sync_bridge
+            with self.assertRaises(BridgeError) as ctx:
+                sync_bridge(self.bridge)
+        self.assertIn('UNIS_DB_NAME', str(ctx.exception))
+
+    def test_access_missing_pyodbc_graceful(self):
+        import builtins
+        from unittest import mock
+        from django.conf import settings
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == 'pyodbc':
+                raise ImportError('no pyodbc')
+            return real_import(name, *args, **kwargs)
+        with mock.patch.object(builtins, '__import__', fake_import), \
+                mock.patch.object(
+                    settings, 'UNIS_ACCESS',
+                    {'name': 'x.mdb', 'password': ''}, create=True):
+            from apps.device.gateway.unis_adapter import sync_bridge
+            with self.assertRaises(BridgeError) as ctx:
+                sync_bridge(self.bridge)
+        self.assertIn('pyodbc', str(ctx.exception))
+
+    def test_access_rejects_bad_identifiers_before_connect(self):
+        from unittest import mock
+        from django.conf import settings
+        mod = mock.MagicMock()
+        self.bridge.table_name = 'T_LOG); DROP'
+        self.bridge.save()
+        with mock.patch.dict(sys.modules, {'pyodbc': mod}), \
+                mock.patch.object(
+                    settings, 'UNIS_ACCESS',
+                    {'name': 'x.mdb', 'password': ''}, create=True):
+            from apps.device.gateway.unis_adapter import sync_bridge
+            with self.assertRaises(BridgeError):
+                sync_bridge(self.bridge)
+        mod.connect.assert_not_called()
