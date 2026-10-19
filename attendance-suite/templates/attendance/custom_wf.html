@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}گردش‌کار تأیید{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>گردش‌کار سفارشی تأیید</h1>
+<p class="sub">{{ chain_note }}</p></div></div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>نوع درخواست</th><th>نیازمند تأیید</th><th>اجازه جانشین</th><th>شرح</th><th></th></tr></thead>
+    <tbody>
+    {% for item in kinds %}
+      <tr>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="kind" value="{{ item.kind }}">
+          <td>{{ item.label }}</td>
+          <td><input type="checkbox" name="needs_approval" {% if not item.rule or item.rule.needs_approval %}checked{% endif %}></td>
+          <td><input type="checkbox" name="use_deputy" {% if not item.rule or item.rule.use_deputy %}checked{% endif %}></td>
+          <td><input name="description" value="{{ item.rule.description|default:'' }}" style="width:100%"></td>
+          <td><button class="btn" type="submit">ذخیره</button></td>
+        </form>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

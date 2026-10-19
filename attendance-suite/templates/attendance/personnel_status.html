@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}وضعیت پرسنل{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>وضعیت پرسنل</h1>
+<p class="sub">نمای کلی ماه جاری — {{ today|jdate }}</p></div>
+<div class="actions"><a class="btn" href="{% url 'reports:index' %}">گزارش‌ها</a></div></div>
+<table class="table">
+  <thead><tr><th>کارمند</th><th>حاضر</th><th>با تأخیر</th><th>غیبت</th><th>آخرین روز ثبت‌شده</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.employee }}</td>
+      <td>{{ row.present|fa }}</td>
+      <td>{{ row.late|fa }}</td>
+      <td>{{ row.absent|fa }}</td>
+      <td>{% if row.last %}{{ row.last.date|jdate }} ({{ row.last.get_state_display }}){% else %}—{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">کارمندی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

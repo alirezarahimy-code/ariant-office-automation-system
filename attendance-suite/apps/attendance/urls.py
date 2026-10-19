@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, views_extra
 
 app_name = 'attendance'
 
@@ -28,4 +28,8 @@ urlpatterns = [
     path('deputy/', views.deputy, name='deputy'),
     path('leaves/transfer/', views.leave_transfer, name='leave_transfer'),
     path('exit-types/', views.exit_type_list, name='exit_types'),
+    path('import/', views_extra.import_csv, name='import_csv'),
+    path('personnel-status/', views_extra.personnel_status,
+         name='personnel_status'),
+    path('custom-wf/', views_extra.custom_wf, name='custom_wf'),
 ]

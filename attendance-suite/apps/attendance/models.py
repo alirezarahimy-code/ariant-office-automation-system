@@ -384,3 +384,20 @@ class GeoArea(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class WorkflowRule(models.Model):
+    """قاعده گردش‌کار تأیید هر نوع درخواست (CustomWF)."""
+
+    kind = models.CharField('نوع درخواست', max_length=14, unique=True,
+                            choices=Request.Kind.choices)
+    needs_approval = models.BooleanField('نیازمند تأیید', default=True)
+    use_deputy = models.BooleanField('اجازه جانشین', default=True)
+    description = models.CharField('شرح', max_length=200, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'قاعده گردش‌کار'
+        verbose_name_plural = 'قواعد گردش‌کار'
+
+    def __str__(self) -> str:
+        return self.get_kind_display()

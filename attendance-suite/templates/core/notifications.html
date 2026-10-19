@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}قالب‌های اعلان{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>قالب‌های اعلان</h1>
+<p class="sub">پیام‌های سیستمی (ایمیل/پیامک/درون‌برنامه‌ای)</p></div></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label>کلید (نوع)</label><input name="kind" placeholder="request_approved"></div>
+    <div class="field"><label>عنوان</label><input name="title"></div>
+    <div class="field"><label>متن</label><input name="body" placeholder="{name} عزیز، درخواست شما ..."></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ذخیره</button></div>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>کلید</th><th>عنوان</th><th>متن</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td>{{ r.kind }}</td><td>{{ r.title }}</td><td>{{ r.body|truncatechars:80 }}</td></tr>
+  {% empty %}
+    <tr><td colspan="3" class="empty">قالبی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
