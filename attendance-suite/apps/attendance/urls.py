@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, views_extra, views_precards, views_schedule
+from . import views, views_extra, views_leave_types, views_precards, views_schedule
 
 app_name = 'attendance'
 
@@ -36,6 +36,7 @@ urlpatterns = [
     path('deputy/', views.deputy, name='deputy'),
     path('leaves/transfer/', views.leave_transfer, name='leave_transfer'),
     path('exit-types/', views.exit_type_list, name='exit_types'),
+    path('leave-types/', views_leave_types.leave_types, name='leave_types'),
     path('leave-descriptions/', views_extra.leave_descriptions,
          name='leave_descriptions'),
     path('leave-descriptions/<int:pk>/', views_extra.leave_descriptions,

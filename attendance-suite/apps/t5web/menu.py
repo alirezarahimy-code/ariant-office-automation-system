@@ -19,6 +19,7 @@ T5_MENU = (
             ("سمت", "org:titles", "org.manage"),
             ("انتخاب جانشین", "attendance:deputy", "requests.manage"),
             ("نوع استخدام", "org:emp_types", "org.manage"),
+            ("انواع خروج", "attendance:leave_types", "attendance.manage"),
             ("نوع خروج", "attendance:exit_types", "attendance.manage"),
             ("شرح خروج", "attendance:leave_descriptions", "attendance.manage"),
             ("تقویم", "attendance:holidays", "attendance.manage"),

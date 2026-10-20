@@ -32,7 +32,7 @@ class T5NavigationTests(TestCase):
         )
         self.assertEqual(
             [label for label, *_ in T5_MENU[0][1]][:5],
-            ["مدرک تحصیلی", "سمت", "انتخاب جانشین", "نوع استخدام", "نوع خروج"],
+            ["مدرک تحصیلی", "سمت", "انتخاب جانشین", "نوع استخدام", "انواع خروج"],
         )
 
     def test_every_exposed_menu_destination_resolves(self):

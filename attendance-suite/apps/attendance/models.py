@@ -378,8 +378,54 @@ class LeaveDescription(models.Model):
 
 
 class LeaveType(models.Model):
+    class LeaveKind(models.TextChoices):
+        DUTY = 'duty', 'ماموریت'
+        LEAVE = 'leave', 'مرخصی'
+
+    class GetInType(models.TextChoices):
+        MONTH_FIRST = 'month_first', 'ابتدای ماه'
+        MONTH_LAST = 'month_last', 'انتهای ماه'
+        YEAR_FIRST = 'year_first', 'ابتدای سال'
+        YEAR_LAST = 'year_last', 'انتهای سال'
+        CUSTOM = 'custom', 'سفارشی'
+
     name = models.CharField('نام', max_length=100)
+    symbol = models.CharField('نماد', max_length=24, blank=True, default='')
+    leave_kind = models.CharField(
+        'نوع مرخصی/ماموریت', max_length=8,
+        choices=LeaveKind.choices, default=LeaveKind.LEAVE)
+    is_hourly = models.BooleanField('ساعتی', default=True)
+    color = models.CharField('رنگ', max_length=7, default='#000000')
     state_key = models.PositiveIntegerField('کلید وضعیت رکورد', default=4)
+    max_hours_in_a_day_seconds = models.PositiveIntegerField(
+        'حداکثر ساعتی روزانه (ثانیه)', default=6 * 3600)
+    max_hours_in_a_month_seconds = models.PositiveIntegerField(
+        'حداکثر ساعتی ماهانه (ثانیه)', default=12 * 3600)
+    max_daily_in_year = models.DecimalField(
+        'حداکثر روزانه در سال', max_digits=7, decimal_places=2, default=30)
+    max_daily_in_month = models.DecimalField(
+        'حداکثر روزانه در ماه', max_digits=7, decimal_places=2, default=2.5)
+    each_x_hours_a_day_seconds = models.PositiveIntegerField(
+        'هر چند ساعت یک روز', default=8 * 3600)
+    get_in_type = models.CharField(
+        'روش استحقاق', max_length=12,
+        choices=GetInType.choices, default=GetInType.MONTH_FIRST)
+    parameter = models.ForeignKey(
+        'CalcParameter', verbose_name='پارامتر', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='leave_types')
+    for_next_year = models.DecimalField(
+        'انتقال به سال بعد', max_digits=7, decimal_places=2, default=9)
+    for_next_year_sum = models.BooleanField('جمع انتقال سال بعد', default=False)
+    max_minus = models.DecimalField(
+        'حداکثر منفی', max_digits=7, decimal_places=2, default=0)
+    payment = models.BooleanField('بدون پرداخت', default=False)
+    decrease_from_leave = models.ForeignKey(
+        'self', verbose_name='کسر از نوع مرخصی', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='decrease_target_types')
+    get_in_holidays = models.BooleanField('محاسبه در تعطیلات', default=False)
+    auto_in_holidays = models.BooleanField('محاسبه خودکار در تعطیلات', default=False)
+    only_one = models.BooleanField('فقط یکبار', default=False)
+    valid_free_ot = models.BooleanField('اعتبار اضافه‌کار آزاد', default=False)
     code = models.CharField('کد', max_length=24, unique=True)
     limit_per_year = models.DecimalField(
         'سهمیه سالانه (روز)', max_digits=6, decimal_places=2, default=0)
