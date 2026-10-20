@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}اعمال پیش‌کارت{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>اعمال پیش‌کارت</h1><p class="sub">اعمال وضعیت کارت به رکوردهای همان دستگاه در محدودهٔ اعتبار</p></div>
+  <div class="actions"><a class="btn" href="{% url 'attendance:pre_cards' %}">پیش‌کارت‌ها</a></div>
+</div>
+<div class="card">
+  <div class="card-title">انتخاب بازه زمانی</div>
+  <form method="post" action="{% url 'attendance:pre_cards_apply' %}">
+    {% csrf_token %}
+    <div class="form-grid">
+      <div class="field"><label><input id="isMonthly" type="checkbox" name="isMonthly" value="true" onchange="toggleDateMode()"> بازهٔ ماهانه</label></div>
+      <div class="field monthly-field"><label for="year">سال</label><input id="year" name="year" type="number" min="1300" max="1600" value="{{ year }}"></div>
+      <div class="field monthly-field"><label for="month">ماه</label>
+        <select id="month" name="month">
+          <option value="1"{% if month == 1 %} selected{% endif %}>فروردین</option>
+          <option value="2"{% if month == 2 %} selected{% endif %}>اردیبهشت</option>
+          <option value="3"{% if month == 3 %} selected{% endif %}>خرداد</option>
+          <option value="4"{% if month == 4 %} selected{% endif %}>تیر</option>
+          <option value="5"{% if month == 5 %} selected{% endif %}>مرداد</option>
+          <option value="6"{% if month == 6 %} selected{% endif %}>شهریور</option>
+          <option value="7"{% if month == 7 %} selected{% endif %}>مهر</option>
+          <option value="8"{% if month == 8 %} selected{% endif %}>آبان</option>
+          <option value="9"{% if month == 9 %} selected{% endif %}>آذر</option>
+          <option value="10"{% if month == 10 %} selected{% endif %}>دی</option>
+          <option value="11"{% if month == 11 %} selected{% endif %}>بهمن</option>
+          <option value="12"{% if month == 12 %} selected{% endif %}>اسفند</option>
+        </select>
+      </div>
+      <div class="field interval-field"><label for="fromdate">از تاریخ (جلالی)</label><input id="fromdate" name="FromDateHijri" value="{{ today }}" placeholder="۱۴۰۵/۰۱/۰۱"></div>
+      <div class="field interval-field"><label for="todate">تا تاریخ (جلالی)</label><input id="todate" name="ToDateHijri" value="{{ today }}" placeholder="۱۴۰۵/۰۱/۳۱"></div>
+    </div>
+    <p class="sub">کارت آغازگر باید در بازه انتخاب‌شده خوانده شده باشد. فقط رکوردهای دستگاه منتخب و در مدت اعتبار کارت تغییر می‌کنند.</p>
+    <div class="actions"><button class="btn btn-primary" type="submit">اعمال پیش‌کارت</button></div>
+  </form>
+</div>
+<script>
+  function toggleDateMode() {
+    const monthly = document.getElementById('isMonthly').checked;
+    document.querySelectorAll('.monthly-field').forEach((el) => {
+      el.style.display = monthly ? '' : 'none';
+    });
+    document.querySelectorAll('.interval-field').forEach((el) => {
+      el.style.display = monthly ? 'none' : '';
+    });
+  }
+  toggleDateMode();
+</script>
+{% endblock %}

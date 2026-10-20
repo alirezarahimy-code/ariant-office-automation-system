@@ -52,6 +52,8 @@ T5_MENU = (
             ("صدور مجوز کسر کار", "attendance:valid_leaves", "attendance.manage"),
             ("پیش‌کارت", "attendance:pre_cards",
              ("attendance.manage", "device.manage", "scope:attendance_device_all")),
+            ("اعمال پیش‌کارت", "attendance:pre_cards_apply",
+             ("attendance.manage", "device.manage", "scope:attendance_device_all")),
             ("رکورد تردد", "attendance:punches", "attendance.view"),
             ("کنترل یکپارچه", "attendance:total_control", "attendance.view"),
             ("گزارش جدولی", "reports:index", "reports.view"),

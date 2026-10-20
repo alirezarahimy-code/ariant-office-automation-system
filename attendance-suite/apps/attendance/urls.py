@@ -44,6 +44,8 @@ urlpatterns = [
     path('valid-leaves/<int:pk>/', views_schedule.valid_leaves,
          name='valid_leave_edit'),
     path('pre-cards/', views_precards.pre_cards, name='pre_cards'),
+    path('pre-cards/apply/', views_precards.apply_pre_cards,
+         name='pre_cards_apply'),
     path('import/', views_extra.import_csv, name='import_csv'),
     path('personnel-status/', views_extra.personnel_status,
          name='personnel_status'),

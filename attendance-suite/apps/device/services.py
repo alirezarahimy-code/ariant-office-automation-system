@@ -39,7 +39,8 @@ def ingest_records(device: Device, records: list[dict]) -> dict:
             raise ValueError('pin (کد پرسنلی دستگاه) الزامی است.')
         obj, was_created = RawRecord.objects.get_or_create(
             device=device, pin=pin, punch_time=punch_time,
-            defaults={'verify_mode': int(item.get('verify_mode') or 0),
+            defaults={'check_type': int(item.get('check_type') or 0),
+                      'verify_mode': int(item.get('verify_mode') or 0),
                       'work_code': str(item.get('work_code') or ''),
                       'payload': str(item.get('payload') or '')})
         if was_created:
@@ -93,7 +94,7 @@ def convert_raw_to_punches(device: Device | None = None, *,
         Punch.objects.get_or_create(
             employee=employee, date=dt.date(), time=dt.time(),
             defaults={'direction': direction, 'source': Punch.Source.DEVICE,
-                      'device': raw.device,
+                      'device': raw.device, 'check_type': raw.check_type,
                       'description': f'از رکورد خام {raw.pk}'})
         raw.state = RawRecord.State.TRANSFERED
         raw.save(update_fields=['state'])

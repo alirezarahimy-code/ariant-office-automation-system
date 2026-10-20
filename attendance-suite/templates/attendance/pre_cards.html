@@ -4,6 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>پیش‌کارت</h1><p class="sub">تعریف شماره کارت، مدت اعتبار، وضعیت و دستگاه</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'attendance:pre_cards_apply' %}">اعمال پیش‌کارت</a></div>
 </div>
 <div class="card">
   <div class="card-title">{% if selected %}ویرایش پیش‌کارت{% else %}افزودن پیش‌کارت{% endif %}</div>
@@ -61,5 +62,4 @@
     </tbody>
   </table>
 </div>
-<div class="card"><p class="sub">اعمال بازه‌ای پیش‌کارت‌ها تا زمان تطبیق کامل منطق تغییر رکوردهای مرجع در دسترس نیست.</p></div>
 {% endblock %}

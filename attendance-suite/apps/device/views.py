@@ -164,6 +164,7 @@ def api_ingest(request):
                 raise ValueError('invalid record')
             pin, punch_time = item.get('pin'), item.get('time')
             verify_mode = item.get('verify_mode', 0)
+            check_type = item.get('check_type', 0)
             if (isinstance(pin, bool) or not isinstance(pin, (str, int))
                     or not 1 <= len(str(pin).strip()) <= 24
                     or not isinstance(punch_time, str) or not punch_time.strip()
@@ -171,6 +172,9 @@ def api_ingest(request):
                     or isinstance(verify_mode, bool)
                     or not str(verify_mode).isdigit()
                     or not 0 <= int(verify_mode) <= 32767
+                    or isinstance(check_type, bool)
+                    or not str(check_type).isdigit()
+                    or not 0 <= int(check_type) <= 2147483647
                     or len(str(item.get('work_code') or '')) > 12):
                 raise ValueError('invalid record')
         device = Device.objects.get(serial=serial.strip(), is_active=True)

@@ -131,6 +131,11 @@
 - `T5V3.DB.EntityClasses.Workflow` — AccepterTitleID, LeaveTypeID, OrderIndex, TitleID, WorkflowType
 - `T5V3.DB.EntityClasses.YearRemain` — BadgeNumber, DailyValue, LeaveType, LeaveTypeID, Year
 
+## مدل‌های افزوده‌شده در بازسازی T5Web
+
+- `attendance.PreCard` — نگاشت فیلدهای `T5V3.Model.Card`/`T5V3.DB.EntityClasses.Card`: `card_badge_number` ↔ CardBadgeNumber, `valid_secs` ↔ ValidSecs, `leave_type` ↔ LeaveTypeID, `device` ↔ MachineNumber, `only_first` ↔ OnlyFirst. `device` در نسخهٔ جدید FK به ردیف محلی Device است؛ برابری شناسهٔ محلی با شمارهٔ ماشین مرجع فرض نشده است. CRUD و ApplyInterval بازسازی شده‌اند: شمارهٔ کارتِ آغازگر در بازه پیدا می‌شود؛ رکوردهای همان دستگاه از یک ثانیه پس از آن تا `ValidSecs` انتخاب و `check_type` آنها به `LeaveType.state_key` تغییر می‌کند؛ `OnlyFirst` انتخاب را به اولین رکورد محدود می‌کند. `LeaveType.state_key` مقدار پیش‌فرض ۴ دارد، مطابق مقدار اولیهٔ فیلد StateKey در فرم مرجع.
+- `device.RawRecord.check_type` و `attendance.Punch.check_type` نگه‌دارندهٔ CheckType مرجع‌اند؛ ApplyInterval هر دو لایه را به‌روزرسانی می‌کند تا اعمال پیش/پس از تبدیل رکورد خام حفظ شود. متدهای DAL در CIL مرتب‌سازی صریح ندارند؛ پیاده‌سازی جدید برای نتیجهٔ تکرارپذیر، ترتیب زمانی و سپس شناسهٔ محلی را انتخاب کرده است. این نگاشت آزمون‌شدهٔ الگوریتم CIL است، نه استخراج سورس C# یا تأیید کامل محاسبات نهایی T5؛ اتصال CheckType به محاسبات گزارش و پذیرش مقایسه‌ای با دادهٔ واقعی مرجع همچنان لازم است.
+
 ## Personnel DB
 
 **کلاس‌های دارای property استخراج‌شده:** 116. هر کلاس با propertyهای نام‌گذاری‌شده در اسمبلی:

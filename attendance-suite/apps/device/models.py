@@ -95,6 +95,7 @@ class RawRecord(models.Model):
         related_name='raw_records')
     pin = models.CharField('کد پرسنلی دستگاه', max_length=24, db_index=True)
     punch_time = models.DateTimeField('زمان رویداد', db_index=True)
+    check_type = models.PositiveIntegerField('نوع رکورد', default=0)
     verify_mode = models.PositiveSmallIntegerField('نوع تأیید', default=0)
     work_code = models.CharField('کد کار', max_length=12, blank=True, default='')
     state = models.CharField(

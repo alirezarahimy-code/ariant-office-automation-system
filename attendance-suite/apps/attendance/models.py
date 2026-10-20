@@ -269,6 +269,7 @@ class Punch(models.Model):
     time = models.TimeField('ساعت')
     direction = models.CharField(
         'جهت', max_length=4, choices=Direction.choices)
+    check_type = models.PositiveIntegerField('نوع/کلید رکورد', default=0)
     source = models.CharField(
         'منبع', max_length=8, choices=Source.choices, default=Source.WEB)
     device = models.ForeignKey(
@@ -378,6 +379,7 @@ class LeaveDescription(models.Model):
 
 class LeaveType(models.Model):
     name = models.CharField('نام', max_length=100)
+    state_key = models.PositiveIntegerField('کلید وضعیت رکورد', default=4)
     code = models.CharField('کد', max_length=24, unique=True)
     limit_per_year = models.DecimalField(
         'سهمیه سالانه (روز)', max_digits=6, decimal_places=2, default=0)
