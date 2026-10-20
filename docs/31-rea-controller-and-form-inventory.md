@@ -210,12 +210,14 @@ REA comparison روی فایل‌های هم‌نام داخل T5Web و TWF ان
 برای کاهش خطای نگاشت از روی نام کنترلر، کد بازسازی این موارد را جداگانه پیاده می‌کند:
 
 - `LeaveDescription/Index.cshtml` ↔ `attendance:leave_descriptions`؛ شرح و enum مربوط به Duty/Leave، با آزمون create/edit/delete.
+- `LeaveType/MyView.cshtml` ↔ `attendance:leave_types`؛ نام/نماد، Duty/Leave، ساعتی/روزانه، StateKey، رنگ، سقف‌ها، روش/پارامتر استحقاق، انتقال سال، پرداخت و تعطیلات. enumهای numeric مرجع در مدل جدید نرمال شده‌اند؛ رفتار محاسباتی همهٔ این سیاست‌ها هنوز پذیرش تطبیقی می‌خواهد.
+- `Card/Index.cshtml` + `Card/Apply.cshtml` ↔ `attendance:pre_cards` + `attendance:pre_cards_apply`؛ نگاشت Card و الگوریتم ApplyInterval در CIL از طریق badge آغازگر، پنجرهٔ ValidSecs، MachineNumber، StateKey/CheckType و OnlyFirst اجرا می‌شود؛ آزمون‌های محلی وجود دارد و تطبیق دادهٔ واقعی هنوز لازم است.
 - `Schedule/Index.cshtml` ↔ `attendance:schedule_definitions`؛ فیلدهای ساعت، پنجره‌های ورود/خروج، رمضان، استراحت، قانون و تقویم.
 - `TempSchedules/Index.cshtml` ↔ `attendance:temp_schedules`؛ نمایش بازه و رکوردها، و تغییر گروهی/فردی با دامنهٔ پرسنلی مجاز.
 - `Permit/Index.cshtml` ↔ `attendance:valid_leaves`؛ `ValidLeave` با انتخاب پرسنل، بازه، مدت و شرح.
 - `ImportFromExcel/Index.cshtml` ↔ `org:import_excel`؛ واردکردن **پروندهٔ پرسنلی** با انتخاب ستون، پیش‌نمایش و تأیید ثبت. واردکنندهٔ CSV تردد به‌عنوان جایگزین Excel پرسنل استفاده نمی‌شود.
 
-این نگاشت‌ها از Viewها و metadata مدل/کنترلر استخراج شده‌اند؛ آزمون‌های Django در کنار آن‌ها رفتار پیاده‌سازی را می‌سنجند، اما تأیید تطابق UI/runtime نصب فعال شبکه هنوز لازم است. صفحهٔ `USBManagement` اکنون فقط برای ورود پیش‌نمایشی CSV/TXT خروجی UNIS (`device:usb_import`) پیاده شده تا مسیر Virdi از UNIS باقی بماند؛ این به‌معنای بازسازی فایل اختصاصی اسمبلی نیست. `Card/ApplyInterval` و گزارش‌های ویژه همچنان نیازمند نگاشت و آزمون اختصاصی‌اند؛ هیچ endpoint مشابهی به‌جای آن‌ها جا زده نشده است.
+این نگاشت‌ها از Viewها و metadata مدل/کنترلر استخراج شده‌اند؛ آزمون‌های Django در کنار آن‌ها رفتار پیاده‌سازی را می‌سنجند، اما تأیید تطابق UI/runtime نصب فعال شبکه هنوز لازم است. صفحهٔ `USBManagement` اکنون فقط برای ورود پیش‌نمایشی CSV/TXT خروجی UNIS (`device:usb_import`) پیاده شده تا مسیر Virdi از UNIS باقی بماند؛ این به‌معنای بازسازی فایل اختصاصی اسمبلی نیست. `Card/ApplyInterval` اکنون با شواهد CIL و آزمون‌های محدود پیاده شده است؛ گزارش‌های ویژه هنوز نیازمند نگاشت، مقایسهٔ خروجی و آزمون اختصاصی هستند و هیچ endpoint مشابهی به‌جای آن‌ها جا زده نشده است.
 
 ## ۹) مرز این استخراج
 
