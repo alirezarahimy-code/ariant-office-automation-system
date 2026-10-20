@@ -298,7 +298,8 @@ class AccuracyTests(TestCase):
         admin = User.objects.create_superuser('root', password='x')
         self.client.force_login(admin)
         resp = self.client.get(reverse('reports:run_standard', args=['sum']),
-                               {'year': 1404, 'month': 7})
+                               {'year': 1404, 'month': 7,
+                                'selectedBadgeNumbers': [self.employee.badge_no]})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, '540')  # کارکرد دقیقه
 
