@@ -28,9 +28,11 @@ class LeaveTypeReferenceFormTests(TestCase):
         return data
 
     def test_create_and_edit_full_reference_configuration(self):
+        LeaveType.objects.create(name='نوع قبلی', code='previous')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'StateKey')
+        self.assertContains(response, 'delete_selected')
 
         response = self.client.post(self.url, self.payload())
         self.assertEqual(response.status_code, 302)
@@ -57,8 +59,10 @@ class LeaveTypeReferenceFormTests(TestCase):
 
     def test_invalid_input_does_not_create_or_change_rows(self):
         response = self.client.post(self.url, self.payload(
-            MaxHoursInADay='six hours', StateKey='-2'))
+            MaxHoursInADay='six hours', StateKey='7'))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'زمان باید به صورت ساعت:دقیقه')
+        self.assertNotContains(response, 'id="leaveTypePanel" class="card" style="display:none"')
         self.assertFalse(LeaveType.objects.exists())
 
         row = LeaveType.objects.create(name='قدیمی', code='old')
@@ -68,6 +72,29 @@ class LeaveTypeReferenceFormTests(TestCase):
         self.assertEqual(response.status_code, 200)
         row.refresh_from_db()
         self.assertEqual(row.name, 'قدیمی')
+
+    def test_bulk_delete_is_all_or_nothing_and_preserves_referenced_types(self):
+        first = LeaveType.objects.create(name='اول', code='first')
+        second = LeaveType.objects.create(name='دوم', code='second')
+        response = self.client.post(self.url, {
+            'action': 'delete_selected', 'selected_ids': [str(first.pk), str(second.pk)],
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(LeaveType.objects.filter(pk__in=[first.pk, second.pk]).exists())
+
+        safe = LeaveType.objects.create(name='آزاد', code='safe')
+        protected = LeaveType.objects.create(name='مصرف‌شده', code='protected')
+        device = Device.objects.create(name='دستگاه گروهی', serial='LT-BULK-DEVICE')
+        PreCard.objects.create(
+            card_badge_number=909091, valid_secs=30,
+            leave_type=protected, device=device)
+        response = self.client.post(self.url, {
+            'action': 'delete_selected',
+            'selected_ids': [str(safe.pk), str(protected.pk)],
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(LeaveType.objects.filter(pk=safe.pk).exists())
+        self.assertTrue(LeaveType.objects.filter(pk=protected.pk).exists())
 
     def test_pre_card_reference_prevents_deleting_leave_type(self):
         leave_type = LeaveType.objects.create(name='حالت', code='state')

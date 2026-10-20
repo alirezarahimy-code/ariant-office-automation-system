@@ -88,15 +88,46 @@ def _posted_form_values(row, post):
     return values
 
 
+def _has_dependents(row):
+    return (row.pre_cards.exists() or row.balances.exists()
+            or row.requests.exists())
+
+
 @require_perm('attendance', 'manage')
 def leave_types(request):
     selected_id = request.GET.get('leave_type_id')
     row = get_object_or_404(LeaveType, pk=selected_id) if selected_id else None
     values = _form_values(row)
+    show_panel = bool(row)
 
     if request.method == 'POST':
-        action = request.POST.get('action', 'save')
-        raw_id = _text(request.POST.get('leave_type_id', ''))
+        action = request.POST.get('action') or ('delete' if request.POST.get('delete_id') else 'save')
+        if action == 'delete_selected':
+            try:
+                raw_ids = request.POST.getlist('selected_ids')
+                if not raw_ids or len(raw_ids) > 500 or any(not _text(v).isdigit() for v in raw_ids):
+                    raise ValueError('برای حذف گروهی، یک تا ۵۰۰ نوع معتبر انتخاب کنید.')
+                ids = {int(_text(v)) for v in raw_ids}
+                with transaction.atomic():
+                    selected_rows = list(LeaveType.objects.select_for_update().filter(
+                        pk__in=ids).order_by('pk'))
+                    if len(selected_rows) != len(ids):
+                        raise ValueError('بعضی از انواع انتخاب‌شده دیگر وجود ندارند.')
+                    if any(_has_dependents(item) for item in selected_rows):
+                        raise ValueError('یک یا چند نوع انتخاب‌شده در داده‌های سامانه استفاده می‌شود؛ هیچ‌کدام حذف نشد.')
+                    for item in selected_rows:
+                        audit(request.user, 'delete', 'LeaveType', item.pk,
+                              detail=item.name)
+                        item.delete()
+            except ValueError as exc:
+                messages.error(request, str(exc) or 'حذف گروهی انجام نشد.')
+            except (ProtectedError, IntegrityError):
+                messages.error(request, 'به دلیل وابستگی داده‌ها، حذف گروهی انجام نشد.')
+            else:
+                messages.success(request, f'{len(selected_rows)} نوع مرخصی حذف شد.')
+            return redirect('attendance:leave_types')
+
+        raw_id = _text(request.POST.get('delete_id', request.POST.get('leave_type_id', '')))
         if raw_id and raw_id != '-1' and not raw_id.isdigit():
             messages.error(request, 'شناسهٔ نوع مرخصی معتبر نیست.')
             return redirect('attendance:leave_types')
@@ -106,19 +137,19 @@ def leave_types(request):
         if action == 'delete':
             if target is None:
                 messages.error(request, 'نوع مرخصی برای حذف انتخاب نشده است.')
-            elif (target.pre_cards.exists() or target.balances.exists()
-                  or target.requests.exists()):
+            elif _has_dependents(target):
                 messages.error(request, 'این نوع مرخصی در داده‌های ثبت‌شده استفاده می‌شود و حذف‌پذیر نیست.')
             else:
                 label, pk = target.name, target.pk
                 try:
-                    target.delete()
+                    with transaction.atomic():
+                        audit(request.user, 'delete', 'LeaveType', pk, detail=label)
+                        target.delete()
                 except ProtectedError:
                     messages.error(request, 'این نوع مرخصی در پیش‌کارت‌ها استفاده می‌شود و حذف‌پذیر نیست.')
                 except IntegrityError:
                     messages.error(request, 'این نوع مرخصی در داده‌های سامانه استفاده می‌شود و حذف‌پذیر نیست.')
                 else:
-                    audit(request.user, 'delete', 'LeaveType', pk, detail=label)
                     messages.success(request, 'نوع مرخصی حذف شد.')
             return redirect('attendance:leave_types')
 
@@ -171,6 +202,8 @@ def leave_types(request):
         except (TypeError, ValueError, OverflowError) as exc:
             messages.error(request, str(exc) or 'مقادیر فرم معتبر نیستند.')
             values = _posted_form_values(target, request.POST)
+            row = target
+            show_panel = True
         else:
             is_new = target is None
             target = target or LeaveType()
@@ -205,6 +238,8 @@ def leave_types(request):
             except (IntegrityError, ValidationError, ValueError):
                 messages.error(request, 'نماد/کد تکراری است یا نوع مرخصی معتبر نیست.')
                 values = _form_values(target)
+                row = target if target.pk else None
+                show_panel = True
             else:
                 messages.success(request, 'نوع مرخصی ذخیره شد.')
                 return redirect('attendance:leave_types')
@@ -213,6 +248,7 @@ def leave_types(request):
         'rows': LeaveType.objects.select_related('parameter', 'decrease_from_leave').order_by('name'),
         'values': values,
         'row': row,
+        'show_panel': show_panel,
         'parameters': CalcParameter.objects.filter(is_active=True).order_by('name'),
         'leave_types': LeaveType.objects.all().order_by('name'),
         'kind_choices': LeaveType.LeaveKind.choices,
