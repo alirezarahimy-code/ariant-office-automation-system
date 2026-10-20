@@ -78,10 +78,12 @@
     <div class="form-grid">
       {% for pair in cf_pairs %}
         <div class="field"><label>{{ pair.0.title }}</label>
-          {% if pair.0.field_type == 'bool' %}
-            <input type="checkbox" name="cf_{{ pair.0.pk }}" {% if pair.1 == 'on' or pair.1 == '1' %}checked{% endif %}>
+          {% if pair.0.field_type == 'boolean' %}
+            <input type="checkbox" name="cf_{{ pair.0.pk }}" {% if pair.1 == 'on' or pair.1 == '1' or pair.1 == 'true' %}checked{% endif %}>
+          {% elif pair.0.field_type == 'dropdown' %}
+            <select name="cf_{{ pair.0.pk }}"><option value="">—</option>{% for choice in pair.2 %}<option value="{{ choice }}"{% if choice == pair.1 %} selected{% endif %}>{{ choice }}</option>{% endfor %}</select>
           {% else %}
-            <input name="cf_{{ pair.0.pk }}" value="{{ pair.1 }}">
+            <input name="cf_{{ pair.0.pk }}" value="{{ pair.1 }}"{% if pair.0.field_type == 'date' %} placeholder="سال/ماه/روز جلالی"{% endif %}>
           {% endif %}
         </div>
       {% endfor %}

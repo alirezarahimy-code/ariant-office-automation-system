@@ -285,12 +285,25 @@ def custom_fields(request):
     """فیلدهای سفارشی پرسنل (UserAddProperty)."""
     from .models import EmployeeFieldDef
     if request.method == 'POST' and has_perm(request.user, 'org', 'manage'):
-        EmployeeFieldDef.objects.create(
-            title=request.POST.get('title', '').strip(),
-            field_type=request.POST.get('field_type') or 'text',
-            options=request.POST.get('options', '').strip())
-        audit(request.user, 'add', 'EmployeeFieldDef')
-        return redirect('org:custom_fields')
+        filter_id = request.POST.get('filter_id')
+        if filter_id:
+            field = get_object_or_404(EmployeeFieldDef, pk=filter_id, is_active=True)
+            field.is_search_filter = request.POST.get('is_search_filter') == 'on'
+            field.save(update_fields=['is_search_filter'])
+            audit(request.user, 'change', 'EmployeeFieldDef', field.pk)
+            messages.success(request, 'تنظیم فیلتر پیشرفته ذخیره شد.')
+            return redirect('org:custom_fields')
+        field_type = request.POST.get('field_type') or EmployeeFieldDef.FieldType.TEXT
+        if field_type not in EmployeeFieldDef.FieldType.values:
+            messages.error(request, 'نوع فیلد نامعتبر است.')
+        else:
+            EmployeeFieldDef.objects.create(
+                title=request.POST.get('title', '').strip(),
+                field_type=field_type,
+                options=request.POST.get('options', '').strip(),
+                is_search_filter=request.POST.get('is_search_filter') == 'on')
+            audit(request.user, 'add', 'EmployeeFieldDef')
+            return redirect('org:custom_fields')
     return render(request, 'org/custom_fields.html', {
         'fields': EmployeeFieldDef.objects.filter(is_active=True),
         'can_manage': has_perm(request.user, 'org', 'manage')})
@@ -393,7 +406,12 @@ def userinfo(request, emp_id=None):
     if emp:
         cf_vals = {v.field_def_id: v.value
                    for v in EmployeeFieldVal.objects.filter(employee=emp)}
-    cf_pairs = [(fd, cf_vals.get(fd.pk, '')) for fd in cf_defs]
+    cf_pairs = [
+        (fd, cf_vals.get(fd.pk, ''), [item.strip() for item in
+                                     fd.options.replace('|', '\n').splitlines()
+                                     if item.strip()])
+        for fd in cf_defs
+    ]
     return render(request, 'org/userinfo.html', {
         'emp': emp, 'cf_defs': cf_defs, 'cf_pairs': cf_pairs,
         'depts': allowed_depts,

@@ -23,9 +23,26 @@
   <details class="card" style="margin:8px 0;padding:10px">
     <summary style="cursor:pointer">جستجوی پیشرفته</summary>
     <div class="form-grid" style="margin-top:10px">
-      <div class="field"><label for="genderFilter">جنسیت</label><select id="genderFilter"><option value="">همه</option><option value="M">مرد</option><option value="F">زن</option><option value="blank">ثبت‌نشده</option></select></div>
-      <div class="field"><label for="employmentTypeFilter">نوع استخدام</label><select id="employmentTypeFilter"><option value="">همه</option>{% for item in employment_types %}<option value="{{ item.pk }}">{{ item.name }}</option>{% endfor %}</select></div>
-      <div class="field"><label for="positionFilter">سمت</label><select id="positionFilter"><option value="">همه</option>{% for item in positions %}<option value="{{ item.pk }}">{{ item.title }}</option>{% endfor %}</select></div>
+      <div class="field advanced-filter" data-filter-kind="certificate">
+        <label><input class="advanced-filter-enabled" type="checkbox"> مدرک تحصیلی</label>
+        <select class="advanced-filter-value"><option value="">انتخاب کنید</option>{% for item in certificates %}<option value="{{ item }}">{{ item }}</option>{% endfor %}</select>
+      </div>
+      <div class="field advanced-filter" data-filter-kind="employment_type">
+        <label><input class="advanced-filter-enabled" type="checkbox"> نوع استخدام</label>
+        <select class="advanced-filter-value"><option value="">انتخاب کنید</option>{% for item in employment_types %}<option value="{{ item.pk }}">{{ item.name }}</option>{% endfor %}</select>
+      </div>
+      {% for item in search_properties %}
+      <div class="field advanced-filter" data-filter-kind="custom" data-filter-id="{{ item.pk }}">
+        <label><input class="advanced-filter-enabled" type="checkbox"> {{ item.title }}</label>
+        {% if item.field_type == 'boolean' %}
+          <input class="advanced-filter-value" type="checkbox" aria-label="{{ item.title }}">
+        {% elif item.field_type == 'dropdown' %}
+          <select class="advanced-filter-value"><option value="">انتخاب کنید</option>{% for choice in item.filter_options %}<option value="{{ choice }}">{{ choice }}</option>{% endfor %}</select>
+        {% else %}
+          <input class="advanced-filter-value" type="text" placeholder="{{ item.title }}">
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
     <div class="actions"><button class="btn" type="button" onclick="filterEmployees()">اعمال فیلترها</button><button class="btn" type="button" onclick="clearAdvancedFilters()">پاک‌کردن فیلترها</button></div>
   </details>
@@ -129,12 +146,20 @@
         .some((id) => checkedDepartmentIds.has(id));
       if (!hasSelectedAncestor) params.append('department', input.value);
     });
-    const gender = document.getElementById('genderFilter').value;
-    const employmentType = document.getElementById('employmentTypeFilter').value;
-    const position = document.getElementById('positionFilter').value;
-    if (gender) params.set('gender', gender);
-    if (employmentType) params.set('employment_type', employmentType);
-    if (position) params.set('position', position);
+    document.querySelectorAll('.advanced-filter').forEach((filter) => {
+      const enabled = filter.querySelector('.advanced-filter-enabled');
+      if (!enabled.checked) return;
+      const kind = filter.dataset.filterKind;
+      const valueInput = filter.querySelector('.advanced-filter-value');
+      let value = valueInput.value;
+      if (kind === 'custom') {
+        if (valueInput.type === 'checkbox') value = valueInput.checked ? 'true' : 'false';
+        params.append('custom_filter', filter.dataset.filterId);
+        params.set(`custom_${filter.dataset.filterId}`, value);
+      } else if (value) {
+        params.set(kind, value);
+      }
+    });
 
     const employeeOptions = [...document.querySelectorAll('.employee-option')];
     const status = document.getElementById('employeeFilterStatus');
@@ -171,9 +196,12 @@
   function clearAdvancedFilters() {
     document.getElementById('employeeSearch').value = '';
     document.getElementById('departmentSearch').value = '';
-    document.getElementById('genderFilter').value = '';
-    document.getElementById('employmentTypeFilter').value = '';
-    document.getElementById('positionFilter').value = '';
+    document.querySelectorAll('.advanced-filter').forEach((filter) => {
+      filter.querySelector('.advanced-filter-enabled').checked = false;
+      const value = filter.querySelector('.advanced-filter-value');
+      if (value.type === 'checkbox') value.checked = false;
+      else value.value = '';
+    });
     document.querySelectorAll('.department-filter').forEach((input) => input.checked = false);
     filterDepartmentTree();
     filterEmployees();
@@ -199,9 +227,6 @@
   }
   document.getElementById('employeeSearch').addEventListener('input', scheduleEmployeeFilter);
   document.getElementById('departmentSearch').addEventListener('input', filterDepartmentTree);
-  document.getElementById('genderFilter').addEventListener('change', scheduleEmployeeFilter);
-  document.getElementById('employmentTypeFilter').addEventListener('change', scheduleEmployeeFilter);
-  document.getElementById('positionFilter').addEventListener('change', scheduleEmployeeFilter);
   document.querySelectorAll('.department-filter').forEach((input) => {
     input.addEventListener('change', departmentChanged);
   });

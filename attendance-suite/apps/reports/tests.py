@@ -6,8 +6,9 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.attendance.models import DailyRecord, Punch
-from apps.core.models import Permission, Role, RoleDataScope, UserRole
-from apps.org.models import Department, Employee, EmpType, Position
+from apps.core.models import AppSetting, Permission, Role, RoleDataScope, UserRole
+from apps.org.models import (Department, Employee, EmployeeFieldDef,
+                             EmployeeFieldVal, EmpType)
 from apps.reports.models import ReportDef
 
 User = get_user_model()
@@ -114,6 +115,24 @@ class PersonnelReportTests(TestCase):
         self.assertIn('text/csv', csv_response['Content-Type'])
         self.assertIn(self.employee.last_name, csv_response.content.decode('utf-8-sig'))
 
+    def test_personnel_selector_uses_reference_advanced_filter_families(self):
+        AppSetting.objects.create(key='certificates', value='کارشناسی|ارشد')
+        EmpType.objects.create(name='رسمی', code='ET-REPORT')
+        enabled = EmployeeFieldDef.objects.create(
+            title='گروه شیفت', field_type=EmployeeFieldDef.FieldType.DROPDOWN,
+            options='الف|ب', is_search_filter=True)
+        EmployeeFieldDef.objects.create(
+            title='یادداشت داخلی', field_type=EmployeeFieldDef.FieldType.TEXT,
+            is_search_filter=False)
+        response = self.client.get(reverse(
+            'reports:run_standard', args=['daily']))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'مدرک تحصیلی')
+        self.assertContains(response, 'نوع استخدام')
+        self.assertContains(response, 'گروه شیفت')
+        self.assertNotContains(response, 'یادداشت داخلی')
+        self.assertContains(response, f'data-filter-id="{enabled.pk}"')
+
     def test_department_tree_is_nested_and_limited_to_visible_employees(self):
         root = Department.objects.create(name='مدیریت کل', code='D-ROOT')
         child = Department.objects.create(
@@ -166,37 +185,63 @@ class PersonnelReportTests(TestCase):
         self.assertContains(response, 'آزمایشی')
         self.assertNotContains(response, 'محدود')
 
-    def test_employee_search_endpoint_applies_department_branch_and_advanced_filters(self):
+    def test_employee_search_endpoint_matches_reference_filter_families(self):
         root = Department.objects.create(name='عملیات', code='D-OPS')
         child = Department.objects.create(
             name='اداری', code='D-ADMIN', parent=root)
         outside_department = Department.objects.create(name='فروش', code='D-SALES')
         emp_type = EmpType.objects.create(name='رسمی', code='ET-PERM')
-        position = Position.objects.create(title='کارشناس', department=child)
+        certificate = 'کارشناسی'
+        AppSetting.objects.create(
+            key='certificates', value=f'{certificate}|کارشناسی ارشد')
+        custom_dropdown = EmployeeFieldDef.objects.create(
+            title='گروه کاری', field_type=EmployeeFieldDef.FieldType.DROPDOWN,
+            options='الف|ب', is_search_filter=True)
+        custom_boolean = EmployeeFieldDef.objects.create(
+            title='مشمول طرح', field_type=EmployeeFieldDef.FieldType.BOOLEAN,
+            is_search_filter=True)
+        custom_text = EmployeeFieldDef.objects.create(
+            title='محل خدمت', field_type=EmployeeFieldDef.FieldType.TEXT,
+            is_search_filter=True)
         self.employee.department = child
         self.employee.emp_type = emp_type
-        self.employee.position = position
-        self.employee.gender = 'F'
-        self.employee.save(update_fields=['department', 'emp_type', 'position', 'gender'])
+        self.employee.certificate = certificate
+        self.employee.save(update_fields=['department', 'emp_type', 'certificate'])
+        EmployeeFieldVal.objects.create(
+            employee=self.employee, field_def=custom_dropdown, value='الف')
+        EmployeeFieldVal.objects.create(
+            employee=self.employee, field_def=custom_boolean, value='on')
+        EmployeeFieldVal.objects.create(
+            employee=self.employee, field_def=custom_text, value='مرکز')
         outside = Employee.objects.create(
             badge_no='RP-306', first_name='علی', last_name='خارج',
-            department=outside_department, gender='F')
-        response = self.client.get(reverse('reports:employee_search'), {
-            'department': str(root.pk), 'gender': 'F',
-            'employment_type': str(emp_type.pk), 'position': str(position.pk),
-        })
+            department=outside_department, certificate=certificate)
+        params = {
+            'department': str(root.pk), 'certificate': certificate,
+            'employment_type': str(emp_type.pk),
+            'custom_filter': [str(custom_dropdown.pk), str(custom_boolean.pk),
+                              str(custom_text.pk)],
+            f'custom_{custom_dropdown.pk}': 'الف',
+            f'custom_{custom_boolean.pk}': 'true',
+            f'custom_{custom_text.pk}': 'مرکز',
+        }
+        response = self.client.get(reverse('reports:employee_search'), params)
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item['badge_no'] for item in response.json()['results']],
                          [self.employee.badge_no])
         self.assertNotIn(outside.badge_no,
                          [item['badge_no'] for item in response.json()['results']])
 
+        false_filter = self.client.get(reverse('reports:employee_search'), {
+            'custom_filter': str(custom_boolean.pk),
+            f'custom_{custom_boolean.pk}': 'false',
+        })
+        self.assertEqual([item['badge_no'] for item in false_filter.json()['results']],
+                         [outside.badge_no])
+
     def test_employee_search_endpoint_enforces_report_scope_and_filters(self):
-        self.employee.gender = 'M'
-        self.employee.save(update_fields=['gender'])
         other = Employee.objects.create(
-            badge_no='RP-305', first_name='نگار', last_name='خارج از دامنه',
-            gender='F')
+            badge_no='RP-305', first_name='نگار', last_name='خارج از دامنه')
         user = User.objects.create_user(
             'employee-search-scope', password='x', employee=self.employee)
         role = Role.objects.create(name='جستجوی محدود', code='employee-search-scope')
@@ -214,8 +259,8 @@ class PersonnelReportTests(TestCase):
                          [self.employee.badge_no])
         denied_search = self.client.get(url, {'q': other.badge_no})
         self.assertEqual(denied_search.json()['results'], [])
-        gender_filter = self.client.get(url, {'gender': 'F'})
-        self.assertEqual(gender_filter.json()['results'], [])
+        invalid_filter = self.client.get(url, {'employment_type': 'not-an-id'})
+        self.assertEqual(invalid_filter.status_code, 400)
 
     def test_custom_punch_report_respects_employee_scope(self):
         other = Employee.objects.create(

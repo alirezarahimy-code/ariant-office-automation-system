@@ -125,14 +125,16 @@ class EmployeeFieldDef(models.Model):
         NUMBER = 'number', 'عدد'
         DATE = 'date', 'تاریخ'
         DROPDOWN = 'dropdown', 'فهرستی'
+        BOOLEAN = 'boolean', 'بله/خیر'
 
     title = models.CharField('عنوان', max_length=120)
     field_type = models.CharField(
         'نوع', max_length=10, choices=FieldType.choices, default=FieldType.TEXT)
     options = models.TextField(
         'گزینه‌ها', blank=True, default='',
-        help_text='برای نوع فهرستی — هر گزینه در یک سطر')
+        help_text='برای نوع فهرستی — هر گزینه در یک سطر یا جداشده با |')
     is_active = models.BooleanField('فعال', default=True)
+    is_search_filter = models.BooleanField('فیلتر جستجوی پیشرفته', default=False)
 
     class Meta:
         verbose_name = 'فیلد سفارشی'

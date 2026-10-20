@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 import jdatetime
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,10 +14,12 @@ from django.utils import timezone
 from apps.attendance.models import (AttendancePolicy, DailyRecord, Punch,
                                     Request, RewardPenalty)
 from apps.attendance.services import parse_jalali, to_jdate
+from apps.core.models import AppSetting
 from apps.core.services import (audit, data_scope, has_perm, require_perm,
                                 scoped_employees)
 from apps.device.models import Device, RawRecord, Visitor
-from apps.org.models import Department, Employee, EmpType, Position
+from apps.org.models import (Department, Employee, EmployeeFieldDef,
+                             EmployeeFieldVal, EmpType)
 
 from .models import ReportDef
 
@@ -68,6 +70,14 @@ def _report_value(value):
     if isinstance(value, gregorian.time):
         return value.strftime('%H:%M:%S')
     return str(value) if value is not None else ''
+
+
+def _certificate_choices():
+    setting = AppSetting.objects.filter(key='certificates').first()
+    if not setting:
+        return []
+    raw = setting.value.replace('|', '\n')
+    return list(dict.fromkeys(item.strip() for item in raw.splitlines() if item.strip()))
 
 
 def _department_subtree_ids(root_ids):
@@ -158,12 +168,16 @@ def _personnel_report(request, code):
     ).select_related('department').order_by('last_name', 'first_name', 'badge_no'))
     visible_by_badge = {employee.badge_no: employee for employee in visible}
     department_nodes = _department_tree(visible)
-    employment_types = EmpType.objects.filter(
-        pk__in={employee.emp_type_id for employee in visible if employee.emp_type_id}
-    ).order_by('name')
-    positions = Position.objects.filter(
-        pk__in={employee.position_id for employee in visible if employee.position_id}
-    ).order_by('title')
+    employment_types = EmpType.objects.order_by('name')
+    certificates = _certificate_choices()
+    search_properties = list(EmployeeFieldDef.objects.filter(
+        is_active=True, is_search_filter=True).order_by('pk'))
+    for search_property in search_properties:
+        search_property.filter_options = [
+            item.strip() for item in
+            search_property.options.replace('|', '\n').splitlines()
+            if item.strip()
+        ]
     requested_badges = request.GET.getlist('selectedBadgeNumbers')
     if len(requested_badges) > 1000:
         messages.error(request, 'در هر گزارش حداکثر ۱۰۰۰ پرسنل انتخاب کنید.')
@@ -289,7 +303,8 @@ def _personnel_report(request, code):
     return render(request, 'reports/personnel_report.html', {
         'title': title, 'header': header, 'rows': rows,
         'employees': visible, 'department_nodes': department_nodes,
-        'employment_types': employment_types, 'positions': positions,
+        'employment_types': employment_types, 'certificates': certificates,
+        'search_properties': search_properties,
         'selected_badges': selected_badges,
         'selected_count': len(selected_employees),
         'criteria_submitted': criteria_submitted,
@@ -331,16 +346,61 @@ def employee_search(request):
         queryset = queryset.filter(
             department_id__in=_department_subtree_ids(department_ids))
 
-    gender = request.GET.get('gender', '')
-    if gender in ('M', 'F', 'blank'):
-        queryset = queryset.filter(gender='' if gender == 'blank' else gender)
-    for param, field in (('employment_type', 'emp_type_id'), ('position', 'position_id')):
-        value = request.GET.get(param, '')
-        if value:
-            try:
-                queryset = queryset.filter(**{field: int(value)})
-            except (TypeError, ValueError):
-                return JsonResponse({'error': f'{param} نامعتبر است.'}, status=400)
+    certificate = request.GET.get('certificate', '')
+    if certificate:
+        if certificate not in _certificate_choices():
+            return JsonResponse({'error': 'مدرک انتخاب‌شده معتبر نیست.'}, status=400)
+        queryset = queryset.filter(certificate=certificate)
+    employment_type = request.GET.get('employment_type', '')
+    if employment_type:
+        try:
+            queryset = queryset.filter(emp_type_id=int(employment_type))
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'نوع استخدام نامعتبر است.'}, status=400)
+
+    filter_ids = request.GET.getlist('custom_filter')
+    if len(filter_ids) > 100:
+        return JsonResponse({'error': 'تعداد فیلترهای سفارشی بیش از حد مجاز است.'}, status=400)
+    for raw_id in dict.fromkeys(filter_ids):
+        try:
+            filter_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        search_property = EmployeeFieldDef.objects.filter(
+            pk=filter_id, is_active=True, is_search_filter=True).first()
+        if not search_property:
+            continue
+        value = request.GET.get(f'custom_{filter_id}')
+        if value is None:
+            continue
+        property_values = EmployeeFieldVal.objects.filter(
+            employee_id=OuterRef('pk'), field_def=search_property)
+        if search_property.field_type == EmployeeFieldDef.FieldType.BOOLEAN:
+            if value == 'true':
+                matching_values = property_values.filter(
+                    value__in=('on', '1', 'true', 'True'))
+                queryset = queryset.filter(Exists(matching_values))
+            elif value == 'false':
+                matching_values = property_values.filter(
+                    value__in=('', '0', 'false', 'False'))
+                queryset = queryset.filter(
+                    Q(Exists(matching_values)) | ~Exists(property_values))
+            else:
+                return JsonResponse({'error': 'مقدار فیلتر بله/خیر نامعتبر است.'}, status=400)
+        else:
+            if search_property.field_type == EmployeeFieldDef.FieldType.DROPDOWN:
+                allowed_values = [item.strip() for item in
+                                  search_property.options.replace('|', '\n').splitlines()
+                                  if item.strip()]
+                if value and value not in allowed_values:
+                    return JsonResponse({'error': 'گزینهٔ فیلتر سفارشی معتبر نیست.'}, status=400)
+                if not value:
+                    continue
+            if value:
+                queryset = queryset.filter(Exists(property_values.filter(value=value)))
+            else:
+                queryset = queryset.filter(
+                    Q(Exists(property_values.filter(value=''))) | ~Exists(property_values))
 
     matches = list(queryset.order_by(
         'last_name', 'first_name', 'badge_no')[:501])
