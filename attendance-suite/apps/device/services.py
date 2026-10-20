@@ -18,7 +18,8 @@ def _parse_dt(value: str) -> gregorian.datetime:
     for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y/%m/%d %H:%M:%S',
                 '%Y/%m/%d %H:%M'):
         try:
-            return gregorian.datetime.strptime(text, fmt)
+            parsed = gregorian.datetime.strptime(text, fmt)
+            return timezone.make_aware(parsed, timezone.get_current_timezone())
         except ValueError:
             continue
     raise ValueError(f'قالب زمان نامعتبر: {value}')
@@ -51,12 +52,32 @@ def ingest_records(device: Device, records: list[dict]) -> dict:
     return {'created': created, 'skipped': skipped}
 
 
-def convert_raw_to_punches(device: Device | None = None) -> dict:
-    """تبدیل رکوردهای خام «تازه» به رویداد تردد (با تطبیق pin ← شماره کارگری)."""
+def _direction_for_record(raw: RawRecord, local_dt: gregorian.datetime) -> str:
+    """Prefer explicit direction from UNIS; retain time-based fallback otherwise."""
+    payload = raw.payload or ''
+    direction_text = ''
+    for part in payload.split('|'):
+        if part.casefold().startswith('dir='):
+            direction_text = part.split('=', 1)[1].strip().casefold()
+            break
+    if direction_text in {'i', 'in', 'entry', 'enter', 'checkin', 'ورود', 'داخل'}:
+        return Punch.Direction.IN
+    if direction_text in {'o', 'out', 'exit', 'leave', 'checkout', 'خروج', 'بیرون'}:
+        return Punch.Direction.OUT
+    # A number of vendor exports use numeric event codes whose meaning differs
+    # by configuration. Do not guess those; preserve the existing fallback.
+    return Punch.Direction.OUT if local_dt.hour >= 12 else Punch.Direction.IN
+
+
+def convert_raw_to_punches(device: Device | None = None, *,
+                           allowed_pins: set[str] | None = None) -> dict:
+    """تبدیل رکوردهای خام تازه به تردد؛ در صورت نیاز، محدود به کدهای مجاز."""
     from apps.org.models import Employee
     qs = RawRecord.objects.filter(state=RawRecord.State.NEW)
     if device:
         qs = qs.filter(device=device)
+    if allowed_pins is not None:
+        qs = qs.filter(pin__in=allowed_pins)
     converted = errors = 0
     for raw in qs.select_related('device').order_by('punch_time'):
         employee = Employee.objects.filter(badge_no=raw.pin).first()
@@ -68,7 +89,7 @@ def convert_raw_to_punches(device: Device | None = None) -> dict:
         dt = raw.punch_time
         if timezone.is_aware(dt):
             dt = timezone.localtime(dt)  # به وقت محلی (تهران)
-        direction = Punch.Direction.OUT if dt.hour >= 12 else Punch.Direction.IN
+        direction = _direction_for_record(raw, dt)
         Punch.objects.get_or_create(
             employee=employee, date=dt.date(), time=dt.time(),
             defaults={'direction': direction, 'source': Punch.Source.DEVICE,

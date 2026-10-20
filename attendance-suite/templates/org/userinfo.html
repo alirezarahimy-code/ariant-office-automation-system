@@ -57,6 +57,7 @@
   <div class="card">
     <div class="card-title">۴) کارت و دستگاه</div>
     <div class="form-grid">
+      <div class="field"><label>نام دستگاه</label><input name="device_name" value="{{ emp.device_name }}"></div>
       <div class="field"><label>شماره کارت</label><input name="device_card_no" value="{{ emp.device_card_no }}"></div>
       <div class="field"><label>گروه دستگاه</label><input name="device_group" value="{{ emp.device_group|default:1 }}"></div>
       <div class="field"><label>رمز دستگاه</label><input name="device_password" value="{{ emp.device_password }}"></div>

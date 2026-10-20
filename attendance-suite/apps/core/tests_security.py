@@ -5,9 +5,11 @@ import jdatetime
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 
-from apps.attendance.models import DailyRecord, Request
+from apps.attendance.models import DailyRecord, Punch, Request
+from apps.device.models import Device, RawRecord, UnisBridge
 from apps.core.models import Permission, Role, RoleDataScope, UserRole
 from apps.core.services import (login_throttled, record_login_failure,
                                 scoped_employees)
@@ -21,7 +23,8 @@ class SecurityTests(TestCase):
     def setUp(self):
         self.dept = Department.objects.create(name='مالی', code='FIN')
         self.employee = Employee.objects.create(
-            badge_no='900', first_name='ن', last_name='ام', department=self.dept)
+            badge_no='900', first_name='ن', last_name='ام', department=self.dept,
+            web_user=True)
         self.user = User.objects.create_user('u1', password='x',
                                              employee=self.employee)
         role = Role.objects.create(name='کارمند', code='emp')
@@ -43,6 +46,194 @@ class SecurityTests(TestCase):
         self.client.force_login(self.user)
         resp = self.client.get(reverse('attendance:policy'))
         self.assertEqual(resp.status_code, 403)
+
+    def test_shift_configuration_requires_management_permission(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('attendance:shifts'))
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(reverse('attendance:shifts'), {
+            'name': 'غیرمجاز', 'start_time': '08:00', 'end_time': '16:00',
+        })
+        self.assertEqual(response.status_code, 403)
+        from apps.attendance.models import Shift
+        self.assertFalse(Shift.objects.filter(name='غیرمجاز').exists())
+        self.assertEqual(
+            self.client.get(reverse('attendance:schedule_definitions')).status_code,
+            403)
+        self.assertEqual(
+            self.client.get(reverse('attendance:temp_schedules')).status_code,
+            403)
+        self.assertEqual(
+            self.client.get(reverse('attendance:valid_leaves')).status_code,
+            403)
+
+    def test_temporary_schedule_cannot_cross_employee_scope(self):
+        from apps.attendance.models import ScheduleDefinition, TemporarySchedule
+        role = self.user.user_roles.get().role
+        role.permissions.add(Permission.objects.get_or_create(
+            module='attendance', action='manage')[0])
+        foreign = Employee.objects.create(
+            badge_no='902', first_name='ب', last_name='یر')
+        schedule = ScheduleDefinition.objects.create(
+            name='سراسری', symbol='S', from_time=gregorian.time(8),
+            to_time=gregorian.time(16))
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('attendance:temp_schedules'), {
+            'action': 'save_day', 'employee_id': [str(foreign.pk)],
+            'day': '1405/01/01', 'schedule_id': str(schedule.pk),
+            'start_date': '1405/01/01', 'end_date': '1405/01/01',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(TemporarySchedule.objects.exists())
+
+    def test_holiday_configuration_requires_management_permission(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('attendance:holidays'))
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(reverse('attendance:holidays'), {
+            'date': '1404/01/01', 'title': 'نوروز', 'kind': 'national',
+        })
+        self.assertEqual(response.status_code, 403)
+        from apps.attendance.models import Holiday
+        self.assertFalse(Holiday.objects.exists())
+
+    def test_schedule_rules_require_login_and_view_permission(self):
+        response = self.client.get(reverse('attendance:rules'))
+        self.assertEqual(response.status_code, 302)
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('attendance:rules'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_device_add_validates_choices_port_and_serial(self):
+        role = self.user.user_roles.get().role
+        role.permissions.add(
+            Permission.objects.get_or_create(module='device', action='view')[0],
+            Permission.objects.get_or_create(module='device', action='add')[0],
+        )
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(reverse('device:index')), 'ثبت دستگاه تازه')
+        base = {'name': 'ترمینال', 'serial': 'DEV-SEC-1', 'port': '437'}
+        invalid_brand = self.client.post(reverse('device:device_add'), {
+            **base, 'brand': 'unknown', 'conn_type': 'tcp'})
+        self.assertEqual(invalid_brand.status_code, 302)
+        self.assertFalse(Device.objects.filter(serial='DEV-SEC-1').exists())
+        invalid_port = self.client.post(reverse('device:device_add'), {
+            **base, 'brand': 'zk', 'conn_type': 'tcp', 'port': '70000'})
+        self.assertEqual(invalid_port.status_code, 302)
+        self.assertFalse(Device.objects.filter(serial='DEV-SEC-1').exists())
+        valid = self.client.post(reverse('device:device_add'), {
+            **base, 'brand': 'zk', 'conn_type': 'tcp'})
+        self.assertEqual(valid.status_code, 302)
+        self.assertTrue(Device.objects.filter(serial='DEV-SEC-1').exists())
+
+    def test_device_sync_requires_device_and_attendance_management(self):
+        device = Device.objects.create(
+            name='Virdi', serial='SEC-V1', brand=Device.Brand.VIRDI)
+        bridge = UnisBridge.objects.create(
+            name='UNIS', device=device, mode=UnisBridge.Mode.DIR,
+            dir_path='/not-used')
+        raw = RawRecord.objects.create(
+            device=device, pin=self.employee.badge_no,
+            punch_time=timezone.make_aware(
+                gregorian.datetime(2026, 10, 20, 8, 0)))
+        self.client.force_login(self.user)
+        for url in (
+            reverse('device:sync_punches'),
+            reverse('device:gateway_sync'),
+            reverse('device:unis_sync', args=[bridge.pk]),
+        ):
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, 403)
+        raw.refresh_from_db()
+        self.assertEqual(raw.state, RawRecord.State.NEW)
+        self.assertFalse(DailyRecord.objects.exists())
+
+    def test_manual_sync_uses_intersection_of_attendance_and_device_scopes(self):
+        role = self.user.user_roles.get().role
+        role.permissions.add(
+            Permission.objects.get_or_create(module='attendance', action='manage')[0],
+            Permission.objects.get_or_create(module='device', action='manage')[0],
+            Permission.objects.get_or_create(module='device', action='view')[0],
+        )
+        RoleDataScope.objects.update_or_create(
+            role=role, module='attendance', defaults={'scope': 'all'})
+        device = Device.objects.create(name='ZK', serial='SEC-INTERSECTION')
+        other = Employee.objects.create(
+            badge_no='903', first_name='ب', last_name='یر')
+        own_raw = RawRecord.objects.create(
+            device=device, pin=self.employee.badge_no,
+            punch_time=timezone.make_aware(gregorian.datetime(2026, 10, 20, 8, 0)))
+        foreign_raw = RawRecord.objects.create(
+            device=device, pin=other.badge_no,
+            punch_time=timezone.make_aware(gregorian.datetime(2026, 10, 20, 9, 0)))
+        self.client.force_login(self.user)
+        listing = self.client.get(reverse('device:raw_records'))
+        self.assertEqual(
+            [record.pin for record in listing.context['records']],
+            [self.employee.badge_no])
+        response = self.client.post(reverse('device:sync_punches'))
+        self.assertEqual(response.status_code, 302)
+        own_raw.refresh_from_db()
+        foreign_raw.refresh_from_db()
+        self.assertEqual(own_raw.state, RawRecord.State.TRANSFERED)
+        self.assertEqual(foreign_raw.state, RawRecord.State.NEW)
+        self.assertEqual(Punch.objects.count(), 1)
+
+    def test_global_sync_requires_global_employee_and_device_scopes(self):
+        role = self.user.user_roles.get().role
+        role.permissions.add(
+            Permission.objects.get_or_create(module='attendance', action='manage')[0],
+            Permission.objects.get_or_create(module='device', action='manage')[0],
+            Permission.objects.get_or_create(module='device', action='view')[0],
+        )
+        device = Device.objects.create(name='Virdi', serial='SEC-GLOBAL',
+                                       brand=Device.Brand.VIRDI)
+        bridge = UnisBridge.objects.create(
+            name='UNIS scoped', device=device, mode=UnisBridge.Mode.DIR,
+            dir_path='/not-used')
+        raw = RawRecord.objects.create(
+            device=device, pin=self.employee.badge_no,
+            punch_time=timezone.make_aware(gregorian.datetime(2026, 10, 20, 8, 0)))
+        self.client.force_login(self.user)
+        index_page = self.client.get(reverse('device:index'))
+        self.assertNotContains(index_page, 'همگام‌سازی دروازه')
+        bridge_page = self.client.get(reverse('device:unis_bridge'))
+        self.assertNotContains(
+            bridge_page, reverse('device:unis_sync', args=[bridge.pk]))
+        for url in (
+            reverse('device:gateway_sync'),
+            reverse('device:unis_sync', args=[bridge.pk]),
+        ):
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, 403)
+        raw.refresh_from_db()
+        self.assertEqual(raw.state, RawRecord.State.NEW)
+        self.assertFalse(Punch.objects.exists())
+
+    def test_punch_sync_does_not_convert_out_of_scope_raw_records(self):
+        role = self.user.user_roles.get().role
+        role.permissions.add(
+            Permission.objects.get_or_create(module='attendance', action='manage')[0],
+            Permission.objects.get_or_create(module='device', action='manage')[0],
+        )
+        other = Employee.objects.create(
+            badge_no='903', first_name='پ', last_name='یرسنل')
+        device = Device.objects.create(name='ZK', serial='SEC-ZK')
+        own_raw = RawRecord.objects.create(
+            device=device, pin=self.employee.badge_no,
+            punch_time=timezone.make_aware(gregorian.datetime(2026, 10, 20, 8, 0)))
+        foreign_raw = RawRecord.objects.create(
+            device=device, pin=other.badge_no,
+            punch_time=timezone.make_aware(gregorian.datetime(2026, 10, 20, 9, 0)))
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('device:sync_punches'))
+        self.assertEqual(response.status_code, 302)
+        own_raw.refresh_from_db()
+        foreign_raw.refresh_from_db()
+        self.assertEqual(own_raw.state, RawRecord.State.TRANSFERED)
+        self.assertEqual(foreign_raw.state, RawRecord.State.NEW)
+        self.assertEqual(list(Punch.objects.values_list('employee__badge_no', flat=True)),
+                         [self.employee.badge_no])
 
     def test_scope_limits_requests(self):
         other = Employee.objects.create(badge_no='901', first_name='د',

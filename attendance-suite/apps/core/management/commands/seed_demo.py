@@ -32,8 +32,9 @@ class Command(BaseCommand):
         hr.permissions.set([p for k, p in perms.items()
                             if k.split('.')[0] in ('org', 'attendance', 'requests',
                                                    'reports', 'device')])
-        RoleDataScope.objects.get_or_create(
-            role=hr, module='attendance', defaults={'scope': 'all'})
+        for module in ('org', 'attendance', 'requests', 'reports', 'device'):
+            RoleDataScope.objects.get_or_create(
+                role=hr, module=module, defaults={'scope': 'all'})
         employee_role, _ = Role.objects.get_or_create(
             code='employee', defaults={'name': 'کارمند', 'is_system': True})
         employee_role.permissions.set(
@@ -61,6 +62,8 @@ class Command(BaseCommand):
             badge_no='1002', defaults={
                 'first_name': 'علی', 'last_name': 'کارمند',
                 'department': it, 'emp_type': et, 'manager': mgr_emp})
+        # The demo web accounts need the same T5 permission flag used by login.
+        Employee.objects.filter(pk__in=[mgr_emp.pk, emp.pk]).update(web_user=True)
 
         admin, _ = User.objects.get_or_create(
             username='admin', defaults={'is_staff': True, 'is_superuser': True})

@@ -8,10 +8,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.services import audit, has_perm, require_perm, scoped_employees
 
-from .models import (AttendancePolicy, CalcParameter, DailyRecord, Deputy, GeoArea, Holiday, LeaveBalance, LeaveType, OvertimeConstant, Punch, RamadanRule, Request, RewardPenalty, ScheduleRule, Shift, ShiftAssignment)
-from .services import (approve_request, create_request, monthly_summary,
-                       parse_jalali, register_punch, reject_request,
-                       undo_request)
+from .models import (AttendanceCalendar, AttendancePolicy, CalcParameter,
+                     DailyRecord, Deputy, GeoArea, Holiday, LeaveBalance,
+                     LeaveType, OvertimeConstant, Punch, RamadanRule, Request,
+                     RewardPenalty, ScheduleRule, Shift, ShiftAssignment)
+from .services import (approve_request, can_approve, create_request,
+                       monthly_summary, parse_jalali, register_punch,
+                       reject_request, undo_request)
 
 
 def _employee(request):
@@ -53,9 +56,11 @@ def request_list(request):
     qs = Request.objects.select_related('employee', 'leave_type', 'decided_by')
     employee = _employee(request)
     if tab == 'pending' and has_perm(request.user, 'requests', 'approve'):
-        qs = qs.filter(status=Request.Status.PENDING)
+        allowed = scoped_employees(request.user, 'requests', Employee_qs())
+        qs = qs.filter(status=Request.Status.PENDING, employee__in=allowed)
     elif tab == 'all' and has_perm(request.user, 'requests', 'report'):
-        pass
+        allowed = scoped_employees(request.user, 'requests', Employee_qs())
+        qs = qs.filter(employee__in=allowed)
     else:
         tab = 'mine'
         qs = qs.filter(employee=employee) if employee else qs.none()
@@ -105,13 +110,17 @@ def request_detail(request, pk):
         Request.objects.select_related('employee', 'leave_type', 'decided_by'),
         pk=pk)
     employee = _employee(request)
-    if not (has_perm(request.user, 'requests', 'report')
-            or (employee and req.employee_id == employee.pk)
-            or has_perm(request.user, 'requests', 'approve')):
-        return render(request, 'core/forbidden.html')
+    is_owner = bool(employee and req.employee_id == employee.pk)
+    within_scope = scoped_employees(
+        request.user, 'requests', Employee_qs()
+    ).filter(pk=req.employee_id).exists()
+    can_report = has_perm(request.user, 'requests', 'report') and within_scope
+    can_decide = can_approve(request.user, req)
+    if not (is_owner or can_report or can_decide):
+        return render(request, 'core/forbidden.html', status=403)
     return render(request, 'attendance/request_detail.html', {
         'req': req,
-        'can_decide': has_perm(request.user, 'requests', 'approve'),
+        'can_decide': can_decide,
     })
 
 
@@ -129,6 +138,10 @@ def request_decide(request, pk):
             reject_request(req, request.user, request.POST.get('note', ''))
             messages.success(request, 'درخواست رد شد.')
         elif action == 'cancel':
+            is_owner = bool(request.user.employee_id
+                            and req.employee_id == request.user.employee_id)
+            if not (is_owner or can_approve(request.user, req)):
+                raise ValueError('شما مجاز به لغو این درخواست نیستید.')
             undo_request(req, request.user)
             messages.success(request, 'درخواست لغو (ابطال) شد.')
         audit(request.user, f'request_{action}', 'Request', req.pk)
@@ -141,10 +154,10 @@ def request_decide(request, pk):
 
 @require_perm('attendance', 'view')
 def punches(request):
-    employee = _employee(request)
-    qs = Punch.objects.select_related('employee', 'device', 'area')
-    if not has_perm(request.user, 'attendance', 'report'):
-        qs = qs.filter(employee=employee)
+    allowed_employees = scoped_employees(
+        request.user, 'attendance', Employee_qs())
+    qs = Punch.objects.select_related('employee', 'device', 'area').filter(
+        employee__in=allowed_employees)
     return render(request, 'attendance/punches.html', {
         'punches': qs[:200],
         'can_add': has_perm(request.user, 'attendance', 'add'),
@@ -254,10 +267,10 @@ def overtime_constant_add(request):
 
 @require_perm('attendance', 'view')
 def rewards(request):
-    employee = _employee(request)
-    qs = RewardPenalty.objects.select_related('employee')
-    if not has_perm(request.user, 'attendance', 'report'):
-        qs = qs.filter(employee=employee)
+    allowed_employees = scoped_employees(
+        request.user, 'attendance', Employee_qs())
+    qs = RewardPenalty.objects.select_related('employee').filter(
+        employee__in=allowed_employees)
     return render(request, 'attendance/rewards.html', {
         'rows': qs[:200],
         'can_manage': has_perm(request.user, 'attendance', 'manage'),
@@ -308,50 +321,127 @@ def policy(request):
 @require_perm('attendance', 'manage')
 def holidays(request):
     if request.method == 'POST':
+        action = request.POST.get('action', 'add_holiday')
+        if action == 'add_calendar':
+            name = request.POST.get('calendar_name', '').strip()
+            if not name or len(name) > 120:
+                messages.error(request, 'نام تقویم الزامی و حداکثر ۱۲۰ نویسه است.')
+            else:
+                calendar = AttendanceCalendar.objects.create(name=name)
+                audit(request.user, 'add', 'AttendanceCalendar', calendar.pk,
+                      detail=name)
+                messages.success(request, 'تقویم ثبت شد.')
+            return redirect('attendance:holidays')
+        if action == 'edit_calendar':
+            calendar = get_object_or_404(
+                AttendanceCalendar, pk=request.POST.get('calendar_id'))
+            name = request.POST.get('calendar_name', '').strip()
+            if not name or len(name) > 120:
+                messages.error(request, 'نام تقویم الزامی و حداکثر ۱۲۰ نویسه است.')
+            else:
+                calendar.name = name
+                calendar.save(update_fields=['name'])
+                audit(request.user, 'change', 'AttendanceCalendar', calendar.pk,
+                      detail=name)
+                messages.success(request, 'تقویم ویرایش شد.')
+            return redirect('attendance:holidays')
+        if action == 'delete_calendar':
+            calendar = get_object_or_404(
+                AttendanceCalendar, pk=request.POST.get('calendar_id'))
+            audit(request.user, 'delete', 'AttendanceCalendar', calendar.pk,
+                  detail=calendar.name)
+            calendar.delete()
+            messages.success(request, 'تقویم حذف شد.')
+            return redirect('attendance:holidays')
         try:
-            Holiday.objects.get_or_create(
-                date=_parse_date(request.POST.get('date')),
-                defaults={'title': request.POST.get('title', ''),
-                          'kind': request.POST.get('kind', 'national')})
-            messages.success(request, 'تعطیلی ثبت شد.')
+            date = _parse_date(request.POST.get('date'))
+            title = request.POST.get('title', '').strip()
+            kind = request.POST.get('kind', Holiday.Kind.NATIONAL)
+            if date is None:
+                raise ValueError('تاریخ تعطیلی الزامی است.')
+            if not title or len(title) > 160:
+                raise ValueError('عنوان تعطیلی الزامی است.')
+            if kind not in Holiday.Kind.values:
+                raise ValueError('نوع تعطیلی معتبر نیست.')
+            holiday, created = Holiday.objects.get_or_create(
+                date=date,
+                defaults={'title': title, 'kind': kind})
+            if not created:
+                messages.info(request, 'برای این تاریخ قبلاً تعطیلی ثبت شده است.')
+            else:
+                audit(request.user, 'add', 'Holiday', holiday.pk, detail=title)
+                messages.success(request, 'تعطیلی ثبت شد.')
         except (ValueError, TypeError) as exc:
             messages.error(request, str(exc))
         return redirect('attendance:holidays')
     return render(request, 'attendance/holidays.html', {
-        'rows': Holiday.objects.all()[:400]})
+        'rows': Holiday.objects.all()[:400],
+        'calendars': AttendanceCalendar.objects.all(),
+    })
 
 
 @require_perm('attendance', 'manage')
 def shifts(request):
+    allowed_employees = scoped_employees(
+        request.user, 'attendance', Employee_qs().filter(is_active=True))
     if request.method == 'POST':
-        days = [int(d) for d in request.POST.getlist('work_days')]
-        Shift.objects.create(
-            name=request.POST.get('name', ''),
-            start_time=_parse_time(request.POST.get('start_time'))
-            or gregorian.time(8, 0),
-            end_time=_parse_time(request.POST.get('end_time'))
-            or gregorian.time(16, 0),
-            work_days=days or [0, 1, 2, 3, 4],
-            grace_minutes=int(request.POST.get('grace_minutes') or 15))
-        messages.success(request, 'شیفت ثبت شد.')
+        name = request.POST.get('name', '').strip()
+        try:
+            days = [int(day) for day in request.POST.getlist('work_days')]
+            start_time = _parse_time(request.POST.get('start_time'))
+            end_time = _parse_time(request.POST.get('end_time'))
+            grace = int(request.POST.get('grace_minutes') or 15)
+            if any(day not in range(7) for day in days):
+                raise ValueError
+            if not 0 <= grace <= 1440:
+                raise ValueError
+        except (TypeError, ValueError):
+            messages.error(request, 'زمان یا روزهای کاری معتبر نیست.')
+            return redirect('attendance:shifts')
+        if not name or len(name) > 120 or not start_time or not end_time:
+            messages.error(request, 'نام و ساعت شروع و پایان الزامی است.')
+        else:
+            shift = Shift.objects.create(
+                name=name, start_time=start_time, end_time=end_time,
+                work_days=days or [0, 1, 2, 3, 4], grace_minutes=grace)
+            audit(request.user, 'add', 'Shift', shift.pk, detail=name)
+            messages.success(request, 'شیفت ثبت شد.')
         return redirect('attendance:shifts')
     return render(request, 'attendance/shifts.html', {
         'shifts': Shift.objects.all(),
-        'assignments': ShiftAssignment.objects.select_related(
-            'employee', 'shift')[:100],
-        'employees': Employee_qs().filter(is_active=True),
+        'assignments': ShiftAssignment.objects.filter(
+            employee__in=allowed_employees).select_related(
+                'employee', 'shift')[:100],
+        'employees': allowed_employees,
     })
 
 
 @require_perm('attendance', 'manage')
 def shift_assign(request):
+    from apps.org.models import Employee
+    allowed = scoped_employees(
+        request.user, 'attendance', Employee.objects.filter(is_active=True))
     if request.method == 'POST':
-        ShiftAssignment.objects.create(
-            employee_id=request.POST.get('employee_id'),
-            shift_id=request.POST.get('shift_id'),
-            from_date=_parse_date(request.POST.get('from_date'))
-            or gregorian.date.today())
-        messages.success(request, 'انتساب شیفت ثبت شد.')
+        employee = allowed.filter(pk=request.POST.get('employee_id')).first()
+        shift = Shift.objects.filter(
+            pk=request.POST.get('shift_id'), is_active=True).first()
+        try:
+            from_date = _parse_date(request.POST.get('from_date'))
+            to_date = _parse_date(request.POST.get('to_date')) or None
+        except (ValueError, TypeError):
+            messages.error(request, 'تاریخ انتساب معتبر نیست.')
+            return redirect('attendance:shifts')
+        if not employee or not shift:
+            messages.error(request, 'پرسنل یا شیفت معتبر در دامنهٔ مجاز انتخاب کنید.')
+        elif not from_date or (to_date and to_date < from_date):
+            messages.error(request, 'بازهٔ تاریخ انتساب معتبر نیست.')
+        else:
+            ShiftAssignment.objects.create(
+                employee=employee, shift=shift,
+                from_date=from_date, to_date=to_date)
+            audit(request.user, 'add', 'ShiftAssignment',
+                  detail=f'employee={employee.pk}; shift={shift.pk}')
+            messages.success(request, 'انتساب شیفت ثبت شد.')
     return redirect('attendance:shifts')
 
 
@@ -377,19 +467,34 @@ def geo_add(request):
 
 @require_perm('requests', 'manage')
 def deputy(request):
+    employees = scoped_employees(
+        request.user, 'requests', Employee_qs().filter(is_active=True))
     if request.method == 'POST':
-        Deputy.objects.create(
-            employee_id=request.POST.get('employee_id'),
-            for_employee_id=request.POST.get('for_employee_id'),
-            from_date=_parse_date(request.POST.get('from_date'))
-            or gregorian.date.today(),
-            to_date=_parse_date(request.POST.get('to_date'))
-            or gregorian.date.today())
-        messages.success(request, 'جانشین ثبت شد.')
+        substitute = employees.filter(pk=request.POST.get('employee_id')).first()
+        principal = employees.filter(pk=request.POST.get('for_employee_id')).first()
+        try:
+            from_date = _parse_date(request.POST.get('from_date'))
+            to_date = _parse_date(request.POST.get('to_date'))
+        except (ValueError, TypeError):
+            from_date = to_date = None
+        if not substitute or not principal:
+            messages.error(request, 'جانشین و پرسنل اصلی باید در دامنهٔ مجاز باشند.')
+        elif substitute.pk == principal.pk:
+            messages.error(request, 'پرسنل نمی‌تواند جانشین خودش باشد.')
+        elif not from_date or not to_date or to_date < from_date:
+            messages.error(request, 'بازهٔ تاریخ جانشینی معتبر نیست.')
+        else:
+            deputy_obj = Deputy.objects.create(
+                employee=substitute, for_employee=principal,
+                from_date=from_date, to_date=to_date)
+            audit(request.user, 'add', 'Deputy', deputy_obj.pk)
+            messages.success(request, 'جانشین ثبت شد.')
         return redirect('attendance:deputy')
     return render(request, 'attendance/deputy.html', {
-        'deputies': Deputy.objects.select_related('employee', 'for_employee'),
-        'employees': Employee_qs().filter(is_active=True),
+        'deputies': Deputy.objects.filter(
+            for_employee__in=employees
+        ).select_related('employee', 'for_employee'),
+        'employees': employees,
     })
 
 
@@ -439,7 +544,10 @@ def total_control(request):
     day = request.GET.get('day', '')
     if not day:
         day = jdatetime.date.today().strftime('%Y-%m-%d')
-    emps = Employee.objects.filter(is_active=True).select_related('department')[:300]
+    emps = scoped_employees(
+        request.user, 'attendance',
+        Employee.objects.filter(is_active=True).select_related('department'),
+    )[:300]
     rows = []
     for e in emps:
         d = DailyRecord.objects.filter(employee=e, date=day).first()
@@ -452,6 +560,8 @@ def total_control(request):
 def insert_record(request):
     """ثبت تردد دستی (InsertRecord) — چند پرسنل + نوع تردد + تاریخ/ساعت."""
     from apps.org.models import Employee
+    allowed_employees = scoped_employees(
+        request.user, 'attendance', Employee.objects.filter(is_active=True))
     if request.method == 'POST':
         badges = request.POST.getlist('selectedBadgeNumbers')
         date = request.POST.get('date', '')
@@ -460,7 +570,7 @@ def insert_record(request):
         desc = request.POST.get('description', '')
         n = 0
         for b in badges:
-            emp = Employee.objects.filter(badge_no=b).first()
+            emp = allowed_employees.filter(badge_no=b).first()
             if not emp:
                 continue
             Punch.objects.create(
@@ -471,7 +581,7 @@ def insert_record(request):
         messages.success(request, f'{n} تردد ثبت شد.')
         return redirect('attendance:insert_record')
     return render(request, 'attendance/insert_record.html', {
-        'employees': Employee.objects.filter(is_active=True)[:400]})
+        'employees': allowed_employees[:400]})
 
 
 @require_perm('attendance', 'change')
@@ -479,11 +589,15 @@ def edit_late_early(request):
     """اصلاح تأخیر/خروج زودهنگام (EditLateEarly) — با سهمیه روزانه/ماهانه."""
     from apps.org.models import Employee
     from .models import DailyRecord
+    allowed_employees = scoped_employees(
+        request.user, 'attendance', Employee.objects.filter(is_active=True))
     if request.method == 'POST':
         emp_id = request.POST.get('employee_id')
         date = request.POST.get('date', '')
         reason = request.POST.get('reason', '')
-        obj = DailyRecord.objects.filter(employee_id=emp_id, date=date).first()
+        obj = DailyRecord.objects.filter(
+            employee__in=allowed_employees, employee_id=emp_id, date=date
+        ).first()
         if obj:
             obj.late_minutes = int(request.POST.get('late_minutes', 0) or 0)
             obj.early_minutes = int(request.POST.get('early_minutes', 0) or 0)
@@ -493,39 +607,103 @@ def edit_late_early(request):
         else:
             messages.error(request, 'رکورد روز موردنظر یافت نشد — ابتدا تردد ثبت کنید.')
         return redirect('attendance:edit_late_early')
-    recent = DailyRecord.objects.select_related('employee').order_by('-date')[:100]
+    recent = DailyRecord.objects.filter(employee__in=allowed_employees).select_related(
+        'employee').order_by('-date')[:100]
     return render(request, 'attendance/edit_late_early.html', {
-        'employees': Employee.objects.filter(is_active=True)[:400],
+        'employees': allowed_employees[:400],
         'recent': recent})
 
 
-@require_perm('attendance', 'add')
+@require_perm('attendance', 'manage')
 def daily_leave_batch(request):
-    """مرخصی گروهی (InsertDailyLeave/AddDailyLeave) — ثبت گروهی بازه برای چند نفر."""
+    """ثبت گروهی مرخصی/مأموریت روزانه با محاسبه روز کاری و ثبت مانده."""
+    from django.db import transaction
+    from decimal import Decimal
     from apps.org.models import Employee
-    from .models import LeaveBalance, LeaveType, Request
+    from .models import Holiday, LeaveType, Request, Shift
+    from .services import _change_balance, scheduled_minutes, shift_for_employee
+
     if request.method == 'POST':
         badges = request.POST.getlist('selectedBadgeNumbers')
-        lt = LeaveType.objects.filter(pk=request.POST.get('leave_type_id')).first()
-        date_from, date_to = request.POST.get('date_from'), request.POST.get('date_to')
-        desc = request.POST.get('description', '')
-        n = 0
-        for b in badges:
-            emp = Employee.objects.filter(badge_no=b).first()
-            if not emp:
-                continue
-            Request.objects.create(
-                employee=emp, kind=Request.Kind.LEAVE, leave_type=lt,
-                from_date=date_from, to_date=date_to or date_from,
-                description=desc, status=Request.Status.APPROVED,
-                decided_at=timezone.now())
-            n += 1
-        audit(request.user, 'add', 'Request', detail=f'batch leave {n} emp')
-        messages.success(request, f'مرخصی برای {n} نفر ثبت شد.')
+        operation = request.POST.get('operation', Request.Kind.LEAVE_DAILY)
+        date_from_text = request.POST.get('date_from', '')
+        date_to_text = request.POST.get('date_to', '') or date_from_text
+        description = request.POST.get('description', '').strip()
+        leave_type = LeaveType.objects.filter(
+            pk=request.POST.get('leave_type_id') or 0, is_active=True
+        ).first() if operation == Request.Kind.LEAVE_DAILY else None
+        try:
+            date_from = _parse_date(date_from_text)
+            date_to = _parse_date(date_to_text)
+            if operation not in (Request.Kind.LEAVE_DAILY, Request.Kind.MISSION_DAILY):
+                raise ValueError('نوع ثبت گروهی نامعتبر است.')
+            if not badges:
+                raise ValueError('حداقل یک پرسنل را انتخاب کنید.')
+            if not date_from or not date_to or date_to < date_from:
+                raise ValueError('بازهٔ تاریخ نامعتبر است.')
+            if jdatetime.date.fromgregorian(date=date_from).year != \
+                    jdatetime.date.fromgregorian(date=date_to).year:
+                raise ValueError('بازهٔ ثبت گروهی نباید از مرز سال جلالی عبور کند.')
+            if operation == Request.Kind.LEAVE_DAILY and leave_type is None:
+                raise ValueError('نوع مرخصی معتبر را انتخاب کنید.')
+
+            allowed_employees = scoped_employees(
+                request.user, 'attendance', Employee.objects.filter(is_active=True))
+            employees = list(allowed_employees.filter(badge_no__in=badges))
+            if not employees:
+                raise ValueError('پرسنل فعال و معتبری از انتخاب‌ها یافت نشد.')
+            fallback_shift = Shift.objects.filter(is_active=True).order_by('id').first()
+            day_count_by_employee = {}
+            for emp in employees:
+                day = date_from
+                count = 0
+                while day <= date_to:
+                    if not Holiday.objects.filter(date=day).exists():
+                        shift = shift_for_employee(emp, day) or fallback_shift
+                        if shift and scheduled_minutes(shift, day) > 0:
+                            count += 1
+                    day += gregorian.timedelta(days=1)
+                if count:
+                    day_count_by_employee[emp.pk] = count
+            if not day_count_by_employee:
+                raise ValueError('در بازهٔ انتخاب‌شده روز کاری معتبری وجود ندارد.')
+
+            with transaction.atomic():
+                for emp in employees:
+                    days = day_count_by_employee.get(emp.pk)
+                    if not days:
+                        continue
+                    req = Request.objects.create(
+                        employee=emp,
+                        kind=operation,
+                        leave_type=leave_type,
+                        from_date=date_from,
+                        to_date=date_to,
+                        days=Decimal(days),
+                        description=description[:300],
+                        status=Request.Status.APPROVED,
+                        decided_by=request.user,
+                        decided_at=timezone.now(),
+                    )
+                    if req.is_leave and leave_type.needs_balance:
+                        _change_balance(req, Decimal(days))
+                count = len(day_count_by_employee)
+            audit(request.user, 'add', 'Request',
+                  detail=f'batch {operation}; people={count}; {date_from}:{date_to}')
+            messages.success(request, f'ثبت گروهی برای {count} نفر انجام شد.')
+        except (ValueError, TypeError) as exc:
+            messages.error(request, str(exc))
         return redirect('attendance:daily_leave_batch')
+
     return render(request, 'attendance/daily_leave_batch.html', {
-        'employees': Employee.objects.filter(is_active=True)[:400],
-        'leave_types': LeaveType.objects.filter(is_active=True)})
+        'employees': scoped_employees(
+            request.user, 'attendance', Employee.objects.filter(is_active=True))[:400],
+        'leave_types': LeaveType.objects.filter(is_active=True),
+        'operations': [
+            (Request.Kind.LEAVE_DAILY, 'مرخصی روزانه'),
+            (Request.Kind.MISSION_DAILY, 'مأموریت روزانه'),
+        ],
+    })
 
 
 @require_perm('attendance', 'view')
@@ -551,10 +729,17 @@ def rules(request):
     """قواعد زمان‌بندی (Rule/AssignRule)."""
     from .models import ScheduleRule
     if request.method == 'POST' and has_perm(request.user, 'attendance', 'manage'):
-        ScheduleRule.objects.create(
-            name=request.POST.get('name', '').strip(),
-            priority=int(request.POST.get('priority', 100) or 100))
-        audit(request.user, 'add', 'ScheduleRule')
+        name = request.POST.get('name', '').strip()
+        try:
+            priority = int(request.POST.get('priority', 100) or 100)
+        except (TypeError, ValueError):
+            priority = -1
+        if not name or len(name) > 120 or not 0 <= priority <= 32767:
+            messages.error(request, 'نام و اولویت قانون معتبر نیست.')
+        else:
+            rule = ScheduleRule.objects.create(name=name, priority=priority)
+            audit(request.user, 'add', 'ScheduleRule', rule.pk, detail=name)
+            messages.success(request, 'قانون ثبت شد.')
         return redirect('attendance:rules')
     return render(request, 'attendance/rules.html', {
         'rules': ScheduleRule.objects.all(),
@@ -566,12 +751,24 @@ def ramadan(request):
     """تنظیمات ماه رمضان (Ramezan)."""
     from .models import RamadanRule
     if request.method == 'POST' and has_perm(request.user, 'attendance', 'manage'):
-        RamadanRule.objects.create(
-            shift_id=request.POST.get('shift_id'),
-            from_date=request.POST.get('from_date'),
-            to_date=request.POST.get('to_date'),
-            reduced_minutes=int(request.POST.get('reduced_minutes', 0) or 0))
-        audit(request.user, 'add', 'RamadanRule')
+        shift = Shift.objects.filter(
+            pk=request.POST.get('shift_id'), is_active=True).first()
+        try:
+            from_date = _parse_date(request.POST.get('from_date'))
+            to_date = _parse_date(request.POST.get('to_date'))
+            reduced = int(request.POST.get('reduced_minutes', 0) or 0)
+        except (TypeError, ValueError):
+            from_date = to_date = None
+            reduced = -1
+        if not shift or not from_date or not to_date or to_date < from_date \
+                or not 0 <= reduced <= 1440:
+            messages.error(request, 'اطلاعات قاعدهٔ رمضان معتبر نیست.')
+        else:
+            rule = RamadanRule.objects.create(
+                shift=shift, from_date=from_date, to_date=to_date,
+                reduced_minutes=reduced)
+            audit(request.user, 'add', 'RamadanRule', rule.pk)
+            messages.success(request, 'قاعدهٔ رمضان ثبت شد.')
         return redirect('attendance:ramadan')
     return render(request, 'attendance/ramadan.html', {
         'rules': RamadanRule.objects.select_related('shift'),

@@ -88,6 +88,28 @@ class DeviceBridgeTests(TestCase):
             content_type='application/json', HTTP_X_DEVICE_TOKEN='t')
         self.assertEqual(resp.status_code, 400)
 
+    def test_api_rejects_malformed_batches_and_truthy_convert_strings(self):
+        AppSetting.objects.create(key='device_api_token', value='t')
+        url = reverse('device:api_ingest')
+        for payload in (
+                {'serial': 'SN-100', 'records': ['not-an-object']},
+                {'serial': 'SN-100', 'records': [], 'convert': 'true'},
+                {'serial': 'SN-100', 'records': [{}] * 10001},
+                {'serial': 'SN-100', 'records': [
+                    {'pin': 'X' * 25, 'time': '2026-10-19 08:00:00'}]}):
+            response = self.client.post(
+                url, data=json.dumps(payload), content_type='application/json',
+                HTTP_X_DEVICE_TOKEN='t')
+            self.assertEqual(response.status_code, 400)
+        self.assertEqual(RawRecord.objects.count(), 0)
+
+    def test_api_rejects_oversized_request(self):
+        AppSetting.objects.create(key='device_api_token', value='t')
+        response = self.client.post(
+            reverse('device:api_ingest'), data=' ' * (2 * 1024 * 1024 + 1),
+            content_type='application/json', HTTP_X_DEVICE_TOKEN='t')
+        self.assertEqual(response.status_code, 413)
+
 
 class LeaveTransferTests(TestCase):
     def setUp(self):

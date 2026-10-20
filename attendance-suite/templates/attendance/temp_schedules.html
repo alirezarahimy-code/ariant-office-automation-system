@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}شیفت‌های موقت{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>شیفت‌های موقت</h1></div></div>
+<div class="card">
+  <form method="post" class="temp-filter">
+    {% csrf_token %}<input type="hidden" name="action" value="show">
+    <div class="field"><label for="start_date">از تاریخ</label><input id="start_date" name="start_date" value="{{ start_date }}" placeholder="1404/01/01" required></div>
+    <div class="field"><label for="end_date">تا تاریخ</label><input id="end_date" name="end_date" value="{{ end_date }}" placeholder="1404/01/31" required></div>
+    <fieldset class="employee-picker"><legend>انتخاب پرسنل</legend>
+      {% for employee in employees %}
+        <label><input type="checkbox" name="employee_id" value="{{ employee.pk }}" {% if employee.pk in employee_ids %}checked{% endif %}> {{ employee.badge_no }} — {{ employee }}</label>
+      {% empty %}<p class="muted">پرسنلی در دامنهٔ دسترسی وجود ندارد.</p>{% endfor %}
+    </fieldset>
+    <button class="btn btn-primary" type="submit">نمایش شیفت‌های موقت</button>
+  </form>
+</div>
+{% if selected_employees %}
+<div class="card">
+  <h2>شیفت موقت گروهی</h2>
+  <p class="muted">تغییر هر ردیف برای همهٔ پرسنل انتخاب‌شده در همان تاریخ اعمال می‌شود.</p>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>تاریخ</th><th>روز هفته</th><th>جدول زمانی موقت فعلی</th><th>تغییر گروهی</th></tr></thead>
+    <tbody>
+      {% for row in group_rows %}
+      <tr>
+        <td>{{ row.jday }}</td><td>{{ row.weekday }}</td>
+        <td>{% if row.schedule_names %}{{ row.schedule_names|join:'، ' }}{% else %}—{% endif %}</td>
+        <td>
+          <form method="post" class="temp-edit-form">
+            {% csrf_token %}<input type="hidden" name="action" value="save_day">
+            <input type="hidden" name="day" value="{{ row.jday }}">
+            <input type="hidden" name="start_date" value="{{ start_date }}"><input type="hidden" name="end_date" value="{{ end_date }}">
+            {% for employee in selected_employees %}<input type="hidden" name="employee_id" value="{{ employee.pk }}">{% endfor %}
+            <select name="schedule_id" required><option value="">انتخاب جدول زمانی</option><option value="-1">حذف شیفت موقت</option>{% for schedule in schedules %}<option value="{{ schedule.pk }}">{{ schedule.name }} ({{ schedule.symbol }})</option>{% endfor %}</select>
+            <button class="btn btn-primary" type="submit">اعمال</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="4" class="empty">برای نمایش، پرسنل و بازهٔ زمانی را انتخاب کنید.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+<div class="card">
+  <h2>شیفت موقت همراه با رکوردها</h2>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>شماره پرسنلی</th><th>نام</th><th>تاریخ</th><th>رکورد ۱</th><th>رکورد ۲</th><th>رکورد ۳</th><th>رکورد ۴</th><th>رکورد ۵</th><th>رکورد ۶</th><th>جدول زمانی</th><th></th></tr></thead>
+    <tbody>
+      {% for row in record_rows %}
+      <tr>
+        <td>{{ row.employee.badge_no }}</td><td>{{ row.employee }}</td><td>{{ row.jday }}</td>
+        {% for punch in row.punches %}<td>{{ punch|time:'H:i' }}</td>{% endfor %}
+        <td>{% if row.override and row.override.schedule %}{{ row.override.schedule.name }}{% else %}—{% endif %}</td>
+        <td>
+          <form method="post" class="temp-edit-form">
+            {% csrf_token %}<input type="hidden" name="action" value="save_day"><input type="hidden" name="day" value="{{ row.jday }}">
+            <input type="hidden" name="employee_id" value="{{ row.employee.pk }}"><input type="hidden" name="start_date" value="{{ start_date }}"><input type="hidden" name="end_date" value="{{ end_date }}">
+            <select name="schedule_id" required><option value="-1" {% if not row.override %}selected{% endif %}>عادی / بدون موقت</option>{% for schedule in schedules %}<option value="{{ schedule.pk }}" {% if row.override and row.override.schedule_id == schedule.pk %}selected{% endif %}>{{ schedule.name }}</option>{% endfor %}</select>
+            <button class="btn" type="submit">ذخیره</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="11" class="empty">رکوردی برای نمایش وجود ندارد.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+<style>
+.temp-filter,.temp-edit-form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.employee-picker{border:1px solid var(--border);border-radius:8px;padding:10px;max-height:210px;overflow:auto;display:flex;gap:8px 18px;flex-wrap:wrap;min-width:100%}
+.employee-picker label{white-space:nowrap}.table-wrap{overflow:auto}.temp-edit-form select{min-width:180px;padding:7px;border:1px solid var(--border);border-radius:8px;font:inherit;background:#fff}
+</style>
+{% endblock %}

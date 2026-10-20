@@ -11,7 +11,8 @@ from django.utils import timezone
 
 from .models import (AttendancePolicy, DailyRecord, Deputy, GeoArea,
                      Holiday, LeaveBalance, LeaveType, Punch, Request,
-                     Shift, ShiftAssignment)
+                     Shift, ShiftAssignment, TemporarySchedule,
+                     CalendarHoliday)
 
 
 # ---------- تبدیل تاریخ ----------
@@ -36,7 +37,13 @@ def parse_jalali(text: str) -> gregorian.date:
 
 # ---------- شیفت و محاسبات ----------
 
-def shift_for_employee(employee, date: gregorian.date) -> Shift | None:
+def shift_for_employee(employee, date: gregorian.date):
+    """Return a date-specific override first, then the current regular shift."""
+    temporary = TemporarySchedule.objects.filter(
+        employee=employee, date=date, schedule__is_active=True
+    ).select_related('schedule').first()
+    if temporary:
+        return temporary.schedule
     from django.db.models import Q
     assign = ShiftAssignment.objects.filter(
         employee=employee, from_date__lte=date
@@ -52,6 +59,9 @@ def day_metrics(date: gregorian.date, check_in=None, check_out=None,
     if shift is None:
         shift = Shift.objects.filter(is_active=True).order_by('id').first()
     holiday = Holiday.objects.filter(date=date).exists()
+    if shift and getattr(shift, 'calendar_id', None):
+        holiday = holiday or CalendarHoliday.objects.filter(
+            calendar_id=shift.calendar_id, date=date).exists()
     jwday = jdatetime.date.fromgregorian(date=date).weekday()  # 0=شنبه
 
     if check_in is None and check_out is None:
@@ -74,9 +84,10 @@ def day_metrics(date: gregorian.date, check_in=None, check_out=None,
                                - gregorian.datetime.combine(date, shift.start_time)
                                ).total_seconds() // 60) - shift.grace_minutes)
         if check_out and not holiday:
+            early_margin = getattr(shift, 'early_minutes', 0)
             early = max(0, int((gregorian.datetime.combine(date, shift.end_time)
                                 - gregorian.datetime.combine(date, check_out)
-                                ).total_seconds() // 60))
+                                ).total_seconds() // 60) - early_margin)
         scheduled = scheduled_minutes(shift, date)
         overtime = max(0, worked - scheduled) if not holiday else worked
         if holiday:
@@ -95,10 +106,15 @@ def day_metrics(date: gregorian.date, check_in=None, check_out=None,
             'overtime_minutes': overtime, 'worked_minutes': worked}
 
 
-def scheduled_minutes(shift: Shift, date: gregorian.date) -> int:
-    if shift.work_days and jdatetime.date.fromgregorian(date=date).weekday() \
-            not in shift.work_days:
+def scheduled_minutes(shift, date: gregorian.date) -> int:
+    work_days = getattr(shift, 'work_day_indexes', None)
+    if work_days is None:
+        work_days = getattr(shift, 'work_days', [])
+    if work_days and jdatetime.date.fromgregorian(date=date).weekday() not in work_days:
         return 0
+    configured_minutes = getattr(shift, 'work_minutes', None)
+    if configured_minutes is not None and configured_minutes > 0:
+        return int(configured_minutes)
     start = gregorian.datetime.combine(date, shift.start_time)
     end = gregorian.datetime.combine(date, shift.end_time)
     if end <= start:
@@ -176,9 +192,14 @@ def approval_targets(employee):
 
 
 def can_approve(user, request: Request) -> bool:
-    from apps.core.services import has_perm
-    if has_perm(user, 'requests', 'approve') or user.is_superuser:
+    from apps.core.services import has_perm, scoped_employees
+    if user.is_superuser:
         return True
+    if has_perm(user, 'requests', 'approve'):
+        from apps.org.models import Employee
+        allowed = scoped_employees(user, 'requests', Employee.objects.all())
+        if allowed.filter(pk=request.employee_id).exists():
+            return True
     emp = getattr(user, 'employee', None)
     return emp is not None and emp in approval_targets(request.employee)
 

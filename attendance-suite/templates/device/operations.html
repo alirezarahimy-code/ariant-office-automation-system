@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}عملیات روی دستگاه‌ها | T5Web{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>عملیات روی دستگاه‌ها</h1><p class="sub">وضعیت دستگاه‌ها، دریافت رکورد و مسیر همگام‌سازی مجاز</p></div>
+  {% if can_manage or can_usb_import %}<div class="head-actions">{% if can_manage %}<a class="btn btn-ghost" href="{% url 'device:unis_bridge' %}">تنظیم پل UNIS</a>{% endif %}{% if can_usb_import %}<a class="btn btn-ghost" href="{% url 'device:usb_import' %}">ورود اطلاعات USB</a>{% endif %}</div>{% endif %}
+</div>
+{% if can_sync %}
+<section class="card operation-banner">
+  <div><strong>دریافت و تبدیل رکوردها</strong><p class="sub">خواندن دستگاه‌های پشتیبانی‌شده و دریافت دادهٔ Virdi فقط از پل UNIS تنظیم‌شده انجام می‌شود؛ این عملیات به Windows Service وابسته نیست.</p></div>
+  <form method="post" action="{% url 'device:gateway_sync' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">اجرای همگام‌سازی</button></form>
+</section>
+{% endif %}
+<div class="grid">
+  <section>
+    <div class="card-title">دستگاه‌ها</div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>نام</th><th>برند</th><th>سریال</th><th>آدرس</th><th>آخرین دریافت</th><th>رکورد</th></tr></thead><tbody>
+    {% for device in devices %}<tr><td>{{ device.name }}</td><td>{{ device.get_brand_display }}</td><td dir="ltr">{{ device.serial }}</td><td dir="ltr">{{ device.ip|default:'—' }}{% if device.ip %}:{{ device.port }}{% endif %}</td><td>{{ device.last_read_at|default:'—' }}</td><td>{{ device.records_count|fa }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">دستگاهی ثبت نشده است.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <section>
+    <div class="card-title">پل‌های UNIS</div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>نام پل</th><th>دستگاه مقصد</th><th>منبع</th><th>آخرین اجرا</th><th>وضعیت</th></tr></thead><tbody>
+    {% for bridge in bridges %}<tr><td>{{ bridge.name }}</td><td>{{ bridge.device.name }}</td><td>{{ bridge.get_mode_display }}</td><td>{{ bridge.last_sync_at|default:'—' }}</td><td>{{ bridge.last_result|default:'آماده' }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">پل UNIS پیکربندی نشده است.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+<section class="card"><div class="card-title">آخرین رکوردهای خام</div><div class="table-wrap"><table class="table"><thead><tr><th>دستگاه</th><th>کد</th><th>زمان</th><th>وضعیت</th></tr></thead><tbody>
+{% for record in recent_records %}<tr><td>{{ record.device.name }}</td><td>{{ record.pin }}</td><td>{{ record.punch_time }}</td><td>{{ record.get_state_display }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">رکوردی دریافت نشده است.</td></tr>{% endfor %}
+</tbody></table></div><a class="btn btn-ghost" href="{% url 'device:raw_records' %}">نمایش همهٔ رکوردها</a></section>
+<style>
+.head-actions{display:flex;gap:8px;flex-wrap:wrap}.operation-banner{display:flex;justify-content:space-between;align-items:center;gap:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.table-wrap{overflow:auto}.operation-banner .sub{margin-bottom:0}@media(max-width:900px){.grid{grid-template-columns:1fr}.operation-banner{align-items:flex-start;flex-direction:column}}
+</style>
+{% endblock %}

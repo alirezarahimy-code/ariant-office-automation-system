@@ -5,12 +5,12 @@ import io
 
 import jdatetime
 from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.services import audit, has_perm, require_perm, scoped_employees
 from apps.org.models import Employee
 
-from .models import DailyRecord, Request, WorkflowRule
+from .models import DailyRecord, LeaveDescription, Request, WorkflowRule
 from .services import (parse_jalali, register_punch)
 
 
@@ -18,15 +18,16 @@ from .services import (parse_jalali, register_punch)
 def import_csv(request):
     """ورود رویدادهای تردد از CSV (USB/اکسل): badge_no,date,time,direction."""
     result = None
+    allowed_employees = scoped_employees(
+        request.user, 'attendance', Employee.objects.filter(is_active=True))
     if request.method == 'POST' and request.FILES.get('file'):
         try:
-            from apps.org.models import Employee
             text = request.FILES['file'].read().decode('utf-8-sig')
             reader = csv.DictReader(io.StringIO(text))
             created = errors = 0
             for row in reader:
                 try:
-                    employee = Employee.objects.get(
+                    employee = allowed_employees.get(
                         badge_no=(row.get('badge_no') or '').strip())
                     date = parse_jalali(row.get('date') or '')
                     time_text = (row.get('time') or '').strip()
@@ -46,6 +47,55 @@ def import_csv(request):
         except UnicodeDecodeError:
             messages.error(request, 'فرمت فایل نادرست است (UTF-8 مورد انتظار).')
     return render(request, 'attendance/import_csv.html', {'result': result})
+
+
+@require_perm('attendance', 'manage')
+def leave_descriptions(request, pk=None):
+    """مدیریت LeaveDescription بر اساس کنترلر موجود در اسمبلی T5Web."""
+    row = get_object_or_404(LeaveDescription, pk=pk) if pk is not None else None
+    values = {
+        'description': row.description if row else '',
+        'for_leave_type': str(row.for_leave_type) if row else '',
+    }
+    if request.method == 'POST':
+        action = request.POST.get('action', 'save')
+        if row and action == 'delete':
+            audit(request.user, 'delete', 'LeaveDescription', row.pk,
+                  detail=row.description)
+            row.delete()
+            messages.success(request, 'شرح حذف شد.')
+            return redirect('attendance:leave_descriptions')
+        description = request.POST.get('description', '').strip()
+        try:
+            leave_type = int(request.POST.get('for_leave_type', ''))
+            valid_types = {value for value, _ in LeaveDescription.ForLeaveType.choices}
+            if leave_type not in valid_types:
+                raise ValueError
+        except (TypeError, ValueError):
+            leave_type = None
+        if not description or len(description) > 200 or leave_type is None:
+            messages.error(request, 'شرح و نوع مرخصی/ماموریت را به‌درستی وارد کنید.')
+            values = {
+                'description': description[:200],
+                'for_leave_type': request.POST.get('for_leave_type', ''),
+            }
+        else:
+            was_new = row is None
+            row = row or LeaveDescription()
+            row.description = description
+            row.for_leave_type = leave_type
+            row.save()
+            audit(request.user, 'add' if was_new else 'change',
+                  'LeaveDescription', row.pk, detail=description)
+            messages.success(request, 'شرح ذخیره شد.')
+            return redirect('attendance:leave_descriptions')
+    return render(request, 'attendance/leave_descriptions.html', {
+        'rows': LeaveDescription.objects.all(),
+        'row': row,
+        'values': values,
+        'can_manage': has_perm(request.user, 'attendance', 'manage'),
+        'leave_types': LeaveDescription.ForLeaveType.choices,
+    })
 
 
 @require_perm('reports', 'report')

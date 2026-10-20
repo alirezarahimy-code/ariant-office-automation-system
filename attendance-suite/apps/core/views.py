@@ -4,8 +4,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
-from .services import (audit, clear_login_failures, login_throttled,
-                       record_login_failure, require_perm, _client_ip)
+from .services import (audit, clear_login_failures, has_program_access,
+                       login_throttled, record_login_failure, require_perm,
+                       _client_ip)
 
 
 def login_view(request):
@@ -19,16 +20,22 @@ def login_view(request):
             audit(None, 'login_blocked', detail=f'{username} @ {ip}', ip=ip)
         else:
             user = authenticate(request, username=username, password=password)
-            if user is not None and user.is_active:
+            has_web_access = user is not None and has_program_access(user, 't5web')
+            if user is not None and user.is_active and has_web_access:
                 login(request, user)
                 clear_login_failures(username, ip)
                 audit(user, 'login', detail='ورود موفق', ip=ip)
                 next_url = request.POST.get('next') or request.GET.get('next')
                 return redirect(next_url if next_url and next_url.startswith('/')
                                 else 'attendance:dashboard')
-            record_login_failure(username, ip)
-            audit(None, 'login_failed', detail=f'{username} @ {ip}', ip=ip)
-            error = 'نام کاربری یا گذرواژه نادرست است.'
+            if user is not None and user.is_active and not has_web_access:
+                audit(user, 'login_denied', model='T5Web',
+                      detail='کاربر وب برای پروندهٔ پرسنلی غیرفعال است.', ip=ip)
+                error = 'دسترسی وب برای این پروندهٔ پرسنلی فعال نیست.'
+            else:
+                record_login_failure(username, ip)
+                audit(None, 'login_failed', detail=f'{username} @ {ip}', ip=ip)
+                error = 'نام کاربری یا گذرواژه نادرست است.'
     return render(request, 'core/login.html', {
         'error': error, 'next': request.GET.get('next', '')})
 

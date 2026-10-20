@@ -33,6 +33,24 @@ def jdate(value):
 
 
 @register.filter
+def get_item(dictionary, key):
+    if not isinstance(dictionary, dict):
+        return None
+    return dictionary.get(key)
+
+
+@register.filter
+def duration(minutes):
+    if minutes is None:
+        return '—'
+    try:
+        total = int(minutes)
+    except (TypeError, ValueError):
+        return '—'
+    return f'{total // 60:02d}:{total % 60:02d}'
+
+
+@register.filter
 def hours(minutes):
     if minutes is None:
         return 0

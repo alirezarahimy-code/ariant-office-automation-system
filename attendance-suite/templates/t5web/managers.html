@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}مدیر | T5Web{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>مدیر</h1><p class="sub">تعریف حساب T5 و تعیین نقش‌های دسترسی برای پرسنل</p></div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{% url 't5web:roles' %}">نقش‌ها و مجوزهای عملیاتی</a>
+    <a class="btn btn-primary" href="{% url 't5web:managers' %}">حساب جدید</a>
+  </div>
+</div>
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-title">{% if selected_user %}ویرایش حساب{% else %}تعریف حساب{% endif %}</div>
+    <p class="sub">هر حساب به یک پروندهٔ پرسنلی موجود متصل می‌شود؛ ایجاد حساب یا پروندهٔ تکراری مجاز نیست.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if selected_user %}<input type="hidden" name="user_id" value="{{ selected_user.pk }}">{% endif %}
+      {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+        {% if field.name != 'roles' and field.name != 't5web_access' and field.name != 'twf_access' and field.name != 'link5_access' %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <fieldset class="field role-picker">
+        <legend>{{ form.roles.label }}</legend>
+        {% if form.roles.field.queryset %}
+          {% for checkbox in form.roles %}<label class="check-row">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>{% empty %}<p class="empty">نقشی تعریف نشده است.</p>{% endfor %}
+        {% else %}<p class="empty">نقشی تعریف نشده است.</p>{% endif %}
+        {% for error in form.roles.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </fieldset>
+      <fieldset class="field role-picker">
+        <legend>دسترسی به برنامه‌ها</legend>
+        {% for field in form %}
+          {% if field.name == 't5web_access' or field.name == 'twf_access' or field.name == 'link5_access' %}
+            <label class="check-row">{{ field }}<span>{{ field.label }}</span></label>
+            {% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}
+          {% endif %}
+        {% endfor %}
+        <small class="help">مجوز ورود به هر برنامه از نقش‌های داخل همان برنامه جداست؛ TWF و Link5 از همین هویت T5 استفاده خواهند کرد.</small>
+      </fieldset>
+      <button class="btn btn-primary" type="submit">ذخیرهٔ دسترسی</button>
+    </form>
+  </section>
+  <section>
+    <div class="card-title">حساب‌های تعریف‌شده</div>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>نام کاربری</th><th>پرسنل</th><th>نقش‌ها</th><th>برنامه‌ها</th><th>وضعیت</th><th></th></tr></thead>
+      <tbody>
+      {% for item in users %}
+        <tr>
+          <td>{{ item.username }}</td>
+          <td>{{ item.employee|default:'—' }}</td>
+          <td>{% for user_role in item.user_roles.all %}<span class="chip">{{ user_role.role.name }}</span> {% empty %}—{% endfor %}</td>
+          <td>{% for access in item.program_access.all %}{% if access.is_allowed %}<span class="chip">{{ access.get_program_display }}</span> {% endif %}{% empty %}—{% endfor %}</td>
+          <td>{% if item.is_active %}<span class="chip chip-ok">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td>
+          <td><a class="btn btn-ghost" href="{% url 't5web:managers' %}?user_id={{ item.pk }}">ویرایش</a></td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="empty">حسابی ثبت نشده است.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+</div>
+<style>
+.head-actions{display:flex;gap:8px;flex-wrap:wrap}.grid-2{display:grid;grid-template-columns:minmax(320px,1fr) minmax(400px,1.3fr);gap:20px;align-items:start}
+.field{margin:14px 0}.field>label,.field>legend{display:block;font-weight:700;margin-bottom:6px}.field input:not([type=checkbox]),.field select{width:100%;max-width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+.role-picker{border:1px solid #dbe3ee;border-radius:10px;padding:12px}.check-row{display:flex;gap:9px;align-items:center;margin:8px 0}.help,.error{display:block;margin-top:5px}.help{color:#64748b}.error{color:#b91c1c}
+.table-wrap{overflow:auto}.chip-ok{background:#dcfce7;color:#166534}.chip-muted{background:#e2e8f0;color:#475569}
+@media(max-width:850px){.grid-2{grid-template-columns:1fr}}
+</style>
+{% endblock %}

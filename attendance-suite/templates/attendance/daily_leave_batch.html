@@ -13,12 +13,23 @@
   </div>
 </div>
 <div class="card"><div class="form-grid">
-  <div class="field"><label>نوع مرخصی</label><select name="leave_type_id">
+  <div class="field"><label>نوع ثبت</label><select id="operation" name="operation" required>
+    {% for value,label in operations %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+  <div class="field" id="leaveTypeField"><label>نوع مرخصی</label><select name="leave_type_id">
     {% for t in leave_types %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}</select></div>
-  <div class="field"><label>از تاریخ</label><input name="date_from" placeholder="1405-07-28" required></div>
+  <div class="field"><label>از تاریخ</label><input name="date_from" placeholder="1405/07/28" required></div>
   <div class="field"><label>تا تاریخ</label><input name="date_to" placeholder="1405-07-30"></div>
   <div class="field"><label>شرح</label><input name="description"></div>
   <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت گروهی</button></div>
 </div></div>
 </form>
+<script>
+  const operation = document.getElementById('operation');
+  const leaveTypeField = document.getElementById('leaveTypeField');
+  function updateLeaveTypeVisibility(){
+    leaveTypeField.hidden = operation.value !== 'leave_daily';
+  }
+  operation.addEventListener('change', updateLeaveTypeVisibility);
+  updateLeaveTypeVisibility();
+</script>
 {% endblock %}

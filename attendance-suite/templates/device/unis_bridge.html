@@ -47,9 +47,9 @@
       <td class="mono">{{ b.last_result|default:'—' }}</td>
       <td>{% if b.is_active %}<span class="chip chip-success">فعال</span>{% else %}<span class="chip chip-muted">غیرفعال</span>{% endif %}</td>
       <td>
-        <form method="post" action="{% url 'device:unis_sync' b.id %}">{% csrf_token %}
+        {% if can_sync and b.is_active and b.device.is_active and b.device.brand == 'virdi' %}<form method="post" action="{% url 'device:unis_sync' b.id %}">{% csrf_token %}
           <button class="btn" type="submit">همگام‌سازی اکنون</button>
-        </form>
+        </form>{% else %}—{% endif %}
       </td>
     </tr>
   {% empty %}

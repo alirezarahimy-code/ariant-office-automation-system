@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'apps.device',
     'apps.attendance',
     'apps.reports',
+    'apps.t5web.apps.T5WebConfig',
 ]
 
 MIDDLEWARE = [
@@ -29,6 +30,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.T5ProgramAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -44,6 +46,7 @@ TEMPLATES = [{
             'django.template.context_processors.request',
             'django.contrib.auth.context_processors.auth',
             'django.contrib.messages.context_processors.messages',
+            'apps.t5web.menu.t5web_navigation',
         ],
     },
 }]

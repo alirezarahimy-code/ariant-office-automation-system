@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}شرح خروج{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>شرح خروج</h1><p class="muted">شرح‌های قابل انتخاب برای مرخصی و مأموریت</p></div>
+</div>
+{% if can_manage %}
+<div class="card">
+  <h2>{% if row %}ویرایش شرح{% else %}ثبت شرح جدید{% endif %}</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field">
+      <label for="description">شرح</label>
+      <input id="description" name="description" maxlength="200" required
+             value="{{ values.description }}" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="for_leave_type">مربوط به</label>
+      <select id="for_leave_type" name="for_leave_type" required>
+        <option value="">انتخاب کنید</option>
+        {% for value, label in leave_types %}
+          <option value="{{ value }}" {% if values.for_leave_type == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ذخیره</button></div>
+    {% if row %}<div class="field"><label>&nbsp;</label><a class="btn" href="{% url 'attendance:leave_descriptions' %}">انصراف</a></div>{% endif %}
+  </form>
+</div>
+{% endif %}
+<div class="card">
+  <table class="table">
+    <thead><tr><th>شرح</th>{% if can_manage %}<th>عملیات</th>{% endif %}</tr></thead>
+    <tbody>
+      {% for item in rows %}
+        <tr>
+          <td>{{ item.description }}</td>
+          {% if can_manage %}
+          <td class="actions">
+            <a class="btn" href="{% url 'attendance:leave_description_edit' item.pk %}">ویرایش</a>
+            <form method="post" action="{% url 'attendance:leave_description_edit' item.pk %}" class="inline" onsubmit="return confirm('این شرح حذف شود؟')">
+              {% csrf_token %}<input type="hidden" name="action" value="delete">
+              <button class="btn" type="submit">حذف</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+      {% empty %}
+        <tr><td colspan="{% if can_manage %}2{% else %}1{% endif %}" class="empty">موردی ثبت نشده است.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

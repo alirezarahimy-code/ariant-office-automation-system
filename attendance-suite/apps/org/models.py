@@ -95,6 +95,7 @@ class Employee(models.Model):
     photo = models.CharField('عکس (مسیر/آدرس)', max_length=255, blank=True, default='')
     end_work_date = models.DateField('تاریخ پایان همکاری', null=True, blank=True)
     # --- کارت/دستگاه ---
+    device_name = models.CharField('نام دستگاه', max_length=120, blank=True, default='')
     device_card_no = models.CharField('شماره کارت دستگاه', max_length=24, blank=True, default='')
     device_enable = models.BooleanField('فعال روی دستگاه', default=True)
     device_group = models.PositiveSmallIntegerField('گروه دستگاه', default=1)

@@ -12,8 +12,8 @@ from .zk_adapter import fetch_records as zk_fetch_records
 __all__ = ['BridgeError', 'sync_bridge', 'zk_fetch_records', 'run_gateway']
 
 
-def run_gateway() -> dict:
-    """یک نوبت کامل: نظرسنجی همه دستگاه‌های ZK فعال + همه پل‌های یونیس فعال."""
+def run_gateway(*, allowed_pins: set[str] | None = None) -> dict:
+    """یک نوبت کامل؛ تبدیل تردد در صورت نیاز به کدهای پرسنلی مجاز محدود می‌شود."""
     from apps.device.models import Device, UnisBridge
     from apps.device.services import convert_raw_to_punches, ingest_records
 
@@ -27,9 +27,9 @@ def run_gateway() -> dict:
             result['zk'].append({'device': device.serial, 'error': str(exc)})
     for bridge in UnisBridge.objects.filter(is_active=True).select_related('device'):
         try:
-            result['unis'].append(sync_bridge(bridge))
+            result['unis'].append(sync_bridge(bridge, allowed_pins=allowed_pins))
         except BridgeError as exc:
             result['unis'].append({'bridge': bridge.name, 'error': str(exc)})
-    converted = convert_raw_to_punches()
+    converted = convert_raw_to_punches(allowed_pins=allowed_pins)
     result['converted'] = converted
     return result

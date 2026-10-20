@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, views_extra
+from . import views, views_extra, views_schedule
 
 app_name = 'attendance'
 
@@ -23,11 +23,26 @@ urlpatterns = [
     path('holidays/', views.holidays, name='holidays'),
     path('shifts/', views.shifts, name='shifts'),
     path('shifts/assign/', views.shift_assign, name='shift_assign'),
+    path('schedule-definitions/', views_schedule.schedule_definitions,
+         name='schedule_definitions'),
+    path('schedule-definitions/<int:pk>/', views_schedule.schedule_definitions,
+         name='schedule_definition_edit'),
+    path('temporary-schedules/', views_schedule.temp_schedules,
+         name='temp_schedules'),
+    path('calendars/<int:calendar_id>/holidays/',
+         views_schedule.calendar_holidays, name='calendar_holidays'),
     path('geo/', views.geo, name='geo'),
     path('geo/add/', views.geo_add, name='geo_add'),
     path('deputy/', views.deputy, name='deputy'),
     path('leaves/transfer/', views.leave_transfer, name='leave_transfer'),
     path('exit-types/', views.exit_type_list, name='exit_types'),
+    path('leave-descriptions/', views_extra.leave_descriptions,
+         name='leave_descriptions'),
+    path('leave-descriptions/<int:pk>/', views_extra.leave_descriptions,
+         name='leave_description_edit'),
+    path('valid-leaves/', views_schedule.valid_leaves, name='valid_leaves'),
+    path('valid-leaves/<int:pk>/', views_schedule.valid_leaves,
+         name='valid_leave_edit'),
     path('import/', views_extra.import_csv, name='import_csv'),
     path('personnel-status/', views_extra.personnel_status,
          name='personnel_status'),

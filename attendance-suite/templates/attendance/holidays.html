@@ -2,8 +2,24 @@
 {% load suite_tags %}
 {% block title %}تعطیلات{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>تعطیلات رسمی</h1></div></div>
+<div class="page-head"><div><h1>تقویم</h1></div></div>
 <div class="card">
+  <h2>تقویم‌ها</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="add_calendar">
+    <div class="field"><label>نام تقویم</label><input name="calendar_name" maxlength="120" required></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن تقویم</button></div>
+  </form>
+  <table class="table"><thead><tr><th>نام تقویم</th><th>عملیات</th></tr></thead><tbody>
+    {% for calendar in calendars %}<tr><td>
+      <form method="post" class="inline calendar-name-form">{% csrf_token %}<input type="hidden" name="action" value="edit_calendar"><input type="hidden" name="calendar_id" value="{{ calendar.pk }}"><input name="calendar_name" maxlength="120" value="{{ calendar.name }}" required><button class="btn" type="submit">ذخیره نام</button></form>
+    </td><td><a class="btn" href="{% url 'attendance:calendar_holidays' calendar.pk %}">تعطیلات این تقویم</a>
+      <form method="post" class="inline" onsubmit="return confirm('تقویم و تعطیلات آن حذف شود؟')">{% csrf_token %}<input type="hidden" name="action" value="delete_calendar"><input type="hidden" name="calendar_id" value="{{ calendar.pk }}"><button class="btn" type="submit">حذف</button></form>
+    </td></tr>{% empty %}<tr><td colspan="2" class="empty">تقویمی ثبت نشده است.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<div class="card">
+  <h2>تعطیلات عمومی</h2>
   <form method="post" class="form-grid">
     {% csrf_token %}
     <div class="field"><label>تاریخ</label><input name="date" placeholder="1404/01/01"></div>

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}صدور مجوز کسر کار{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>صدور مجوز کسر کار</h1></div></div>
+{% for error in errors %}<div class="alert">{{ error }}</div>{% endfor %}
+<div class="card">
+  <h2>{% if item %}ویرایش مجوز{% else %}مجوز جدید{% endif %}</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label for="employee_id">پرسنل</label><select id="employee_id" name="employee_id" required><option value="">انتخاب کنید</option>{% for employee in employees %}<option value="{{ employee.pk }}" {% if values.employee_id == employee.pk|stringformat:'s' %}selected{% endif %}>{{ employee.badge_no }} — {{ employee }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="from_date">از تاریخ</label><input id="from_date" name="from_date" value="{{ values.from_date }}" placeholder="1405/01/01" required></div>
+    <div class="field"><label for="to_date">تا تاریخ</label><input id="to_date" name="to_date" value="{{ values.to_date }}" placeholder="1405/01/01" required></div>
+    <div class="field"><label for="valid_hours">مدت معتبر (ساعت:دقیقه)</label><input id="valid_hours" name="valid_hours" value="{{ values.valid_hours }}" placeholder="02:00" required></div>
+    <div class="field"><label for="description">شرح</label><input id="description" name="description" maxlength="300" value="{{ values.description }}"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">{% if item %}ویرایش{% else %}ثبت مجوز{% endif %}</button></div>
+    {% if item %}<div class="field"><label>&nbsp;</label><a class="btn" href="{% url 'attendance:valid_leaves' %}">انصراف</a></div>{% endif %}
+  </form>
+</div>
+<div class="card">
+  <table class="table"><thead><tr><th>پرسنل</th><th>از تاریخ</th><th>تا تاریخ</th><th>مدت معتبر</th><th>شرح</th><th>عملیات</th></tr></thead><tbody>
+    {% for row in rows %}<tr><td>{{ row.employee }}</td><td>{{ row.from_date|jdate }}</td><td>{{ row.to_date|jdate }}</td><td>{{ row.valid_minutes|duration }}</td><td>{{ row.description|default:'—' }}</td><td>
+      <a class="btn" href="{% url 'attendance:valid_leave_edit' row.pk %}">ویرایش</a>
+      <form method="post" class="inline" action="{% url 'attendance:valid_leave_edit' row.pk %}" onsubmit="return confirm('مجوز حذف شود؟')">{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="btn" type="submit">حذف</button></form>
+    </td></tr>{% empty %}<tr><td colspan="6" class="empty">مجوزی ثبت نشده است.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}

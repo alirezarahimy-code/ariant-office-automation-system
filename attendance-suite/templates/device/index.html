@@ -4,9 +4,9 @@
 {% block content %}
 <div class="page-head">
   <div><h1>دستگاه‌های تردد</h1><p class="sub">وضعیت و آخرین ارتباط</p></div>
-  <div class="actions"><form method="post" action="{% url 'device:gateway_sync' %}" style="display:inline">{% csrf_token %}<button class="btn btn-primary" type="submit">همگام‌سازی دروازه</button></form><a class="btn" href="{% url 'device:unis_bridge' %}">پل یونیس (Virdi)</a><a class="btn" href="{% url 'device:raw_records' %}">رکوردهای خام</a></div>
+  <div class="actions">{% if can_sync %}<form method="post" action="{% url 'device:gateway_sync' %}" style="display:inline">{% csrf_token %}<button class="btn btn-primary" type="submit">همگام‌سازی دروازه</button></form>{% endif %}{% if can_manage %}<a class="btn" href="{% url 'device:unis_bridge' %}">پل یونیس (Virdi)</a>{% endif %}<a class="btn" href="{% url 'device:raw_records' %}">رکوردهای خام</a></div>
 </div>
-{% if can_manage %}
+{% if can_add %}
 <div class="card">
   <div class="card-title">ثبت دستگاه تازه</div>
   <form method="post" action="{% url 'device:device_add' %}" class="form-grid">

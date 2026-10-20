@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}جدول زمانی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>جدول زمانی</h1></div></div>
+{% for error in errors %}<div class="alert">{{ error }}</div>{% endfor %}
+<div class="card">
+  <h2>{% if schedule %}ویرایش جدول زمانی{% else %}جدول زمانی جدید{% endif %}</h2>
+  <form method="post" class="schedule-form">
+    {% csrf_token %}
+    <div class="form-grid">
+      <div class="field"><label for="name">نام جدول زمانی <span aria-hidden="true">*</span></label><input id="name" name="name" maxlength="120" required value="{{ values.name }}"></div>
+      <div class="field"><label for="from_time">از ساعت</label><input id="from_time" name="from_time" type="time" value="{{ values.from_time }}"></div>
+      <div class="field"><label for="to_time">تا ساعت</label><input id="to_time" name="to_time" type="time" value="{{ values.to_time }}"></div>
+
+      <div class="field"><label for="start_from">ورود از</label><input id="start_from" name="start_from" type="time" value="{{ values.start_from }}"></div>
+      <div class="field"><label for="end_from">ورود تا</label><input id="end_from" name="end_from" type="time" value="{{ values.end_from }}"></div>
+      <div class="field"><label for="start_to">خروج از</label><input id="start_to" name="start_to" type="time" value="{{ values.start_to }}"></div>
+      <div class="field"><label for="end_to">خروج تا</label><input id="end_to" name="end_to" type="time" value="{{ values.end_to }}"></div>
+
+      <div class="field"><label for="ramadan_from_time">شروع ماه رمضان</label><input id="ramadan_from_time" name="ramadan_from_time" type="time" value="{{ values.ramadan_from_time }}"></div>
+      <div class="field"><label for="ramadan_to_time">پایان ماه رمضان</label><input id="ramadan_to_time" name="ramadan_to_time" type="time" value="{{ values.ramadan_to_time }}"></div>
+      <div class="field"><label for="rule_id">قانون</label><select id="rule_id" name="rule_id"><option value="">بدون قانون</option>{% for rule in rules %}<option value="{{ rule.pk }}" {% if values.rule_id == rule.pk|stringformat:'s' %}selected{% endif %}>{{ rule.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="calendar_id">تقویم</label><select id="calendar_id" name="calendar_id"><option value="">بدون تقویم</option>{% for calendar in calendars %}<option value="{{ calendar.pk }}" {% if values.calendar_id == calendar.pk|stringformat:'s' %}selected{% endif %}>{{ calendar.name }}</option>{% endfor %}</select></div>
+
+      <div class="field"><label><input type="checkbox" name="rest_time" {% if values.rest_time %}checked{% endif %}> زمان استراحت دارد</label></div>
+      <div class="field"><label>بازه‌های استراحت</label>
+        <div id="rest-intervals">
+          {% for interval in values.rest_times %}
+            <div class="rest-row"><input aria-label="شروع استراحت" type="time" name="rest_from" value="{{ interval.0 }}"><input aria-label="پایان استراحت" type="time" name="rest_to" value="{{ interval.1 }}"><button class="btn remove-rest" type="button">حذف بازه</button></div>
+          {% empty %}
+            <div class="rest-row"><input aria-label="شروع استراحت" type="time" name="rest_from"><input aria-label="پایان استراحت" type="time" name="rest_to"><button class="btn remove-rest" type="button">حذف بازه</button></div>
+          {% endfor %}
+        </div>
+        <button id="add-rest" class="btn" type="button">افزودن بازه استراحت</button>
+      </div>
+
+      <div class="field"><label for="suspend">فاصله بعد</label><input id="suspend" name="suspend" placeholder="00:00" value="{{ values.suspend }}"></div>
+      <div class="field"><label for="interval_before">فاصله قبل</label><input id="interval_before" name="interval_before" placeholder="00:00" value="{{ values.interval_before }}"></div>
+      <div class="field"><label><input type="checkbox" name="before_i" {% if values.before_i %}checked{% endif %}> قبل از شیفت</label></div>
+      <div class="field"><label><input type="checkbox" name="after_i" {% if values.after_i %}checked{% endif %}> بعد از شیفت</label></div>
+
+      <div class="field"><label for="late">تأخیر</label><input id="late" name="late" placeholder="00:15" value="{{ values.late }}"></div>
+      <div class="field"><label for="early">تعجیل</label><input id="early" name="early" placeholder="00:15" value="{{ values.early }}"></div>
+      <div class="field"><label for="work_days">روزهای کاری</label><input id="work_days" name="work_days" type="number" min="0" max="31" step="0.01" value="{{ values.work_days }}"></div>
+      <div class="field"><label for="work_minutes">دقایق کاری</label><input id="work_minutes" name="work_minutes" type="number" min="0" max="10080" step="0.01" value="{{ values.work_minutes }}"></div>
+      <div class="field"><label for="symbol">نماد <span aria-hidden="true">*</span></label><input id="symbol" name="symbol" maxlength="8" required value="{{ values.symbol }}"></div>
+      <div class="field"><label for="color">رنگ</label><input id="color" name="color" type="color" value="{{ values.color }}"></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">{% if schedule %}ویرایش{% else %}افزودن{% endif %}</button>
+      {% if schedule %}<a class="btn" href="{% url 'attendance:schedule_definitions' %}">انصراف</a>{% endif %}</div>
+  </form>
+</div>
+<div class="card">
+  <table class="table"><thead><tr><th>نام جدول زمانی</th><th>عملیات</th></tr></thead><tbody>
+    {% for item in rows %}
+      <tr><td>{{ item.name }}</td><td>
+        <a class="btn" href="{% url 'attendance:schedule_definition_edit' item.pk %}">ویرایش</a>
+        <form class="inline" method="post" action="{% url 'attendance:schedule_definition_edit' item.pk %}" onsubmit="return confirm('جدول زمانی حذف شود؟')">
+          {% csrf_token %}<input type="hidden" name="action" value="delete"><button class="btn" type="submit">حذف</button>
+        </form>
+      </td></tr>
+    {% empty %}<tr><td colspan="2" class="empty">جدول زمانی ثبت نشده است.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<style>
+.schedule-form .form-grid{align-items:end}.form-actions{display:flex;gap:10px;margin-top:16px}
+.rest-row{display:flex;gap:8px;margin:6px 0}.rest-row input{min-width:100px;padding:7px;border:1px solid var(--border);border-radius:8px;font:inherit}
+.field input[type=checkbox]{width:auto;margin-left:6px}
+</style>
+<script>
+  document.getElementById('add-rest').addEventListener('click', function () {
+    const row = document.createElement('div');
+    row.className = 'rest-row';
+    row.innerHTML = '<input aria-label="شروع استراحت" type="time" name="rest_from"><input aria-label="پایان استراحت" type="time" name="rest_to"><button class="btn remove-rest" type="button">حذف بازه</button>';
+    document.getElementById('rest-intervals').appendChild(row);
+  });
+  document.getElementById('rest-intervals').addEventListener('click', function (event) {
+    if (event.target.classList.contains('remove-rest')) {
+      const rows = this.querySelectorAll('.rest-row');
+      if (rows.length > 1) event.target.closest('.rest-row').remove();
+      else event.target.closest('.rest-row').querySelectorAll('input').forEach(input => input.value = '');
+    }
+  });
+</script>
+{% endblock %}

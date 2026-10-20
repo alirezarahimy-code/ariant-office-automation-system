@@ -119,8 +119,9 @@ def run_standard(request, code):
     elif code == 'raw':
         title = 'تردد خام دستگاه‌ها'
         header = ['دستگاه', 'کد', 'زمان', 'وضعیت']
+        allowed_badges = employees.values_list('badge_no', flat=True)
         for r in RawRecord.objects.filter(
-                punch_time__gte=start, punch_time__lt=end
+                pin__in=allowed_badges, punch_time__gte=start, punch_time__lt=end
         ).select_related('device')[:500]:
             rows.append([r.device.name, r.pin, str(r.punch_time), r.get_state_display()])
     elif code == 'devices':
@@ -133,7 +134,8 @@ def run_standard(request, code):
         title = 'بازدیدکنندگان'
         header = ['نام', 'میزبان', 'علت', 'ورود', 'خروج']
         for v in Visitor.objects.filter(
-                enter_time__gte=start, enter_time__lt=end).select_related('host'):
+                host__in=employees, enter_time__gte=start, enter_time__lt=end
+        ).select_related('host'):
             rows.append([v.name, str(v.host or '—'), str(v.reason or '—'),
                          str(v.enter_time), str(v.leave_time or '—')])
 
