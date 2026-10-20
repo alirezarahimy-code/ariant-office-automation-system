@@ -91,29 +91,57 @@ class PersonnelReportTests(TestCase):
         self.assertEqual(response.context['rows'][0][4], 540)
         self.assertContains(response, '۱۴۰۴/۰۷/۰۶')
 
-    def test_daily_report_paginates_and_exports_selected_rows(self):
+    def test_daily_report_pages_by_employee_and_exports_all_selected_rows(self):
         start = jdatetime.date(1404, 7, 1).togregorian()
-        for day in range(51):
+        employees = [self.employee]
+        for index in range(50):
+            employees.append(Employee.objects.create(
+                badge_no=f'RP-P{index:03d}', first_name='کارمند',
+                last_name=f'صفحه {index + 2:02d}'))
+        for index, employee in enumerate(employees):
             DailyRecord.objects.create(
-                employee=self.employee,
-                date=start + gregorian.timedelta(days=day),
-                worked_minutes=day, state=DailyRecord.State.ONTIME)
+                employee=employee, date=start, worked_minutes=480 + index,
+                state=DailyRecord.State.ONTIME)
         params = {
-            'selectedBadgeNumbers': [self.employee.badge_no],
-            'FromDateHijri': '1404/07/01', 'ToDateHijri': '1404/09/01',
+            'selectedBadgeNumbers': [employee.badge_no for employee in employees],
+            'FromDateHijri': '1404/07/01', 'ToDateHijri': '1404/07/30',
         }
         url = reverse('reports:run_standard', args=['daily'])
         response = self.client.get(url, params)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['page_obj'].paginator.num_pages, 2)
-        self.assertEqual(len(response.context['rows']), 50)
+        self.assertEqual(response.context['page_obj'].paginator.num_pages, 51)
+        self.assertEqual(len(response.context['rows']), 1)
+        self.assertEqual(response.context['rows'][0][0], str(self.employee))
 
         second_page = self.client.get(url, {**params, 'page': '2'})
         self.assertEqual(len(second_page.context['rows']), 1)
+        self.assertEqual(second_page.context['rows'][0][0], str(employees[1]))
         csv_response = self.client.get(url, {**params, 'export': 'csv'})
         self.assertEqual(csv_response.status_code, 200)
         self.assertIn('text/csv', csv_response['Content-Type'])
-        self.assertIn(self.employee.last_name, csv_response.content.decode('utf-8-sig'))
+        csv_text = csv_response.content.decode('utf-8-sig')
+        self.assertIn(self.employee.last_name, csv_text)
+        self.assertIn(employees[-1].last_name, csv_text)
+
+    def test_sum_report_pages_one_summary_per_selected_employee(self):
+        other = Employee.objects.create(
+            badge_no='RP-SUM-2', first_name='نگار', last_name='دوم')
+        date = jdatetime.date(1404, 7, 3).togregorian()
+        for index, employee in enumerate((self.employee, other)):
+            DailyRecord.objects.create(
+                employee=employee, date=date, worked_minutes=400 + index,
+                state=DailyRecord.State.ONTIME)
+        params = {
+            'selectedBadgeNumbers': [self.employee.badge_no, other.badge_no],
+            'isMonthly': 'true', 'year': '1404', 'month': '7',
+        }
+        url = reverse('reports:run_standard', args=['sum'])
+        first = self.client.get(url, params)
+        self.assertEqual(first.context['page_obj'].paginator.num_pages, 2)
+        self.assertEqual(len(first.context['rows']), 1)
+        second = self.client.get(url, {**params, 'page': '2'})
+        self.assertEqual(len(second.context['rows']), 1)
+        self.assertEqual(second.context['rows'][0][0], str(other))
 
     def test_personnel_selector_uses_reference_advanced_filter_families(self):
         AppSetting.objects.create(key='certificates', value='کارشناسی|ارشد')

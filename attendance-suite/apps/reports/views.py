@@ -253,13 +253,15 @@ def _personnel_report(request, code):
                             item.overtime_minutes, item.get_state_display()]
                            for item in raw]
             return _csv_response(title, header, export_rows)
-        page_obj = Paginator(daily_qs, 50).get_page(request.GET.get('page'))
+        page_obj = Paginator(selected_employees, 1).get_page(request.GET.get('page'))
+        page_employees = list(page_obj.object_list)
+        page_records = daily_qs.filter(employee__in=page_employees)
         rows = [[str(item.employee), _jdate_text(item.date),
                  item.check_in.strftime('%H:%M') if item.check_in else '',
                  item.check_out.strftime('%H:%M') if item.check_out else '',
                  item.worked_minutes, item.late_minutes, item.early_minutes,
                  item.overtime_minutes, item.get_state_display()]
-                for item in page_obj.object_list]
+                for item in page_records]
     elif report_ready and code == 'sum':
         aggregates = {
             item['employee_id']: item
@@ -286,7 +288,7 @@ def _personnel_report(request, code):
             ])
         if request.GET.get('export') == 'csv' and has_perm(request.user, 'reports', 'export'):
             return _csv_response(title, header, summary_rows)
-        page_obj = Paginator(summary_rows, 50).get_page(request.GET.get('page'))
+        page_obj = Paginator(summary_rows, 1).get_page(request.GET.get('page'))
         rows = page_obj.object_list
     else:
         page_obj = None
