@@ -9,7 +9,7 @@
     <a class="btn" href="{% url 'reports:index' %}">فهرست گزارش‌ها</a>
   </div>
 </div>
-<form method="get" class="card" id="personnelReportForm">
+<form method="get" class="card" id="personnelReportForm" data-search-url="{% url 'reports:employee_search' %}">
   <div class="card-title">انتخاب پرسنل</div>
   <div class="form-grid">
     <div class="field"><label for="employeeSearch">جستجوی پرسنل</label><input id="employeeSearch" type="search" placeholder="نام یا شماره کارگری"></div>
@@ -20,6 +20,15 @@
       <input class="department-filter" type="checkbox" value="{{ node.id }}" data-subtree="{{ node.subtree_ids }}" data-ancestors="{{ node.ancestor_ids }}"> {{ node.name }}
     </label>{% empty %}<p class="empty">واحد سازمانی در دامنهٔ دسترسی یافت نشد.</p>{% endfor %}
   </div>
+  <details class="card" style="margin:8px 0;padding:10px">
+    <summary style="cursor:pointer">جستجوی پیشرفته</summary>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label for="genderFilter">جنسیت</label><select id="genderFilter"><option value="">همه</option><option value="M">مرد</option><option value="F">زن</option><option value="blank">ثبت‌نشده</option></select></div>
+      <div class="field"><label for="employmentTypeFilter">نوع استخدام</label><select id="employmentTypeFilter"><option value="">همه</option>{% for item in employment_types %}<option value="{{ item.pk }}">{{ item.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="positionFilter">سمت</label><select id="positionFilter"><option value="">همه</option>{% for item in positions %}<option value="{{ item.pk }}">{{ item.title }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="actions"><button class="btn" type="button" onclick="filterEmployees()">اعمال فیلترها</button><button class="btn" type="button" onclick="clearAdvancedFilters()">پاک‌کردن فیلترها</button></div>
+  </details>
   <div class="actions">
     <button class="btn" type="button" onclick="setEmployeeChecks(true)">همه</button>
     <button class="btn" type="button" onclick="reverseEmployeeChecks()">معکوس‌کردن انتخاب</button>
@@ -32,6 +41,7 @@
       </label>
     {% empty %}<p class="empty">پرسنلی در دامنهٔ دسترسی شما وجود ندارد.</p>{% endfor %}
   </div>
+  <p id="employeeFilterStatus" class="sub" aria-live="polite"></p>
 
   <div class="card-title">انتخاب بازه زمانی</div>
   <div class="form-grid">
@@ -102,17 +112,71 @@
       el.querySelectorAll('input,select').forEach((input) => input.disabled = monthly);
     });
   }
-  function filterEmployees() {
-    const term = document.getElementById('employeeSearch').value.trim().toLocaleLowerCase();
-    const selectedDepartments = new Set();
-    document.querySelectorAll('.department-filter:checked').forEach((input) => {
-      input.dataset.subtree.split(',').forEach((id) => selectedDepartments.add(id));
+  let employeeFilterTimer;
+  let employeeFilterVersion = 0;
+  function scheduleEmployeeFilter() {
+    window.clearTimeout(employeeFilterTimer);
+    employeeFilterTimer = window.setTimeout(filterEmployees, 250);
+  }
+  async function filterEmployees() {
+    const params = new URLSearchParams();
+    const term = document.getElementById('employeeSearch').value.trim();
+    if (term) params.set('q', term);
+    const checkedDepartments = [...document.querySelectorAll('.department-filter:checked')];
+    const checkedDepartmentIds = new Set(checkedDepartments.map((input) => input.value));
+    checkedDepartments.forEach((input) => {
+      const hasSelectedAncestor = input.dataset.ancestors.split(',')
+        .some((id) => checkedDepartmentIds.has(id));
+      if (!hasSelectedAncestor) params.append('department', input.value);
     });
-    document.querySelectorAll('.employee-option').forEach((el) => {
-      const matchesText = el.dataset.search.toLocaleLowerCase().includes(term);
-      const matchesDepartment = !selectedDepartments.size || selectedDepartments.has(el.dataset.department);
-      el.style.display = matchesText && matchesDepartment ? 'block' : 'none';
-    });
+    const gender = document.getElementById('genderFilter').value;
+    const employmentType = document.getElementById('employmentTypeFilter').value;
+    const position = document.getElementById('positionFilter').value;
+    if (gender) params.set('gender', gender);
+    if (employmentType) params.set('employment_type', employmentType);
+    if (position) params.set('position', position);
+
+    const employeeOptions = [...document.querySelectorAll('.employee-option')];
+    const status = document.getElementById('employeeFilterStatus');
+    if (!params.toString()) {
+      employeeOptions.forEach((el) => el.style.display = 'block');
+      status.textContent = '';
+      return;
+    }
+
+    const version = ++employeeFilterVersion;
+    status.textContent = 'در حال جستجو…';
+    try {
+      const url = new URL(document.getElementById('personnelReportForm').dataset.searchUrl, window.location.href);
+      url.search = params.toString();
+      const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+      if (!response.ok) throw new Error('جستجوی پرسنل انجام نشد.');
+      const payload = await response.json();
+      if (version !== employeeFilterVersion) return;
+      if (payload.truncated) {
+        employeeOptions.forEach((el) => el.style.display = 'block');
+        status.textContent = 'بیش از ۵۰۰ نتیجه یافت شد؛ فیلتر را دقیق‌تر کنید.';
+        return;
+      }
+      const matches = new Set(payload.results.map((item) => item.badge_no));
+      employeeOptions.forEach((el) => {
+        const checkbox = el.querySelector('input[type="checkbox"]');
+        el.style.display = matches.has(checkbox.value) ? 'block' : 'none';
+      });
+      status.textContent = `${payload.results.length} نفر یافت شد.`;
+    } catch (error) {
+      if (version === employeeFilterVersion) status.textContent = error.message;
+    }
+  }
+  function clearAdvancedFilters() {
+    document.getElementById('employeeSearch').value = '';
+    document.getElementById('departmentSearch').value = '';
+    document.getElementById('genderFilter').value = '';
+    document.getElementById('employmentTypeFilter').value = '';
+    document.getElementById('positionFilter').value = '';
+    document.querySelectorAll('.department-filter').forEach((input) => input.checked = false);
+    filterDepartmentTree();
+    filterEmployees();
   }
   function filterDepartmentTree() {
     const term = document.getElementById('departmentSearch').value.trim().toLocaleLowerCase();
@@ -133,8 +197,11 @@
     }
     filterEmployees();
   }
-  document.getElementById('employeeSearch').addEventListener('input', filterEmployees);
+  document.getElementById('employeeSearch').addEventListener('input', scheduleEmployeeFilter);
   document.getElementById('departmentSearch').addEventListener('input', filterDepartmentTree);
+  document.getElementById('genderFilter').addEventListener('change', scheduleEmployeeFilter);
+  document.getElementById('employmentTypeFilter').addEventListener('change', scheduleEmployeeFilter);
+  document.getElementById('positionFilter').addEventListener('change', scheduleEmployeeFilter);
   document.querySelectorAll('.department-filter').forEach((input) => {
     input.addEventListener('change', departmentChanged);
   });

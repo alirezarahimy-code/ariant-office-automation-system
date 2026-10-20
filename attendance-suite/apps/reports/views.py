@@ -7,7 +7,7 @@ import jdatetime
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -17,7 +17,7 @@ from apps.attendance.services import parse_jalali, to_jdate
 from apps.core.services import (audit, data_scope, has_perm, require_perm,
                                 scoped_employees)
 from apps.device.models import Device, RawRecord, Visitor
-from apps.org.models import Department, Employee
+from apps.org.models import Department, Employee, EmpType, Position
 
 from .models import ReportDef
 
@@ -68,6 +68,23 @@ def _report_value(value):
     if isinstance(value, gregorian.time):
         return value.strftime('%H:%M:%S')
     return str(value) if value is not None else ''
+
+
+def _department_subtree_ids(root_ids):
+    departments = list(Department.objects.filter(is_active=True).values_list('pk', 'parent_id'))
+    children = {}
+    for department_id, parent_id in departments:
+        children.setdefault(parent_id, []).append(department_id)
+    expanded = set()
+    pending = [department_id for department_id, _ in departments
+               if department_id in root_ids]
+    while pending:
+        department_id = pending.pop()
+        if department_id in expanded:
+            continue
+        expanded.add(department_id)
+        pending.extend(children.get(department_id, ()))
+    return expanded
 
 
 def _department_tree(visible_employees):
@@ -141,6 +158,12 @@ def _personnel_report(request, code):
     ).select_related('department').order_by('last_name', 'first_name', 'badge_no'))
     visible_by_badge = {employee.badge_no: employee for employee in visible}
     department_nodes = _department_tree(visible)
+    employment_types = EmpType.objects.filter(
+        pk__in={employee.emp_type_id for employee in visible if employee.emp_type_id}
+    ).order_by('name')
+    positions = Position.objects.filter(
+        pk__in={employee.position_id for employee in visible if employee.position_id}
+    ).order_by('title')
     requested_badges = request.GET.getlist('selectedBadgeNumbers')
     if len(requested_badges) > 1000:
         messages.error(request, 'در هر گزارش حداکثر ۱۰۰۰ پرسنل انتخاب کنید.')
@@ -266,6 +289,7 @@ def _personnel_report(request, code):
     return render(request, 'reports/personnel_report.html', {
         'title': title, 'header': header, 'rows': rows,
         'employees': visible, 'department_nodes': department_nodes,
+        'employment_types': employment_types, 'positions': positions,
         'selected_badges': selected_badges,
         'selected_count': len(selected_employees),
         'criteria_submitted': criteria_submitted,
@@ -279,6 +303,54 @@ def _personnel_report(request, code):
         'can_export': has_perm(request.user, 'reports', 'export'),
         'export_url': '?' + urlencode(export_params, doseq=True),
     })
+
+
+@require_perm('reports', 'report')
+def employee_search(request):
+    """Scope-safe lookup endpoint used by the personnel selector filters."""
+    queryset = scoped_employees(
+        request.user, 'reports', Employee.objects.filter(is_active=True)
+    ).select_related('department')
+    term = request.GET.get('q', '').strip()[:100]
+    if term:
+        queryset = queryset.filter(
+            Q(first_name__icontains=term) | Q(last_name__icontains=term)
+            | Q(badge_no__icontains=term)
+        )
+
+    raw_department_ids = request.GET.getlist('department')
+    if len(raw_department_ids) > 500:
+        return JsonResponse({'error': 'تعداد واحدهای انتخابی بیش از حد مجاز است.'}, status=400)
+    department_ids = set()
+    for value in raw_department_ids:
+        try:
+            department_ids.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    if department_ids:
+        queryset = queryset.filter(
+            department_id__in=_department_subtree_ids(department_ids))
+
+    gender = request.GET.get('gender', '')
+    if gender in ('M', 'F', 'blank'):
+        queryset = queryset.filter(gender='' if gender == 'blank' else gender)
+    for param, field in (('employment_type', 'emp_type_id'), ('position', 'position_id')):
+        value = request.GET.get(param, '')
+        if value:
+            try:
+                queryset = queryset.filter(**{field: int(value)})
+            except (TypeError, ValueError):
+                return JsonResponse({'error': f'{param} نامعتبر است.'}, status=400)
+
+    matches = list(queryset.order_by(
+        'last_name', 'first_name', 'badge_no')[:501])
+    results = [{
+        'badge_no': employee.badge_no,
+        'name': f'{employee.first_name} {employee.last_name}',
+        'department_id': employee.department_id,
+        'department': employee.department.name if employee.department_id else '',
+    } for employee in matches[:500]]
+    return JsonResponse({'results': results, 'truncated': len(matches) > 500})
 
 
 @require_perm('reports', 'view')

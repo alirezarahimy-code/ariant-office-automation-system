@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.attendance.models import DailyRecord, Punch
 from apps.core.models import Permission, Role, RoleDataScope, UserRole
-from apps.org.models import Department, Employee
+from apps.org.models import Department, Employee, EmpType, Position
 from apps.reports.models import ReportDef
 
 User = get_user_model()
@@ -165,6 +165,57 @@ class PersonnelReportTests(TestCase):
         self.assertEqual(len(response.context['rows']), 1)
         self.assertContains(response, 'آزمایشی')
         self.assertNotContains(response, 'محدود')
+
+    def test_employee_search_endpoint_applies_department_branch_and_advanced_filters(self):
+        root = Department.objects.create(name='عملیات', code='D-OPS')
+        child = Department.objects.create(
+            name='اداری', code='D-ADMIN', parent=root)
+        outside_department = Department.objects.create(name='فروش', code='D-SALES')
+        emp_type = EmpType.objects.create(name='رسمی', code='ET-PERM')
+        position = Position.objects.create(title='کارشناس', department=child)
+        self.employee.department = child
+        self.employee.emp_type = emp_type
+        self.employee.position = position
+        self.employee.gender = 'F'
+        self.employee.save(update_fields=['department', 'emp_type', 'position', 'gender'])
+        outside = Employee.objects.create(
+            badge_no='RP-306', first_name='علی', last_name='خارج',
+            department=outside_department, gender='F')
+        response = self.client.get(reverse('reports:employee_search'), {
+            'department': str(root.pk), 'gender': 'F',
+            'employment_type': str(emp_type.pk), 'position': str(position.pk),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item['badge_no'] for item in response.json()['results']],
+                         [self.employee.badge_no])
+        self.assertNotIn(outside.badge_no,
+                         [item['badge_no'] for item in response.json()['results']])
+
+    def test_employee_search_endpoint_enforces_report_scope_and_filters(self):
+        self.employee.gender = 'M'
+        self.employee.save(update_fields=['gender'])
+        other = Employee.objects.create(
+            badge_no='RP-305', first_name='نگار', last_name='خارج از دامنه',
+            gender='F')
+        user = User.objects.create_user(
+            'employee-search-scope', password='x', employee=self.employee)
+        role = Role.objects.create(name='جستجوی محدود', code='employee-search-scope')
+        role.permissions.add(Permission.objects.get_or_create(
+            module='reports', action='report')[0])
+        UserRole.objects.create(user=user, role=role)
+        RoleDataScope.objects.create(role=role, module='reports', scope='self')
+        self.client.force_login(user)
+
+        url = reverse('reports:employee_search')
+        response = self.client.get(url, {'q': 'RP-'})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual([row['badge_no'] for row in payload['results']],
+                         [self.employee.badge_no])
+        denied_search = self.client.get(url, {'q': other.badge_no})
+        self.assertEqual(denied_search.json()['results'], [])
+        gender_filter = self.client.get(url, {'gender': 'F'})
+        self.assertEqual(gender_filter.json()['results'], [])
 
     def test_custom_punch_report_respects_employee_scope(self):
         other = Employee.objects.create(
