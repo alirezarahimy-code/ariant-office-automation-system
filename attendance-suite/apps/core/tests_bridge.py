@@ -169,6 +169,14 @@ class ParityTests(TestCase):
         self.assertEqual(self.client.get(reverse('device:cards')).status_code,
                          200)
         self.client.post(reverse('device:cards'), {'card_no': 'C-1'})
+        self.client.post(reverse('device:cards'), {'card_no': 'C' * 41})
+        from apps.device.models import Card, Visitor
+        self.assertEqual(Card.objects.count(), 1)
+        self.client.post(reverse('device:visitors'), {
+            'name': '', 'reason_id': 'bad-id'})
+        self.assertEqual(Visitor.objects.count(), 0)
+        self.client.post(reverse('device:visitors'), {'name': 'مهمان'})
+        self.assertEqual(Visitor.objects.count(), 1)
         self.client.post(reverse('device:visitors'), {'name': 'مهمان'})
         self.assertEqual(self.client.get(
             reverse('device:cards')).status_code, 200)

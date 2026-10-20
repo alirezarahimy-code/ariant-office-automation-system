@@ -194,20 +194,33 @@ def visitors(request):
         request.user, Employee.objects.filter(is_active=True))
     if request.method == 'POST' and has_perm(request.user, 'device', 'add'):
         from django.utils import timezone
+        name = request.POST.get('name', '').strip()
+        card_no = request.POST.get('card_no', '').strip()
+        description = request.POST.get('description', '').strip()
         host_id = request.POST.get('host_id') or None
-        host = allowed_employees.filter(pk=host_id).first() if host_id else None
-        if host_id and host is None:
+        reason_id = request.POST.get('reason_id') or None
+        host = (allowed_employees.filter(pk=host_id).first()
+                if host_id and str(host_id).isdigit() else None)
+        reason = (VisitReason.objects.filter(pk=reason_id).first()
+                  if reason_id and str(reason_id).isdigit() else None)
+        if not name or len(name) > 160 or len(card_no) > 40 or len(description) > 300:
+            messages.error(request, 'نام بازدیدکننده یا طول یکی از فیلدها معتبر نیست.')
+        elif host_id and host is None:
             messages.error(request, 'میزبان انتخاب‌شده خارج از دامنهٔ مجاز است.')
-            return redirect('device:visitors')
-        visitor = Visitor.objects.create(
-            name=request.POST.get('name', '').strip(),
-            card_no=request.POST.get('card_no', '').strip(),
-            reason_id=request.POST.get('reason_id') or None,
-            host=host,
-            enter_time=timezone.now(),
-            description=request.POST.get('description', ''))
-        audit(request.user, 'add', 'Visitor', visitor.pk)
-        messages.success(request, 'بازدیدکننده ثبت شد.')
+        elif reason_id and reason is None:
+            messages.error(request, 'علت مراجعهٔ انتخاب‌شده معتبر نیست.')
+        else:
+            visitor = Visitor(
+                name=name, card_no=card_no, reason=reason, host=host,
+                enter_time=timezone.now(), description=description)
+            try:
+                visitor.full_clean()
+                visitor.save()
+            except ValidationError:
+                messages.error(request, 'اطلاعات بازدیدکننده معتبر نیست.')
+            else:
+                audit(request.user, 'add', 'Visitor', visitor.pk)
+                messages.success(request, 'بازدیدکننده ثبت شد.')
         return redirect('device:visitors')
     return render(request, 'device/visitors.html', {
         'visitors': (Visitor.objects.all() if _has_global_sync_scope(request.user)
@@ -232,6 +245,8 @@ def cards(request):
         employee = allowed_employees.filter(pk=employee_id).first() if employee_id else None
         if not card_no:
             messages.error(request, 'شماره کارت الزامی است.')
+        elif len(card_no) > 40:
+            messages.error(request, 'شماره کارت حداکثر ۴۰ نویسه است.')
         elif employee_id and employee is None:
             messages.error(request, 'پرسنل انتخاب‌شده خارج از دامنهٔ مجاز است.')
         elif not employee_id and not _has_global_sync_scope(request.user):
