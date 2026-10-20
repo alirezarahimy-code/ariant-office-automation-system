@@ -393,6 +393,29 @@ class LeaveType(models.Model):
         return self.name
 
 
+class PreCard(models.Model):
+    """T5Web PishCard configuration (CardBadgeNumber / device / state / interval)."""
+
+    card_badge_number = models.PositiveBigIntegerField(
+        'شماره کارت پیش‌کارت', unique=True)
+    valid_secs = models.PositiveIntegerField('مدت اعتبار (ثانیه)')
+    leave_type = models.ForeignKey(
+        LeaveType, verbose_name='وضعیت کارت', on_delete=models.PROTECT,
+        related_name='pre_cards')
+    device = models.ForeignKey(
+        'device.Device', verbose_name='دستگاه', on_delete=models.PROTECT,
+        related_name='pre_cards')
+    only_first = models.BooleanField('فقط اولین رکورد', default=False)
+
+    class Meta:
+        verbose_name = 'پیش‌کارت'
+        verbose_name_plural = 'پیش‌کارت‌ها'
+        ordering = ['card_badge_number']
+
+    def __str__(self) -> str:
+        return str(self.card_badge_number)
+
+
 class LeaveBalance(models.Model):
     employee = models.ForeignKey(
         'org.Employee', verbose_name='کارمند', on_delete=models.CASCADE,

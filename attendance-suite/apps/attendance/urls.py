@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, views_extra, views_schedule
+from . import views, views_extra, views_precards, views_schedule
 
 app_name = 'attendance'
 
@@ -43,6 +43,7 @@ urlpatterns = [
     path('valid-leaves/', views_schedule.valid_leaves, name='valid_leaves'),
     path('valid-leaves/<int:pk>/', views_schedule.valid_leaves,
          name='valid_leave_edit'),
+    path('pre-cards/', views_precards.pre_cards, name='pre_cards'),
     path('import/', views_extra.import_csv, name='import_csv'),
     path('personnel-status/', views_extra.personnel_status,
          name='personnel_status'),

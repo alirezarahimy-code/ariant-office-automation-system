@@ -5,7 +5,7 @@ shells and navigation trees rather than being folded into these menus.
 """
 from django.urls import NoReverseMatch, reverse
 
-from apps.core.services import user_permissions
+from apps.core.services import data_scope, user_permissions
 
 
 # The ordering and captions follow T5V3Web's embedded menu resources. A menu
@@ -50,6 +50,8 @@ T5_MENU = (
              ("attendance.manage", "device.manage")),
             ("ویرایش تأخیر و تعجیل", "attendance:edit_late_early", "attendance.manage"),
             ("صدور مجوز کسر کار", "attendance:valid_leaves", "attendance.manage"),
+            ("پیش‌کارت", "attendance:pre_cards",
+             ("attendance.manage", "device.manage", "scope:attendance_device_all")),
             ("رکورد تردد", "attendance:punches", "attendance.view"),
             ("کنترل یکپارچه", "attendance:total_control", "attendance.view"),
             ("گزارش جدولی", "reports:index", "reports.view"),
@@ -105,8 +107,17 @@ def t5web_navigation(request):
             label, route, permission, *args = entry
             required_permissions = (permission if isinstance(permission, (tuple, list))
                                     else (permission,))
+            needs_global_attendance_device_scope = (
+                "scope:attendance_device_all" in required_permissions)
+            required_permissions = tuple(
+                required for required in required_permissions
+                if required != "scope:attendance_device_all")
             if not user.is_superuser and not all(
                     required in granted for required in required_permissions):
+                continue
+            if needs_global_attendance_device_scope and not user.is_superuser and not (
+                    data_scope(user, "attendance") == "all"
+                    and data_scope(user, "device") == "all"):
                 continue
             try:
                 url = reverse(route, args=args or None)
