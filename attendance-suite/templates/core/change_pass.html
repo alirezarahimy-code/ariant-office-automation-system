@@ -1,11 +1,18 @@
 {% extends 'base.html' %}
 {% block title %}تغییر رمز{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>تغییر رمز عبور</h1></div></div>
-<div class="card"><form method="post" class="form-grid">{% csrf_token %}
-  <div class="field"><label>رمز فعلی</label><input type="password" name="old_password" required></div>
-  <div class="field"><label>رمز جدید</label><input type="password" name="new_password1" required></div>
-  <div class="field"><label>تکرار رمز جدید</label><input type="password" name="new_password2" required></div>
-  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">تغییر رمز</button></div>
-</form></div>
+<div class="page-head"><div><h1>تغییر رمز</h1></div></div>
+<div class="card">
+  {% if force_password_change %}
+    <div class="alert alert-warning" role="alert">به منظور مسائل امنیتی، موظف به جایگزینی رمز عبور جدید هستید.</div>
+  {% endif %}
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% if force_password_change %}<input type="hidden" name="Message" value="1">{% endif %}
+    <div class="field"><label for="OldPassword">کلمه عبور قبلی</label><input id="OldPassword" type="password" name="OldPassword" required autocomplete="current-password"></div>
+    <div class="field"><label for="NewPassword">کلمه عبور جدید</label><input id="NewPassword" type="password" name="NewPassword" required autocomplete="new-password" minlength="6"></div>
+    <div class="field"><label for="ConfirmPassword">تأیید کلمه عبور</label><input id="ConfirmPassword" type="password" name="ConfirmPassword" required autocomplete="new-password" minlength="6"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">تأیید</button></div>
+  </form>
+</div>
 {% endblock %}

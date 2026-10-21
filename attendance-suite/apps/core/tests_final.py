@@ -536,6 +536,24 @@ class NewPagesSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Punch.objects.exists())
 
+    def test_insert_record_picker_search_is_paged_and_reaches_beyond_first_page(self):
+        from django.urls import reverse
+        from apps.org.models import Employee
+        Employee.objects.bulk_create([
+            Employee(badge_no=f'PX{i:04d}', first_name='Picker', last_name='Test')
+            for i in range(105)
+        ])
+        url = reverse('attendance:insert_record_people')
+        first = self.client.get(url, {'q': 'Picker'})
+        self.assertEqual(first.status_code, 200)
+        payload = first.json()
+        self.assertEqual(len(payload['results']), 100)
+        self.assertTrue(payload['has_more'])
+        second = self.client.get(url, {'q': 'Picker', 'page': 2})
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(len(second.json()['results']), 5)
+        self.assertFalse(second.json()['has_more'])
+
     def test_insert_record_freezes_scoped_badge_and_rejects_external_referrer(self):
         from django.urls import reverse
         from apps.org.models import Employee

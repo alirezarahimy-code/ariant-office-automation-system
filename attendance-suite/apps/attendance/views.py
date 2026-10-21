@@ -3,9 +3,11 @@ import datetime as gregorian
 
 import jdatetime
 from django.contrib import messages
+from django.http import JsonResponse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_GET
 
 from apps.core.services import audit, has_perm, require_perm, scoped_employees
 
@@ -558,6 +560,45 @@ def total_control(request):
 
 
 @require_perm('attendance', 'add')
+@require_GET
+def insert_record_people(request):
+    """Scoped, paged JSON search for the T5-style personnel picker."""
+    from django.db.models import Q
+    from apps.org.models import Employee
+
+    query = request.GET.get('q', '').strip()[:100]
+    try:
+        page = max(1, min(int(request.GET.get('page', '1')), 10000))
+    except (TypeError, ValueError):
+        page = 1
+    page_size = 100
+    employees = scoped_employees(
+        request.user, 'attendance', Employee.objects.filter(is_active=True)
+    ).select_related('department').order_by('badge_no')
+    if query:
+        employees = employees.filter(
+            Q(badge_no__icontains=query)
+            | Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(department__name__icontains=query)
+        )
+
+    start = (page - 1) * page_size
+    rows = list(employees[start:start + page_size + 1])
+    has_more = len(rows) > page_size
+    rows = rows[:page_size]
+    return JsonResponse({
+        'results': [{
+            'badgeNo': row.badge_no,
+            'name': f'{row.first_name} {row.last_name}'.strip(),
+            'department': row.department.name if row.department else '',
+        } for row in rows],
+        'has_more': has_more,
+        'page': page,
+    })
+
+
+@require_perm('attendance', 'add')
 def insert_record(request):
     """ثبت دستی تردد با قراردادهای اصلی T5ِ تاریخ/ساعت/CheckType.
 
@@ -582,7 +623,7 @@ def insert_record(request):
                     date_value=None, time_value=None, check_type='0',
                     referrer_url=''):
         selected_badges = [str(value) for value in (selected_badges or [])]
-        employees = list(allowed_employees[:400])
+        employees = list(allowed_employees[:100])
         visible_badges = {employee.badge_no for employee in employees}
         # Keep a frozen or previously selected, scoped employee visible even when
         # their badge is outside the first page of the picker.

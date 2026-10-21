@@ -10,6 +10,8 @@ class User(AbstractUser):
     employee = models.OneToOneField(
         'org.Employee', verbose_name='کارمند', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='user')
+    must_change_password = models.BooleanField(
+        'الزام تغییر گذرواژه در ورود بعدی', default=False)
 
     class Meta:
         verbose_name = 'کاربر'

@@ -13,10 +13,12 @@
   <input type="hidden" name="referrerURL" value="{{ referrer_url }}">
   {% if is_freeze %}
     <input type="hidden" name="badgeNumber" value="{{ frozen_badge_number }}">
+  {% endif %}
+  <div id="selectedBadgeInputs" hidden>
     {% for badge in selected_badge_numbers %}
       <input type="hidden" name="selectedBadgeNumbers" value="{{ badge }}">
     {% endfor %}
-  {% endif %}
+  </div>
 
   <section class="card">
     <div class="card-title">انتخاب پرسنل</div>
@@ -35,20 +37,23 @@
         </div>
       </div>
     {% endif %}
-    <div id="personnelList" style="max-height:320px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
+    <div id="personnelList" data-search-url="{% url 'attendance:insert_record_people' %}" style="max-height:320px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
       {% for e in employees %}
-        <label class="personnel-option" data-search="{{ e.badge_no }} {{ e.first_name }} {{ e.last_name }} {{ e.department.name|default:'' }}" style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px">
-          <input type="checkbox" name="selectedBadgeNumbers" value="{{ e.badge_no }}"
+        <label class="personnel-option" data-badge="{{ e.badge_no }}" data-name="{{ e.first_name }} {{ e.last_name }}" data-department="{{ e.department.name|default:'' }}" style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px">
+          <input class="personnel-checkbox" type="checkbox" value="{{ e.badge_no }}"
                  {% if e.badge_no in selected_badge_numbers %}checked{% endif %}
                  {% if is_freeze %}disabled{% endif %}>
-          {{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}
+          <span>{{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</span>
           {% if e.department %}<small>({{ e.department.name }})</small>{% endif %}
         </label>
       {% empty %}
         <p>پرسنلی در دامنهٔ دسترسی شما وجود ندارد.</p>
       {% endfor %}
     </div>
-    {% if is_freeze %}<p class="sub">انتخاب پرسنل در این حالت ثابت است.</p>{% endif %}
+    {% if not is_freeze %}
+      <button class="btn" type="button" id="loadMorePeople" hidden>بارگذاری افراد بیشتر</button>
+      <p id="pickerStatus" class="sub" aria-live="polite">برای جستجوی کل فهرست، چند حرف از نام یا شناسه را وارد کنید.</p>
+    {% else %}<p class="sub">انتخاب پرسنل در این حالت ثابت است.</p>{% endif %}
   </section>
 
   <section class="card">
@@ -86,22 +91,134 @@
 <script>
   (() => {
     const search = document.getElementById('personnelSearch');
-    const options = [...document.querySelectorAll('.personnel-option')];
-    const visibleBoxes = () => options
-      .filter(option => !option.hidden)
-      .map(option => option.querySelector('input[type="checkbox"]'));
-    search?.addEventListener('input', () => {
-      const query = search.value.trim().toLocaleLowerCase();
-      for (const option of options) {
-        option.hidden = !option.dataset.search.toLocaleLowerCase().includes(query);
+    const list = document.getElementById('personnelList');
+    const hidden = document.getElementById('selectedBadgeInputs');
+    const status = document.getElementById('pickerStatus');
+    const more = document.getElementById('loadMorePeople');
+    const selected = new Map();
+    let page = 1;
+    let query = '';
+    let hasMore = false;
+    let debounce = null;
+
+    const userFromLabel = label => ({
+      badgeNo: label.dataset.badge,
+      name: label.dataset.name,
+      department: label.dataset.department
+    });
+
+    function syncHiddenInputs() {
+      hidden.replaceChildren();
+      for (const badge of selected.keys()) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'selectedBadgeNumbers';
+        input.value = badge;
+        hidden.appendChild(input);
       }
+    }
+
+    function addPerson(person) {
+      if (list.querySelector(`[data-badge="${CSS.escape(String(person.badgeNo))}"]`)) return;
+      const label = document.createElement('label');
+      label.className = 'personnel-option';
+      label.dataset.badge = String(person.badgeNo);
+      label.dataset.name = person.name || '';
+      label.dataset.department = person.department || '';
+      label.style.cssText = 'display:inline-flex;gap:6px;align-items:center;margin:4px 10px';
+
+      const checkbox = document.createElement('input');
+      checkbox.className = 'personnel-checkbox';
+      checkbox.type = 'checkbox';
+      checkbox.value = String(person.badgeNo);
+      checkbox.checked = selected.has(checkbox.value);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) selected.set(checkbox.value, person);
+        else selected.delete(checkbox.value);
+        syncHiddenInputs();
+      });
+
+      const caption = document.createElement('span');
+      caption.textContent = `${person.badgeNo} — ${person.name || ''}`;
+      label.append(checkbox, caption);
+      if (person.department) {
+        const department = document.createElement('small');
+        department.textContent = ` (${person.department})`;
+        label.appendChild(department);
+      }
+      list.appendChild(label);
+    }
+
+    async function loadPeople(nextPage = 1, append = false) {
+      if (!append) {
+        page = 1;
+        list.replaceChildren();
+      }
+      status.textContent = 'در حال دریافت فهرست پرسنل…';
+      const params = new URLSearchParams({q: query, page: String(nextPage)});
+      try {
+        const response = await fetch(`${list.dataset.searchUrl}?${params}`, {
+          headers: {'Accept': 'application/json'},
+          credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('picker request failed');
+        const data = await response.json();
+        data.results.forEach(addPerson);
+        page = data.page;
+        hasMore = data.has_more;
+        more.hidden = !hasMore;
+        status.textContent = selected.size
+          ? `${selected.size} پرسنل انتخاب شده‌اند.`
+          : 'جستجو در فهرست مجاز پرسنل انجام شد.';
+      } catch (_error) {
+        more.hidden = true;
+        status.textContent = 'دریافت فهرست پرسنل ناموفق بود؛ دوباره تلاش کنید.';
+      }
+    }
+
+    document.querySelectorAll('.personnel-option').forEach(label => {
+      const checkbox = label.querySelector('.personnel-checkbox');
+      const person = userFromLabel(label);
+      if (checkbox.checked) selected.set(checkbox.value, person);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) selected.set(checkbox.value, person);
+        else selected.delete(checkbox.value);
+        syncHiddenInputs();
+      });
+    });
+    syncHiddenInputs();
+
+    search?.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        query = search.value.trim();
+        loadPeople(1, false);
+      }, 250);
+    });
+    more?.addEventListener('click', () => {
+      if (hasMore) loadPeople(page + 1, true);
     });
     document.getElementById('selectVisible')?.addEventListener('click', () => {
-      visibleBoxes().forEach(box => { box.checked = true; });
+      list.querySelectorAll('.personnel-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+        selected.set(checkbox.value, userFromLabel(checkbox.closest('.personnel-option')));
+      });
+      syncHiddenInputs();
+      status.textContent = `${selected.size} پرسنل انتخاب شده‌اند.`;
     });
     document.getElementById('invertVisible')?.addEventListener('click', () => {
-      visibleBoxes().forEach(box => { box.checked = !box.checked; });
+      list.querySelectorAll('.personnel-checkbox').forEach(checkbox => {
+        checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+          selected.set(checkbox.value, userFromLabel(checkbox.closest('.personnel-option')));
+        } else {
+          selected.delete(checkbox.value);
+        }
+      });
+      syncHiddenInputs();
+      status.textContent = `${selected.size} پرسنل انتخاب شده‌اند.`;
     });
+    loadPeople(1, false);
   })();
 </script>
 {% endif %}

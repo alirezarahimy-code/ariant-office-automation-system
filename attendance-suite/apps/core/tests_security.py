@@ -1,10 +1,13 @@
 """آزمون‌های امنیت و دقت: الزام مجوز، دامنه داده، محدودسازی نرخ، گزارش‌ساز."""
 import datetime as gregorian
+from io import BytesIO
+from unittest.mock import patch
 
 import jdatetime
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from django.urls import reverse
 
@@ -19,12 +22,13 @@ from apps.reports.models import ReportDef
 User = get_user_model()
 
 
+@override_settings(LOGIN_CAPTCHA_ENABLED=False)
 class SecurityTests(TestCase):
     def setUp(self):
         self.dept = Department.objects.create(name='مالی', code='FIN')
         self.employee = Employee.objects.create(
             badge_no='900', first_name='ن', last_name='ام', department=self.dept,
-            web_user=True)
+            web_user=True, program_user=True)
         self.user = User.objects.create_user('u1', password='x',
                                              employee=self.employee)
         role = Role.objects.create(name='کارمند', code='emp')
@@ -37,6 +41,50 @@ class SecurityTests(TestCase):
 
     def tearDown(self):
         cache.clear()
+
+    @override_settings(LOGIN_CAPTCHA_ENABLED=True)
+    @patch('apps.core.views._new_captcha_answer', return_value='AAAAAA')
+    def test_login_captcha_is_server_verified_one_time_and_no_store(self, _answer):
+        captcha_url = reverse('core:captcha_image')
+        image_response = self.client.get(captcha_url)
+        self.assertEqual(image_response.status_code, 200)
+        self.assertEqual(image_response['Content-Type'], 'image/png')
+        self.assertIn('no-store', image_response['Cache-Control'])
+        self.assertEqual(Image.open(BytesIO(image_response.content)).size, (196, 64))
+        self.assertIn('core_login_captcha_digest', self.client.session)
+        self.assertNotIn('AAAAAA', repr(dict(self.client.session)))
+
+        success = self.client.post(reverse('core:login'), {
+            'userName': 'u1', 'Password': 'x', 'CaptchaAnswer': 'AAAAAA',
+        })
+        self.assertEqual(success.status_code, 302)
+        self.assertNotIn('core_login_captcha_digest', self.client.session)
+
+        self.client.post(reverse('core:logout'))
+        self.client.get(captcha_url)
+        wrong = self.client.post(reverse('core:login'), {
+            'userName': 'u1', 'Password': 'x', 'CaptchaAnswer': 'BBBBBB',
+        })
+        self.assertEqual(wrong.status_code, 200)
+        self.assertContains(wrong, 'عبارت امنیتی نادرست یا منقضی شده است')
+        reused = self.client.post(reverse('core:login'), {
+            'userName': 'u1', 'Password': 'x', 'CaptchaAnswer': 'AAAAAA',
+        })
+        self.assertEqual(reused.status_code, 200)
+        self.assertFalse(reused.wsgi_request.user.is_authenticated)
+
+    @override_settings(LOGIN_CAPTCHA_ENABLED=True)
+    @patch('apps.core.views._new_captcha_answer', return_value='AAAAAA')
+    def test_login_captcha_expires_after_five_minutes(self, _answer):
+        with patch('apps.core.views.time.time', return_value=1000):
+            self.client.get(reverse('core:captcha_image'))
+        with patch('apps.core.views.time.time', return_value=1301):
+            response = self.client.post(reverse('core:login'), {
+                'userName': 'u1', 'Password': 'x', 'CaptchaAnswer': 'AAAAAA',
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'عبارت امنیتی نادرست یا منقضی شده است')
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
 
     def test_login_required(self):
         resp = self.client.get(reverse('attendance:dashboard'))
@@ -259,6 +307,97 @@ class SecurityTests(TestCase):
             'username': 'u1', 'password': 'x'})
         from apps.core.models import AuditLog
         self.assertTrue(AuditLog.objects.filter(action='login').exists())
+
+    def test_t5_login_field_names_and_safe_return_url(self):
+        login_url = reverse('core:login')
+        form = self.client.get(login_url, {'ReturnURL': '/attendance/requests/'})
+        self.assertContains(form, 'name="userName"')
+        self.assertContains(form, 'name="Password"')
+        self.assertContains(form, 'name="ReturnURL"')
+
+        response = self.client.post(login_url, {
+            'userName': 'u1', 'Password': 'x',
+            'ReturnURL': '/attendance/requests/',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/attendance/requests/')
+
+    def test_t5_logout_clears_session_and_writes_audit(self):
+        from apps.core.models import AuditLog
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('core:logout'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('core:login'))
+        self.assertEqual(self.client.get(reverse('attendance:dashboard')).status_code, 302)
+        self.assertTrue(AuditLog.objects.filter(
+            user=self.user, action='logout'
+        ).exists())
+
+    def test_t5_login_rejects_external_return_url(self):
+        response = self.client.post(reverse('core:login'), {
+            'userName': 'u1', 'Password': 'x',
+            'ReturnURL': '//evil.example/redirect',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('attendance:dashboard'))
+
+    def test_first_login_must_change_password_and_cannot_bypass_gate(self):
+        self.user.must_change_password = True
+        self.user.save(update_fields=['must_change_password'])
+        login_response = self.client.post(reverse('core:login'), {
+            'userName': 'u1', 'Password': 'x',
+            'ReturnURL': reverse('attendance:dashboard'),
+        })
+        self.assertEqual(login_response.status_code, 302)
+        self.assertEqual(login_response['Location'],
+                         reverse('core:change_pass') + '?Message=1')
+        gated = self.client.get(reverse('attendance:dashboard'))
+        self.assertEqual(gated.status_code, 302)
+        self.assertEqual(gated['Location'],
+                         reverse('core:change_pass') + '?Message=1')
+        page = self.client.get(gated['Location'])
+        self.assertContains(page, 'موظف به جایگزینی رمز عبور جدید هستید')
+        changed = self.client.post(reverse('core:change_pass') + '?Message=1', {
+            'Message': '1', 'OldPassword': 'x', 'NewPassword': 'fresh-pass-123',
+            'ConfirmPassword': 'fresh-pass-123',
+        })
+        self.assertEqual(changed.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.must_change_password)
+        self.assertEqual(self.client.get(reverse('attendance:dashboard')).status_code, 200)
+
+    def test_t5_change_password_contract_is_available_to_any_signed_in_user(self):
+        self.client.force_login(self.user)
+        url = reverse('core:change_pass')
+        response = self.client.get(url, {'Message': '1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'موظف به جایگزینی رمز عبور جدید هستید')
+        response = self.client.post(url, {
+            'OldPassword': 'x', 'NewPassword': 'newpass123',
+            'ConfirmPassword': 'newpass123',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpass123'))
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_change_password_rejects_wrong_current_password_and_mismatch(self):
+        self.client.force_login(self.user)
+        url = reverse('core:change_pass')
+        wrong = self.client.post(url, {
+            'OldPassword': 'not-current', 'NewPassword': 'fresh-pass-123',
+            'ConfirmPassword': 'fresh-pass-123',
+        })
+        self.assertEqual(wrong.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('x'))
+        mismatch = self.client.post(url, {
+            'OldPassword': 'x', 'NewPassword': 'fresh-pass-123',
+            'ConfirmPassword': 'different-pass-123',
+        })
+        self.assertEqual(mismatch.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('x'))
 
     def test_builder_rejects_invalid_column(self):
         admin = User.objects.create_superuser('root', password='x')

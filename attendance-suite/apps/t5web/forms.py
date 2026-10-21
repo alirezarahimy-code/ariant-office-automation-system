@@ -61,11 +61,14 @@ class ManagerAccountForm(forms.Form):
 
     @staticmethod
     def _has_access(user, program):
+        if (program == ProgramAccess.Program.T5WEB and user.employee_id
+                and not user.employee.program_user):
+            return False
         grant = ProgramAccess.objects.filter(user=user, program=program).first()
         if grant is not None:
             return grant.is_allowed
         return bool(program == ProgramAccess.Program.T5WEB
-                    and user.employee_id and user.employee.web_user)
+                    and user.employee_id and user.employee.program_user)
 
     def clean_username(self):
         username = self.cleaned_data["username"].strip()
@@ -116,12 +119,15 @@ class ManagerAccountForm(forms.Form):
         user.employee = employee
         user.username = self.cleaned_data["username"]
         user.is_active = self.cleaned_data["is_active"]
+        if not self.instance or self.cleaned_data.get("password"):
+            user.must_change_password = True
         if self.cleaned_data.get("password"):
             user.set_password(self.cleaned_data["password"])
         if commit:
             user.save()
             employee.web_user = self.cleaned_data["t5web_access"]
-            employee.save(update_fields=["web_user"])
+            employee.program_user = self.cleaned_data["t5web_access"]
+            employee.save(update_fields=["web_user", "program_user"])
             UserRole.objects.filter(user=user).delete()
             UserRole.objects.bulk_create([
                 UserRole(user=user, role=role)

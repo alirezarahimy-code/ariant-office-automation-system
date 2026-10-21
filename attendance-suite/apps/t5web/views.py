@@ -1,13 +1,91 @@
 from django.contrib import messages
 from django.db import IntegrityError, transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.core.models import Permission, Role, User, UserRole
 from apps.core.services import audit, require_perm, scoped_employees
 from apps.org.models import Employee
 
 from .forms import ManagerAccountForm, T5RoleForm
+
+
+LICENSE_CHANGE_TYPES = (
+    ("1", "فعال‌سازی"),
+    ("2", "محدودیت پرسنل"),
+    ("3", "محدودیت ایستگاه"),
+    ("4", "محدودیت دستگاه"),
+    ("5", "محدودیت نسخهٔ آزمایشی"),
+    ("6", "محدودیت زمانی برنامه"),
+)
+
+
+@require_perm("core", "manage")
+@require_GET
+def change_lock(request):
+    """Render the reference ChangeLock form without license-side effects."""
+    from django.conf import settings
+
+    return render(request, "t5web/change_lock.html", {
+        "change_types": LICENSE_CHANGE_TYPES,
+        "license_provider_configured": bool(
+            getattr(settings, "T5_LICENSE_CHECKER", "")
+        ),
+        "license_check_url": reverse("t5web:change_lock_check"),
+    })
+
+
+@require_perm("core", "manage")
+@require_POST
+def change_lock_check(request):
+    """Pass one submitted code to the configured trusted provider, fail closed."""
+    from apps.core.licensing import (
+        LicenseCheckResult, configured_license_checker,
+    )
+
+    change_type = request.POST.get("ChangeType", "")
+    code = request.POST.get("Code", "").strip()
+    if change_type not in {value for value, _ in LICENSE_CHANGE_TYPES}:
+        return JsonResponse({
+            "ok": False, "message": "نوع تغییر مجوز معتبر نیست.",
+        }, status=400)
+    if not code or len(code) > 512:
+        return JsonResponse({
+            "ok": False, "message": "کد مجوز باید بین ۱ تا ۵۱۲ نویسه باشد.",
+        }, status=400)
+
+    try:
+        checker = configured_license_checker()
+        if checker is None:
+            return JsonResponse({
+                "ok": False,
+                "message": (
+                    "سرویس معتبر لایسنس T5 پیکربندی نشده است؛ "
+                    "کد بررسی یا ذخیره نشد و هیچ تغییری اعمال نشد."
+                ),
+            }, status=503)
+        result = checker.check(change_type, code)
+        if not isinstance(result, LicenseCheckResult):
+            raise TypeError("License provider returned an untyped result")
+        message = (result.message or "درخواست توسط سرویس لایسنس پردازش شد.")[:1000]
+        if code in message:
+            message = "سرویس لایسنس درخواست را پردازش کرد؛ پیام حاوی کد نمایش داده نشد."
+        audit(request.user,
+              "license_change_accepted" if result.accepted else "license_change_rejected",
+              "T5License", detail=f"change_type={change_type}; provider=configured")
+        return JsonResponse({"ok": result.accepted, "message": message},
+                            status=200 if result.accepted else 400)
+    except Exception:
+        # Never expose provider exception details: an integration could echo
+        # the submitted code or sensitive vendor response data.
+        audit(request.user, "license_check_failed", "T5License",
+              detail=f"change_type={change_type}; provider=configured")
+        return JsonResponse({
+            "ok": False,
+            "message": "نتیجه از سرویس لایسنس دریافت نشد؛ وضعیت نهایی را از سرویس معتبر پیگیری کنید.",
+        }, status=503)
 
 
 @require_perm("core", "manage")

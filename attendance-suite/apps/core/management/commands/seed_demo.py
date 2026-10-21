@@ -62,8 +62,10 @@ class Command(BaseCommand):
             badge_no='1002', defaults={
                 'first_name': 'علی', 'last_name': 'کارمند',
                 'department': it, 'emp_type': et, 'manager': mgr_emp})
-        # The demo web accounts need the same T5 permission flag used by login.
-        Employee.objects.filter(pk__in=[mgr_emp.pk, emp.pk]).update(web_user=True)
+        # T5 AccountController gates web sessions on ProgramUser; WebUser is
+        # retained as a separate legacy flag for reports/UI.
+        Employee.objects.filter(pk__in=[mgr_emp.pk, emp.pk]).update(
+            web_user=True, program_user=True)
 
         admin, _ = User.objects.get_or_create(
             username='admin', defaults={'is_staff': True, 'is_superuser': True})

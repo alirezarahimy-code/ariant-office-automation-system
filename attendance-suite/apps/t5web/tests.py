@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import resolve, reverse
 
 import datetime as gregorian
@@ -10,11 +10,24 @@ from apps.attendance.models import (
 from apps.core.models import (
     AuditLog, Permission, ProgramAccess, Role, RoleDataScope, UserRole,
 )
+from apps.core.licensing import LicenseCheckResult
 from apps.core.services import has_program_access
 from apps.org.models import Department, Employee
 from .menu import T5_MENU, t5web_navigation
 
 User = get_user_model()
+
+
+class FakeLicenseChecker:
+    calls = []
+
+    def check(self, change_type, code):
+        self.calls.append((change_type, code))
+        if code.startswith("explode-"):
+            raise RuntimeError(f"provider diagnostic: {code}")
+        if code == "valid-test-code":
+            return LicenseCheckResult(True, "کد آزمایشی توسط provider آزمایشی پذیرفته شد.")
+        return LicenseCheckResult(False, "کد آزمایشی پذیرفته نشد.")
 
 
 class T5NavigationTests(TestCase):
@@ -86,7 +99,7 @@ class T5ManagerAccountTests(TestCase):
         self.admin = User.objects.create_superuser("manager-admin", password="Admin-Pass-123!")
         self.employee = Employee.objects.create(
             badge_no="T5001", first_name="آرمان", last_name="آزمایشی",
-            web_user=True,
+            web_user=True, program_user=True,
         )
         self.role = Role.objects.create(name="کارشناس", code="t5-operator")
         self.url = reverse("t5web:managers")
@@ -106,16 +119,37 @@ class T5ManagerAccountTests(TestCase):
         account = User.objects.get(username="operator-1")
         self.assertEqual(account.employee_id, self.employee.pk)
         self.assertTrue(account.check_password("New-Passphrase-789!"))
+        self.assertTrue(account.must_change_password)
         self.assertEqual(list(account.user_roles.values_list("role_id", flat=True)), [self.role.pk])
         self.assertEqual(
             set(account.program_access.filter(is_allowed=True).values_list("program", flat=True)),
             {ProgramAccess.Program.T5WEB, ProgramAccess.Program.TWF},
         )
+        self.employee.refresh_from_db()
         self.assertTrue(self.employee.web_user)
+        self.assertTrue(self.employee.program_user)
         self.assertTrue(AuditLog.objects.filter(
             user=self.admin, model="T5UserAccess", action="add",
             object_id=str(account.pk),
         ).exists())
+
+    def test_password_reset_forces_change_at_next_login(self):
+        account = User.objects.create_user(
+            "reset-me", password="Old-Passphrase-789!", employee=self.employee
+        )
+        response = self.client.post(self.url, {
+            "user_id": account.pk,
+            "employee": self.employee.pk,
+            "username": account.username,
+            "password": "Reset-Passphrase-123!",
+            "roles": [],
+            "t5web_access": "on",
+            "is_active": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        account.refresh_from_db()
+        self.assertTrue(account.check_password("Reset-Passphrase-123!"))
+        self.assertTrue(account.must_change_password)
 
     def test_role_editor_stores_action_permissions_and_per_module_scopes(self):
         permission, _ = Permission.objects.get_or_create(
@@ -218,7 +252,7 @@ class T5ManagerAccountTests(TestCase):
         dept = Department.objects.create(name="واحد مجاز", code="T5-SCOPE")
         manager_employee = Employee.objects.create(
             badge_no="T5-MGR", first_name="مدیر", last_name="محدود",
-            department=dept,
+            department=dept, program_user=True,
         )
         in_scope = Employee.objects.create(
             badge_no="T5-IN", first_name="درون", last_name="دامنه",
@@ -257,6 +291,70 @@ class T5ManagerAccountTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 403)
 
+    def test_change_lock_page_is_restricted_and_fails_closed_without_provider(self):
+        FakeLicenseChecker.calls.clear()
+        page_url = reverse("t5web:change_lock")
+        check_url = reverse("t5web:change_lock_check")
+        page = self.client.get(page_url)
+        self.assertEqual(page.status_code, 200)
+        for value in ("1", "2", "3", "4", "5", "6"):
+            self.assertContains(page, f'value="{value}"')
+        invalid = self.client.post(check_url, {
+            "ChangeType": "999", "Code": "never-store-this-license-key",
+        })
+        self.assertEqual(invalid.status_code, 400)
+        self.assertNotIn("never-store-this-license-key", invalid.content.decode())
+        response = self.client.post(check_url, {
+            "ChangeType": "1", "Code": "never-store-this-license-key",
+        })
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("هیچ تغییری اعمال نشد", response.json()["message"])
+        self.assertNotIn("never-store-this-license-key", response.content.decode())
+        self.assertEqual(FakeLicenseChecker.calls, [])
+        self.assertFalse(AuditLog.objects.filter(
+            model="T5License", detail__contains="never-store-this-license-key"
+        ).exists())
+
+        ordinary = User.objects.create_user("license-user", password="License-Pass-123!")
+        self.client.force_login(ordinary)
+        self.assertEqual(self.client.get(page_url).status_code, 403)
+        self.assertEqual(self.client.post(check_url, {
+            "ChangeType": "1", "Code": "valid-test-code",
+        }).status_code, 403)
+
+    @override_settings(T5_LICENSE_CHECKER="apps.t5web.tests.FakeLicenseChecker")
+    def test_change_lock_uses_typed_provider_and_never_logs_or_echoes_codes(self):
+        FakeLicenseChecker.calls.clear()
+        check_url = reverse("t5web:change_lock_check")
+        accepted = self.client.post(check_url, {
+            "ChangeType": "4", "Code": "valid-test-code",
+        })
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.json(), {
+            "ok": True, "message": "کد آزمایشی توسط provider آزمایشی پذیرفته شد."
+        })
+        self.assertEqual(FakeLicenseChecker.calls, [("4", "valid-test-code")])
+        self.assertFalse(AuditLog.objects.filter(
+            model="T5License", detail__contains="valid-test-code"
+        ).exists())
+
+        rejected = self.client.post(check_url, {
+            "ChangeType": "4", "Code": "invalid-test-code",
+        })
+        self.assertEqual(rejected.status_code, 400)
+        self.assertFalse(rejected.json()["ok"])
+        self.assertNotIn("invalid-test-code", rejected.content.decode())
+
+        failing_code = "explode-license-secret"
+        failed = self.client.post(check_url, {
+            "ChangeType": "1", "Code": failing_code,
+        })
+        self.assertEqual(failed.status_code, 503)
+        self.assertNotIn(failing_code, failed.content.decode())
+        self.assertFalse(AuditLog.objects.filter(
+            model="T5License", detail__contains=failing_code
+        ).exists())
+
     def test_application_grants_are_independent_and_explicit(self):
         account = User.objects.create_user(
             "program-user", password="Strong-Passphrase-789!",
@@ -281,14 +379,20 @@ class T5ManagerAccountTests(TestCase):
             user=account, action="program_access_revoked", model="T5Web"
         ).exists())
 
-    def test_login_requires_t5_web_access_flag(self):
+    @override_settings(LOGIN_CAPTCHA_ENABLED=False)
+    def test_login_requires_reference_program_user_flag(self):
         restricted_employee = Employee.objects.create(
             badge_no="T5002", first_name="نرگس", last_name="بدون‌دسترسی",
-            web_user=False,
+            web_user=True, program_user=False,
         )
-        User.objects.create_user(
+        restricted_user = User.objects.create_user(
             "restricted-user", password="Strong-Passphrase-789!",
             employee=restricted_employee,
+        )
+        # An explicit local grant must not bypass T5 3.5.7's ProgramUser gate.
+        ProgramAccess.objects.create(
+            user=restricted_user, program=ProgramAccess.Program.T5WEB,
+            is_allowed=True,
         )
         self.client.logout()
         response = self.client.post(reverse("core:login"), {
@@ -296,7 +400,7 @@ class T5ManagerAccountTests(TestCase):
             "password": "Strong-Passphrase-789!",
         })
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "دسترسی وب برای این پروندهٔ پرسنلی فعال نیست.")
+        self.assertContains(response, "دسترسی T5Web برای این پروندهٔ پرسنلی فعال نیست.")
         self.assertFalse(response.wsgi_request.user.is_authenticated)
         self.assertTrue(AuditLog.objects.filter(
             model="T5Web", action="login_denied",

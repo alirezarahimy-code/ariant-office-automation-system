@@ -72,6 +72,10 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 LOGIN_URL = 'core:login'
 LOGIN_REDIRECT_URL = 'attendance:dashboard'
 LOGOUT_REDIRECT_URL = 'core:login'
+# Optional dotted class path implementing the trusted vendor license contract.
+T5_LICENSE_CHECKER = os.environ.get('T5_LICENSE_CHECKER', '').strip()
+# The T5 3.5.7 web.config enables its login CAPTCHA by default.
+LOGIN_CAPTCHA_ENABLED = os.environ.get('SUITE_LOGIN_CAPTCHA', '1') == '1'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

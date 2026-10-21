@@ -40,15 +40,18 @@ def has_program_access(user, program: str) -> bool:
     if user.employee_id:
         if not user.employee.is_active:
             return False
-        if program == ProgramAccess.Program.T5WEB and not user.employee.web_user:
+        # The shipped T5 AccountController checks UserInfo.ProgramUser before
+        # creating a web session. Keep that gate even with local grants.
+        if (program == ProgramAccess.Program.T5WEB
+                and not user.employee.program_user):
             return False
     access = ProgramAccess.objects.filter(user=user, program=program).first()
     if access is not None:
         return access.is_allowed
-    # Legacy accounts predate the explicit cross-application contract.
-    # T5's existing WebUser bit is the only safe fallback for T5Web itself.
+    # Legacy accounts predate explicit per-application grants. In T5 3.5.7,
+    # ProgramUser—not WebUser—is the login gate observed in AccountController.
     return bool(program == ProgramAccess.Program.T5WEB
-                and user.employee_id and user.employee.web_user)
+                and user.employee_id and user.employee.program_user)
 
 
 def require_perm(module: str, action: str):

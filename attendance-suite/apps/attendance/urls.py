@@ -52,6 +52,8 @@ urlpatterns = [
          name='personnel_status'),
     path('custom-wf/', views_extra.custom_wf, name='custom_wf'),
     path('total-control/', views.total_control, name='total_control'),
+    path('insert-record/people/', views.insert_record_people,
+         name='insert_record_people'),
     path('insert-record/', views.insert_record, name='insert_record'),
     path('edit-late-early/', views.edit_late_early, name='edit_late_early'),
     path('daily-leave-batch/', views.daily_leave_batch, name='daily_leave_batch'),
