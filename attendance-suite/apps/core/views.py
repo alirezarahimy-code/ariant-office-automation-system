@@ -147,6 +147,19 @@ def home(request):
 
 
 @login_required
+def about(request):
+    """T5Web's reference About page, populated from the shipped resource text."""
+    return render(request, 'core/about.html', {
+        'company_name': 'شرکت سامانه های بعد پنجم',
+        'description_1': 'طراح و تولید کننده سیستم های الکترونیکی و کامپیوتری',
+        'description_2': 'ارائه کننده نسل جدید سیستم های حضور و غیاب و کنترل دسترسی',
+        'phone': 'تلفن : 89350(021)',
+        'fax': 'تلفکس : 44293581',
+        'product_name': 'نرم افزار حضور و غیاب سازمانی T5Web v2.0',
+    })
+
+
+@login_required
 def audit_list(request):
     from .services import has_perm
     from .models import AuditLog

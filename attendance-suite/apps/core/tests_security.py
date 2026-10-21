@@ -90,6 +90,20 @@ class SecurityTests(TestCase):
         resp = self.client.get(reverse('attendance:dashboard'))
         self.assertEqual(resp.status_code, 302)
 
+    def test_t5_home_about_routes_and_top_level_links(self):
+        denied = self.client.get(reverse('core:about'))
+        self.assertEqual(denied.status_code, 302)
+        self.client.force_login(self.user)
+        about = self.client.get(reverse('core:about'))
+        self.assertEqual(about.status_code, 200)
+        self.assertContains(about, 'شرکت سامانه های بعد پنجم')
+        self.assertContains(about, '89350(021)')
+        self.assertContains(about, reverse('core:home_index'))
+        self.assertContains(about, reverse('core:about'))
+        home = self.client.get(reverse('core:home_index'))
+        self.assertEqual(home.status_code, 302)
+        self.assertEqual(home.url, reverse('attendance:dashboard'))
+
     def test_permission_denied_403(self):
         self.client.force_login(self.user)
         resp = self.client.get(reverse('attendance:policy'))

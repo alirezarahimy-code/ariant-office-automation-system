@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}درباره ما{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>درباره ما</h1></div></div>
+<section class="card" aria-labelledby="about-company">
+  <header><h2 id="about-company">{{ company_name }}</h2></header>
+  <div class="about-grid">
+    <div>
+      <p>{{ description_1 }}</p>
+      <p>{{ description_2 }}</p>
+    </div>
+    <address>
+      <p>{{ phone }}</p>
+      <p>{{ fax }}</p>
+    </address>
+  </div>
+  <footer class="about-product">{{ product_name }}</footer>
+</section>
+<style>
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.about-grid address{font-style:normal}.about-product{border-top:1px solid #e5eaf2;margin-top:18px;padding-top:12px;color:#475569}@media(max-width:640px){.about-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
