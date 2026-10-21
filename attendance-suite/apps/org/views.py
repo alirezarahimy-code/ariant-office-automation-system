@@ -1,4 +1,7 @@
 """سازمان و پرسنل — فرم‌ها با الزام مجوز و دامنه داده."""
+import datetime
+
+import jdatetime
 from django.contrib import messages
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -6,7 +9,37 @@ from django.shortcuts import get_object_or_404, redirect, render
 from apps.core.services import (audit, data_scope, has_perm, require_perm,
                                 scoped_departments, scoped_employees, _forbidden)
 
-from .models import Department, EmpType, Employee, Position
+from .models import Certificate, Department, EmpType, Employee, Position
+
+
+def _personnel_date_text(value):
+    if not value:
+        return ''
+    return jdatetime.date.fromgregorian(date=value).strftime('%Y-%m-%d')
+
+
+def _parse_optional_personnel_date(value):
+    """Parse personnel form dates without treating Jalali text as Gregorian.
+
+    T5 operators commonly enter Persian/Jalali dates, while integrations may
+    submit ISO Gregorian dates. Years in the 13xx/14xx range are interpreted as
+    Jalali; other four-digit years are interpreted as Gregorian.
+    """
+    text = (value or '').strip()
+    if not text:
+        return None
+    text = text.translate(str.maketrans(
+        '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789'))
+    pieces = text.replace('-', '/').replace('.', '/').split('/')
+    if len(pieces) != 3:
+        raise ValueError('تاریخ باید به شکل سال/ماه/روز وارد شود.')
+    try:
+        year, month, day = (int(part) for part in pieces)
+        if 1300 <= year <= 1499:
+            return jdatetime.date(year, month, day).togregorian()
+        return datetime.date(year, month, day)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError('تاریخ واردشده معتبر نیست.') from exc
 
 
 @require_perm('org', 'view')
@@ -261,23 +294,51 @@ def emp_types(request):
 
 @require_perm('org', 'manage')
 def certificates(request):
-    """مدارک تحصیلی (Certificate)."""
+    """مدارک تحصیلی با شناسه و CRUD (Certificate)."""
     if request.method == 'POST':
-        from apps.core.models import AppSetting
-        name = request.POST.get('name', '').strip()
-        if name:
-            vals = AppSetting.objects.filter(key='certificates').first()
-            items = [x for x in (vals.value.split('|') if vals else []) if x]
-            if name not in items:
-                items.append(name)
-            AppSetting.objects.update_or_create(
-                key='certificates', defaults={'value': '|'.join(items),
-                                              'title': 'مدارک تحصیلی'})
+        action = request.POST.get('action', 'add')
+        if action in ('add', 'edit'):
+            name = request.POST.get('name', '').strip()
+            certificate_id = request.POST.get('certificate_id')
+            certificate = (get_object_or_404(Certificate, pk=certificate_id)
+                          if action == 'edit' else None)
+            if not name:
+                messages.error(request, 'نام مدرک الزامی است.')
+            elif Certificate.objects.filter(name=name).exclude(
+                    pk=certificate.pk if certificate else None).exists():
+                messages.error(request, 'نام مدرک تکراری است.')
+            else:
+                if certificate is None:
+                    certificate = Certificate(name=name)
+                    operation = 'add'
+                else:
+                    certificate.name = name
+                    operation = 'change'
+                certificate.save()
+                # Keep the existing text field in sync for legacy integrations
+                # while the FK-backed catalog is adopted by local screens.
+                Employee.objects.filter(certificate_ref=certificate).update(
+                    certificate=certificate.name)
+                audit(request.user, operation, 'Certificate', certificate.pk)
+                messages.success(request, 'مدرک تحصیلی ذخیره شد.')
+        elif action in ('delete', 'delete_all'):
+            ids = ([request.POST.get('certificate_id')]
+                   if action == 'delete' else request.POST.getlist('ids'))
+            certificates_to_delete = Certificate.objects.filter(pk__in=ids)
+            if not ids or certificates_to_delete.count() != len(set(ids)):
+                messages.error(request, 'فهرست مدارک انتخاب‌شده معتبر نیست.')
+            elif certificates_to_delete.filter(employees__isnull=False).exists():
+                messages.error(request, 'مدرکی که به پروندهٔ پرسنلی متصل است حذف نمی‌شود.')
+            else:
+                deleted_ids = list(certificates_to_delete.values_list('pk', flat=True))
+                certificates_to_delete.delete()
+                for certificate_id in deleted_ids:
+                    audit(request.user, 'delete', 'Certificate', certificate_id)
+                messages.success(request, 'مدرک(های) انتخاب‌شده حذف شد.')
         return redirect('org:certificates')
-    from apps.core.models import AppSetting
-    vals = AppSetting.objects.filter(key='certificates').first()
-    items = [x for x in (vals.value.split('|') if vals else []) if x]
-    return render(request, 'org/certificates.html', {'items': items})
+    return render(request, 'org/certificates.html', {
+        'items': Certificate.objects.all(),
+    })
 
 
 @require_perm('org', 'view')
@@ -325,82 +386,124 @@ def userinfo(request, emp_id=None):
         Q(department__in=allowed_depts) | Q(department__isnull=True))
     emp = get_object_or_404(employee_scope.select_related(
         'department', 'position', 'emp_type', 'manager'), pk=emp_id) if emp_id else None
+    form_data = request.POST if request.method == 'POST' else None
     if request.method == 'POST':
-        data = dict(
-            badge_no=request.POST.get('badge_no', '').strip(),
-            personnel_no=request.POST.get('personnel_no', '').strip(),
-            first_name=request.POST.get('first_name', '').strip(),
-            last_name=request.POST.get('last_name', '').strip(),
-            father_name=request.POST.get('father_name', '').strip(),
-            national_id=request.POST.get('national_id', '').strip(),
-            gender=request.POST.get('gender', ''),
-            birthday=request.POST.get('birthday') or None,
-            certificate=request.POST.get('certificate', '').strip(),
-            email=request.POST.get('email', '').strip(),
-            tel=request.POST.get('tel', '').strip(),
-            address=request.POST.get('address', '').strip(),
-            janbaz_code=request.POST.get('janbaz_code', '').strip(),
-            hire_date=request.POST.get('hire_date') or None,
-            end_work_date=request.POST.get('end_work_date') or None,
-            department_id=request.POST.get('dept_id') or None,
-            position_id=request.POST.get('position_id') or None,
-            emp_type_id=request.POST.get('emp_type_id') or None,
-            device_name=request.POST.get('device_name', '').strip(),
-            device_card_no=request.POST.get('device_card_no', '').strip(),
-            device_enable=request.POST.get('device_enable') == 'on',
-            device_group=int(request.POST.get('device_group') or 1),
-            device_password=request.POST.get('device_password', '').strip(),
-            device_privilege=int(request.POST.get('device_privilege') or 0),
-            web_user=request.POST.get('web_user') == 'on',
-            program_user=request.POST.get('program_user') == 'on')
-        department = allowed_depts.filter(pk=data['department_id'] or 0).first()
-        position = allowed_positions.filter(pk=data['position_id'] or 0).first()
-        manager = allowed_employees.exclude(pk=emp.pk if emp else None).filter(
-            pk=request.POST.get('manager_id') or 0).first()
-        emp_type = EmpType.objects.filter(pk=data['emp_type_id'] or 0).first()
-        has_all_dept_scope = request.user.is_superuser or data_scope(
-            request.user, 'org') == 'all'
-        if not data['badge_no'] or not data['first_name'] or not data['last_name']:
-            messages.error(request, 'شماره کارگری/نام/نام خانوادگی الزامی است.')
-        elif data['department_id'] and department is None:
-            messages.error(request, 'واحد انتخاب‌شده خارج از دامنهٔ مجاز است.')
-        elif data['position_id'] and (
-                position is None or position.department_id not in
-                (department.pk if department else None, None)):
-            messages.error(request, 'سمت انتخاب‌شده با واحد مجاز مطابقت ندارد.')
-        elif request.POST.get('manager_id') and manager is None:
-            messages.error(request, 'مدیر انتخاب‌شده خارج از دامنهٔ مجاز است.')
-        elif data['emp_type_id'] and emp_type is None:
-            messages.error(request, 'نوع استخدام انتخاب‌شده معتبر نیست.')
-        elif department is None and not has_all_dept_scope:
-            messages.error(request, 'انتخاب واحد در دامنهٔ مجاز الزامی است.')
+        data = None
+        try:
+            birthday = _parse_optional_personnel_date(request.POST.get('birthday'))
+            hire_date = _parse_optional_personnel_date(request.POST.get('hire_date'))
+            end_work_date = _parse_optional_personnel_date(
+                request.POST.get('end_work_date'))
+            device_group = int(request.POST.get('device_group') or 1)
+            device_privilege = int(request.POST.get('device_privilege') or 0)
+        except ValueError as exc:
+            messages.error(request, str(exc) if str(exc).startswith('تاریخ')
+                           else 'مقادیر عددی دستگاه معتبر نیستند.')
         else:
-            data['department_id'] = department.pk if department else None
-            data['position_id'] = position.pk if position else None
-            data['manager_id'] = manager.pk if manager else None
-            if emp:
-                for key, value in data.items():
-                    setattr(emp, key, value)
-                emp.save()
-                if not emp.web_user:
-                    # Revoking the T5Web flag blocks any linked account immediately;
-                    # re-enabling the flag never silently reactivates an account.
-                    from django.contrib.auth import get_user_model
-                    get_user_model().objects.filter(employee=emp).update(is_active=False)
-                for fd in EmployeeFieldDef.objects.filter(is_active=True):
-                    val = request.POST.get(f'cf_{fd.pk}', '')
-                    EmployeeFieldVal.objects.update_or_create(
-                        employee=emp, field_def=fd, defaults={'value': val})
-                audit(request.user, 'change', 'Employee', emp.pk)
-                messages.success(request, 'فایل پرسنلی به‌روزرسانی شد.')
-                return redirect('org:userinfo_edit', emp_id=emp.pk)
-            if Employee.objects.filter(badge_no=data['badge_no']).exists():
-                messages.error(request, 'شماره کارگری تکراری است.')
+            data = dict(
+                badge_no=request.POST.get('badge_no', '').strip(),
+                personnel_no=request.POST.get('personnel_no', '').strip(),
+                first_name=request.POST.get('first_name', '').strip(),
+                last_name=request.POST.get('last_name', '').strip(),
+                father_name=request.POST.get('father_name', '').strip(),
+                national_id=request.POST.get('national_id', '').strip(),
+                gender=request.POST.get('gender', ''),
+                birthday=birthday,
+                certificate=request.POST.get('certificate', '').strip(),
+                certificate_ref_id=None,
+                email=request.POST.get('email', '').strip(),
+                tel=request.POST.get('tel', '').strip(),
+                address=request.POST.get('address', '').strip(),
+                janbaz_code=request.POST.get('janbaz_code', '').strip(),
+                hire_date=hire_date,
+                end_work_date=end_work_date,
+                department_id=request.POST.get('dept_id') or None,
+                position_id=request.POST.get('position_id') or None,
+                emp_type_id=request.POST.get('emp_type_id') or None,
+                device_name=request.POST.get('device_name', '').strip(),
+                device_card_no=request.POST.get('device_card_no', '').strip(),
+                device_enable=request.POST.get('device_enable') == 'on',
+                device_group=device_group,
+                device_password=request.POST.get('device_password', '').strip(),
+                device_privilege=device_privilege,
+                web_user=request.POST.get('web_user') == 'on',
+                program_user=request.POST.get('program_user') == 'on')
+            certificate_id = request.POST.get('certificate_id') or None
+            selected_certificate = None
+            if certificate_id not in (None, 'legacy'):
+                try:
+                    selected_certificate = Certificate.objects.filter(
+                        pk=int(certificate_id)).first()
+                except (TypeError, ValueError):
+                    pass
+            if certificate_id not in (None, 'legacy') and selected_certificate is None:
+                messages.error(request, 'مدرک تحصیلی انتخاب‌شده معتبر نیست.')
+                data = None
             else:
-                emp = Employee.objects.create(**data)
-                audit(request.user, 'add', 'Employee', emp.pk)
-                messages.success(request, 'پرسنل جدید ثبت شد.')
-                return redirect('org:userinfo_edit', emp_id=emp.pk)
+                if certificate_id == 'legacy':
+                    data['certificate'] = request.POST.get(
+                        'legacy_certificate', '').strip()
+                if selected_certificate:
+                    data['certificate'] = selected_certificate.name
+                    data['certificate_ref_id'] = selected_certificate.pk
+                elif data['certificate']:
+                    selected_certificate = Certificate.objects.filter(
+                        name=data['certificate']).first()
+                    data['certificate_ref_id'] = (
+                        selected_certificate.pk if selected_certificate else None)
+            if data is not None and not (0 <= device_group <= 32767 and
+                    0 <= device_privilege <= 32767):
+                messages.error(request, 'مقادیر دستگاه باید بین صفر و ۳۲۷۶۷ باشند.')
+                data = None
+        if data is not None:
+            department = allowed_depts.filter(pk=data['department_id'] or 0).first()
+            position = allowed_positions.filter(pk=data['position_id'] or 0).first()
+            manager = allowed_employees.exclude(pk=emp.pk if emp else None).filter(
+                pk=request.POST.get('manager_id') or 0).first()
+            emp_type = EmpType.objects.filter(pk=data['emp_type_id'] or 0).first()
+            has_all_dept_scope = request.user.is_superuser or data_scope(
+                request.user, 'org') == 'all'
+            if not data['badge_no'] or not data['first_name'] or not data['last_name']:
+                messages.error(request, 'شماره کارگری/نام/نام خانوادگی الزامی است.')
+            elif data['department_id'] and department is None:
+                messages.error(request, 'واحد انتخاب‌شده خارج از دامنهٔ مجاز است.')
+            elif data['position_id'] and (
+                    position is None or position.department_id not in
+                    (department.pk if department else None, None)):
+                messages.error(request, 'سمت انتخاب‌شده با واحد مجاز مطابقت ندارد.')
+            elif request.POST.get('manager_id') and manager is None:
+                messages.error(request, 'مدیر انتخاب‌شده خارج از دامنهٔ مجاز است.')
+            elif data['emp_type_id'] and emp_type is None:
+                messages.error(request, 'نوع استخدام انتخاب‌شده معتبر نیست.')
+            elif department is None and not has_all_dept_scope:
+                messages.error(request, 'انتخاب واحد در دامنهٔ مجاز الزامی است.')
+            else:
+                data['department_id'] = department.pk if department else None
+                data['position_id'] = position.pk if position else None
+                data['manager_id'] = manager.pk if manager else None
+                if emp:
+                    for key, value in data.items():
+                        setattr(emp, key, value)
+                    emp.save()
+                    if not emp.web_user:
+                        # Revoking the T5Web flag blocks any linked account immediately;
+                        # re-enabling the flag never silently reactivates an account.
+                        from django.contrib.auth import get_user_model
+                        get_user_model().objects.filter(employee=emp).update(is_active=False)
+                    for fd in EmployeeFieldDef.objects.filter(is_active=True):
+                        val = request.POST.get(f'cf_{fd.pk}', '')
+                        EmployeeFieldVal.objects.update_or_create(
+                            employee=emp, field_def=fd, defaults={'value': val})
+                    audit(request.user, 'change', 'Employee', emp.pk)
+                    messages.success(request, 'فایل پرسنلی به‌روزرسانی شد.')
+                    return redirect('org:userinfo_edit', emp_id=emp.pk)
+                if Employee.objects.filter(badge_no=data['badge_no']).exists():
+                    messages.error(request, 'شماره کارگری تکراری است.')
+                else:
+                    emp = Employee.objects.create(**data)
+                    audit(request.user, 'add', 'Employee', emp.pk)
+                    messages.success(request, 'پرسنل جدید ثبت شد.')
+                    return redirect('org:userinfo_edit', emp_id=emp.pk)
     cf_defs = EmployeeFieldDef.objects.filter(is_active=True)
     cf_vals = {}
     if emp:
@@ -412,9 +515,19 @@ def userinfo(request, emp_id=None):
                                      if item.strip()])
         for fd in cf_defs
     ]
+    date_values = {
+        'birthday': _personnel_date_text(emp.birthday) if emp else '',
+        'hire_date': _personnel_date_text(emp.hire_date) if emp else '',
+        'end_work_date': _personnel_date_text(emp.end_work_date) if emp else '',
+    }
+    if form_data is not None:
+        for field in date_values:
+            date_values[field] = form_data.get(field, '')
     return render(request, 'org/userinfo.html', {
         'emp': emp, 'cf_defs': cf_defs, 'cf_pairs': cf_pairs,
+        'date_values': date_values,
         'depts': allowed_depts,
         'positions': allowed_positions,
         'emp_types': EmpType.objects.all(),
+        'certificates': Certificate.objects.all(),
         'employees': allowed_employees.select_related('department')[:400]})

@@ -28,8 +28,11 @@
         <option value="">—</option>
         <option value="M" {% if emp.gender == 'M' %}selected{% endif %}>مرد</option>
         <option value="F" {% if emp.gender == 'F' %}selected{% endif %}>زن</option></select></div>
-      <div class="field"><label>تاریخ تولد (جلالی)</label><input name="birthday" value="{{ emp.birthday|default:'' }}" placeholder="1365-01-15"></div>
-      <div class="field"><label>مدرک تحصیلی</label><input name="certificate" value="{{ emp.certificate }}"></div>
+      <div class="field"><label>تاریخ تولد (جلالی)</label><input name="birthday" value="{{ date_values.birthday }}" placeholder="1365-01-15" inputmode="numeric" dir="ltr"></div>
+      <div class="field"><label>مدرک تحصیلی</label><select name="certificate_id"><option value="">—</option>
+        {% for cert in certificates %}<option value="{{ cert.pk }}" {% if emp.certificate_ref_id == cert.pk %}selected{% endif %}>{{ cert.name }}</option>{% endfor %}
+        {% if emp.certificate and not emp.certificate_ref_id %}<option value="legacy" selected>{{ emp.certificate }} (قدیمی)</option>{% endif %}</select>
+        {% if emp.certificate and not emp.certificate_ref_id %}<input type="hidden" name="legacy_certificate" value="{{ emp.certificate }}">{% endif %}</div>
       <div class="field"><label>کد جانبازی</label><input name="janbaz_code" value="{{ emp.janbaz_code }}"></div>
     </div>
   </div>
@@ -50,8 +53,8 @@
         {% for p in positions %}<option value="{{ p.id }}" {% if emp.position_id == p.id %}selected{% endif %}>{{ p.title }}</option>{% endfor %}</select></div>
       <div class="field"><label>نوع استخدام</label><select name="emp_type_id"><option value="">—</option>
         {% for t in emp_types %}<option value="{{ t.id }}" {% if emp.emp_type_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></div>
-      <div class="field"><label>تاریخ استخدام</label><input name="hire_date" value="{{ emp.hire_date|default:'' }}" placeholder="1398-07-01"></div>
-      <div class="field"><label>تاریخ پایان همکاری</label><input name="end_work_date" value="{{ emp.end_work_date|default:'' }}"></div>
+      <div class="field"><label>تاریخ استخدام</label><input name="hire_date" value="{{ date_values.hire_date }}" placeholder="1398-07-01" inputmode="numeric" dir="ltr"></div>
+      <div class="field"><label>تاریخ پایان همکاری</label><input name="end_work_date" value="{{ date_values.end_work_date }}" placeholder="1405-01-01" inputmode="numeric" dir="ltr"></div>
     </div>
   </div>
   <div class="card">

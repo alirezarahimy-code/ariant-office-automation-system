@@ -18,8 +18,8 @@ from apps.core.models import AppSetting
 from apps.core.services import (audit, data_scope, has_perm, require_perm,
                                 scoped_employees)
 from apps.device.models import Device, RawRecord, Visitor
-from apps.org.models import (Department, Employee, EmployeeFieldDef,
-                             EmployeeFieldVal, EmpType)
+from apps.org.models import (Certificate, Department, Employee,
+                             EmployeeFieldDef, EmployeeFieldVal, EmpType)
 
 from .models import ReportDef
 
@@ -129,6 +129,9 @@ def _daily_report_rows(records):
 
 
 def _certificate_choices():
+    catalog = list(Certificate.objects.order_by('name').values_list('name', flat=True))
+    if catalog:
+        return catalog
     setting = AppSetting.objects.filter(key='certificates').first()
     if not setting:
         return []

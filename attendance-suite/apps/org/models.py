@@ -48,6 +48,20 @@ class Position(models.Model):
         return self.title
 
 
+class Certificate(models.Model):
+    """T5 Certificate catalog (CertificateID/CertificateName)."""
+
+    name = models.CharField('مدرک تحصیلی', max_length=255, unique=True)
+
+    class Meta:
+        verbose_name = 'مدرک تحصیلی'
+        verbose_name_plural = 'مدارک تحصیلی'
+        ordering = ['name']
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class EmpType(models.Model):
     name = models.CharField('نام', max_length=80)
     code = models.CharField('کد', max_length=24, unique=True)
@@ -87,7 +101,10 @@ class Employee(models.Model):
         'جنسیت', max_length=1, blank=True, default='',
         choices=[('M', 'مرد'), ('F', 'زن')])
     birthday = models.DateField('تاریخ تولد', null=True, blank=True)
-    certificate = models.CharField('مدرک تحصیلی', max_length=60, blank=True, default='')
+    certificate = models.CharField('مدرک تحصیلی', max_length=255, blank=True, default='')
+    certificate_ref = models.ForeignKey(
+        Certificate, verbose_name='مدرک مرجع', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='employees')
     email = models.EmailField('ایمیل', blank=True, default='')
     tel = models.CharField('تلفن', max_length=30, blank=True, default='')
     address = models.TextField('نشانی', blank=True, default='')
