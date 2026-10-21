@@ -24,6 +24,14 @@ from apps.org.models import (Department, Employee, EmployeeFieldDef,
 from .models import ReportDef
 
 MAX_DAILY_EXPORT_ROWS = 10000
+REPORT_QUERY_BATCH_SIZE = 400
+
+
+def _batches(values, size=None):
+    values = list(values)
+    size = size or REPORT_QUERY_BATCH_SIZE
+    for offset in range(0, len(values), size):
+        yield values[offset:offset + size]
 
 # فیلدهای مجاز هر مدل برای گزارش‌ساز (بدون SQL دل‌بخواه — امنیت)
 MODEL_MAP = {
@@ -82,14 +90,18 @@ def _daily_report_rows(records):
     employee_ids = {record.employee_id for record in records}
     dates = {record.date for record in records}
     punches_by_day = {}
-    for punch in Punch.objects.filter(
-            employee_id__in=employee_ids, date__in=dates
-    ).order_by('employee_id', 'date', 'time', 'pk'):
-        key = (punch.employee_id, punch.date)
-        punches_by_day.setdefault(key, {Punch.Direction.IN: [], Punch.Direction.OUT: []})
-        slot = punches_by_day[key].get(punch.direction)
-        if slot is not None:
-            slot.append(punch.time.strftime('%H:%M'))
+    for employee_batch in _batches(sorted(employee_ids)):
+        for date_batch in _batches(sorted(dates)):
+            punches = Punch.objects.filter(
+                employee_id__in=employee_batch, date__in=date_batch
+            ).order_by('employee_id', 'date', 'time', 'pk')
+            for punch in punches:
+                key = (punch.employee_id, punch.date)
+                punches_by_day.setdefault(
+                    key, {Punch.Direction.IN: [], Punch.Direction.OUT: []})
+                slot = punches_by_day[key].get(punch.direction)
+                if slot is not None:
+                    slot.append(punch.time.strftime('%H:%M'))
 
     weekday_names = ('شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه',
                      'چهارشنبه', 'پنجشنبه', 'جمعه')
@@ -288,13 +300,19 @@ def _personnel_report(request, code):
     report_ready = criteria_submitted and bool(selected_employees) and not date_error
 
     if report_ready and code == 'daily':
-        daily_qs = DailyRecord.objects.filter(
-            employee__in=selected_employees,
+        daily_base = DailyRecord.objects.filter(
             date__gte=date_from, date__lte=date_to,
-        ).select_related('employee', 'employee__department').order_by(
-            'employee__last_name', 'employee__first_name', 'date')
+        ).select_related('employee', 'employee__department')
         if request.GET.get('export') == 'csv' and has_perm(request.user, 'reports', 'export'):
-            raw = list(daily_qs[:MAX_DAILY_EXPORT_ROWS + 1])
+            raw = []
+            for employee_batch in _batches(selected_employees):
+                remaining = MAX_DAILY_EXPORT_ROWS + 1 - len(raw)
+                if remaining <= 0:
+                    break
+                employee_ids = [employee.pk for employee in employee_batch]
+                raw.extend(daily_base.filter(employee_id__in=employee_ids).order_by(
+                    'employee__last_name', 'employee__first_name', 'date'
+                )[:remaining])
             if len(raw) > MAX_DAILY_EXPORT_ROWS:
                 return HttpResponse(
                     'برای جلوگیری از خروجی ناقص، بازه یا تعداد پرسنل را کمتر کنید.',
@@ -302,25 +320,30 @@ def _personnel_report(request, code):
             return _csv_response(title, header, _daily_report_rows(raw))
         page_obj = Paginator(selected_employees, 1).get_page(request.GET.get('page'))
         page_employees = list(page_obj.object_list)
-        page_records = daily_qs.filter(employee__in=page_employees)
+        page_records = daily_base.filter(
+            employee_id__in=[employee.pk for employee in page_employees]
+        ).order_by('employee__last_name', 'employee__first_name', 'date')
         rows = _daily_report_rows(page_records)
     elif report_ready and code == 'sum':
-        aggregates = {
-            item['employee_id']: item
-            for item in DailyRecord.objects.filter(
-                employee__in=selected_employees,
-                date__gte=date_from, date__lte=date_to,
-            ).values('employee_id').annotate(
-                total_days=Count('pk'),
-                present_days=Count('pk', filter=~Q(state__in=(
-                    DailyRecord.State.ABSENT, DailyRecord.State.HOLIDAY))),
-                absent_days=Count('pk', filter=Q(state=DailyRecord.State.ABSENT)),
-                late_minutes=Sum('late_minutes'),
-                early_minutes=Sum('early_minutes'),
-                worked_minutes=Sum('worked_minutes'),
-                overtime_minutes=Sum('overtime_minutes'),
-            )
-        }
+        aggregates = {}
+        for employee_batch in _batches(selected_employees):
+            batch_ids = [employee.pk for employee in employee_batch]
+            aggregates.update({
+                item['employee_id']: item
+                for item in DailyRecord.objects.filter(
+                    employee_id__in=batch_ids,
+                    date__gte=date_from, date__lte=date_to,
+                ).values('employee_id').annotate(
+                    total_days=Count('pk'),
+                    present_days=Count('pk', filter=~Q(state__in=(
+                        DailyRecord.State.ABSENT, DailyRecord.State.HOLIDAY))),
+                    absent_days=Count('pk', filter=Q(state=DailyRecord.State.ABSENT)),
+                    late_minutes=Sum('late_minutes'),
+                    early_minutes=Sum('early_minutes'),
+                    worked_minutes=Sum('worked_minutes'),
+                    overtime_minutes=Sum('overtime_minutes'),
+                )
+            })
         summary_rows = []
         for employee in selected_employees:
             totals = aggregates.get(employee.pk, {})

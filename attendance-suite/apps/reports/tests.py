@@ -143,6 +143,11 @@ class PersonnelReportTests(TestCase):
             DailyRecord.objects.create(
                 employee=employee, date=start, worked_minutes=480 + index,
                 state=DailyRecord.State.ONTIME)
+            if index in (0, len(employees) - 1):
+                Punch.objects.create(
+                    employee=employee, date=start,
+                    time=gregorian.time(8 if index == 0 else 9, 0),
+                    direction=Punch.Direction.IN)
         params = {
             'selectedBadgeNumbers': [employee.badge_no for employee in employees],
             'FromDateHijri': '1404/07/01', 'ToDateHijri': '1404/07/30',
@@ -157,10 +162,14 @@ class PersonnelReportTests(TestCase):
         second_page = self.client.get(url, {**params, 'page': '2'})
         self.assertEqual(len(second_page.context['rows']), 1)
         self.assertEqual(second_page.context['rows'][0][0], employees[1].badge_no)
-        csv_response = self.client.get(url, {**params, 'export': 'csv'})
+        with patch('apps.reports.views.REPORT_QUERY_BATCH_SIZE', 7):
+            csv_response = self.client.get(url, {**params, 'export': 'csv'})
         self.assertEqual(csv_response.status_code, 200)
         self.assertIn('text/csv', csv_response['Content-Type'])
         csv_text = csv_response.content.decode('utf-8-sig')
+        csv_rows = list(csv.reader(csv_text.splitlines()))
+        self.assertEqual(csv_rows[1][5], '08:00')
+        self.assertEqual(csv_rows[-1][5], '09:00')
         self.assertIn(self.employee.last_name, csv_text)
         self.assertIn(employees[-1].last_name, csv_text)
 
@@ -196,7 +205,8 @@ class PersonnelReportTests(TestCase):
             'isMonthly': 'true', 'year': '1404', 'month': '7',
         }
         url = reverse('reports:run_standard', args=['sum'])
-        first = self.client.get(url, params)
+        with patch('apps.reports.views.REPORT_QUERY_BATCH_SIZE', 1):
+            first = self.client.get(url, params)
         self.assertEqual(first.context['page_obj'].paginator.num_pages, 2)
         self.assertEqual(len(first.context['rows']), 1)
         self.assertEqual(first.context['rows'][0][:2], [
@@ -205,7 +215,8 @@ class PersonnelReportTests(TestCase):
         second = self.client.get(url, {**params, 'page': '2'})
         self.assertEqual(len(second.context['rows']), 1)
         self.assertEqual(second.context['rows'][0][0], other.badge_no)
-        export_response = self.client.get(url, {**params, 'export': 'csv'})
+        with patch('apps.reports.views.REPORT_QUERY_BATCH_SIZE', 1):
+            export_response = self.client.get(url, {**params, 'export': 'csv'})
         csv_rows = list(csv.reader(
             export_response.content.decode('utf-8-sig').splitlines()))
         self.assertEqual(csv_rows[0][:2], ['شماره کارگری', 'نام'])
