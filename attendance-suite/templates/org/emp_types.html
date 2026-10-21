@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}انواع استخدام | T5Web{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>انواع استخدام</h1><p class="sub">مدیریت انواع استخدام و مرخصی‌های مجاز مرتبط</p></div></div>
+<section class="card">
+  <div class="card-title">{% if selected %}ویرایش نوع استخدام{% else %}افزودن نوع استخدام{% endif %}</div>
+  <form method="post" autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="{% if selected %}edit{% else %}add{% endif %}">
+    {% if selected %}<input type="hidden" name="emp_type_id" value="{{ selected.pk }}">{% endif %}
+    <div class="form-grid">
+      <div class="field"><label for="emp-type-name">نام نوع استخدام *</label><input id="emp-type-name" name="name" maxlength="80" required value="{{ selected.name|default:'' }}"></div>
+      <div class="field"><label for="emp-type-code">کد داخلی *</label><input id="emp-type-code" name="code" maxlength="24" required value="{{ selected.code|default:'' }}" dir="ltr"></div>
+    </div>
+    <fieldset class="leave-types"><legend>مرخصی‌های مجاز</legend>
+      <div class="leave-type-grid">
+      {% for leave in leave_types %}
+        <label class="check-row"><input type="checkbox" name="valid_leave_types" value="{{ leave.pk }}" {% if leave.pk in selected_leave_ids %}checked{% endif %}><span>{{ leave.name }}</span></label>
+      {% empty %}<p class="empty">نوع مرخصی‌ای برای انتخاب ثبت نشده است.</p>{% endfor %}
+      </div>
+    </fieldset>
+    <div class="actions"><button class="btn btn-primary" type="submit">ذخیره</button>
+      {% if selected %}<a class="btn btn-ghost" href="{% url 'org:emp_types' %}">انصراف</a>{% endif %}</div>
+  </form>
+</section>
+<section class="card">
+  <div class="card-title">فهرست انواع استخدام</div>
+  <form method="post" id="emp-type-bulk-delete" class="bulk-actions">
+    {% csrf_token %}<input type="hidden" name="action" value="delete_all">
+    <button class="btn btn-ghost" type="submit" onclick="return confirm('موارد انتخاب‌شده حذف شوند؟')">حذف موارد انتخاب‌شده</button>
+  </form>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>انتخاب</th><th>نام</th><th>کد</th><th>مرخصی‌های مجاز</th><th>پرسنل</th><th>عملیات</th></tr></thead>
+    <tbody>
+    {% for item in items %}
+      <tr>
+        <td><input type="checkbox" name="ids" value="{{ item.pk }}" form="emp-type-bulk-delete" aria-label="انتخاب {{ item.name }}"></td>
+        <td>{{ item.name }}</td><td dir="ltr">{{ item.code }}</td>
+        <td>{% for leave in item.valid_leave_types.all %}<span class="chip">{{ leave.name }}</span>{% empty %}<span class="muted">—</span>{% endfor %}</td>
+        <td>{{ item.employee_count|fa }}</td>
+        <td class="actions"><a class="btn btn-ghost" href="?edit={{ item.pk }}">ویرایش</a>
+          <form method="post" class="inline" onsubmit="return confirm('این نوع استخدام حذف شود؟')">
+            {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="emp_type_id" value="{{ item.pk }}">
+            <button class="btn btn-ghost" type="submit">حذف</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">نوع استخدامی ثبت نشده است.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+<style>
+.leave-types{border:1px solid #cbd5e1;border-radius:10px;padding:12px;margin:16px 0}.leave-types legend{padding:0 8px;font-weight:700}.leave-type-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.check-row{display:flex;gap:8px;align-items:center}.bulk-actions{margin-bottom:12px}.table-wrap{overflow:auto}.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.muted{color:#64748b}
+</style>
+{% endblock %}

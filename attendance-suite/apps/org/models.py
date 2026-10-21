@@ -65,6 +65,9 @@ class Certificate(models.Model):
 class EmpType(models.Model):
     name = models.CharField('نام', max_length=80)
     code = models.CharField('کد', max_length=24, unique=True)
+    valid_leave_types = models.ManyToManyField(
+        'attendance.LeaveType', verbose_name='مرخصی‌های مجاز', blank=True,
+        related_name='employment_types')
 
     class Meta:
         verbose_name = 'نوع استخدام'

@@ -18,6 +18,16 @@ def _personnel_date_text(value):
     return jdatetime.date.fromgregorian(date=value).strftime('%Y-%m-%d')
 
 
+def _parse_primary_keys(values):
+    try:
+        parsed = [int(value) for value in values]
+    except (TypeError, ValueError):
+        return None
+    if not parsed or any(value <= 0 for value in parsed):
+        return None
+    return list(dict.fromkeys(parsed))
+
+
 def _parse_optional_personnel_date(value):
     """Parse personnel form dates without treating Jalali text as Gregorian.
 
@@ -178,6 +188,26 @@ def department_admin(request, pk=None):
                   detail=f'is_active={dept.is_active}')
             messages.success(request, 'وضعیت واحد تغییر کرد.')
             return redirect('org:department_admin')
+        if action in ('delete', 'delete_all'):
+            if action == 'delete':
+                raw_ids = ([str(dept.pk)] if dept else
+                           [request.POST.get('department_id')])
+            else:
+                raw_ids = request.POST.getlist('ids')
+            ids = _parse_primary_keys(raw_ids)
+            selected = allowed_departments.filter(pk__in=ids or [])
+            if ids is None or selected.count() != len(ids):
+                messages.error(request, 'فهرست واحدهای انتخاب‌شده معتبر نیست.')
+            elif selected.filter(Q(employees__isnull=False) |
+                                 Q(children__isnull=False)).exists():
+                messages.error(request, 'واحد دارای پرسنل یا زیرواحد حذف نمی‌شود.')
+            else:
+                deleted_ids = list(selected.values_list('pk', flat=True))
+                selected.delete()
+                for department_id in deleted_ids:
+                    audit(request.user, 'delete', 'Department', department_id)
+                messages.success(request, 'واحد(های) انتخاب‌شده حذف شد.')
+            return redirect('org:department_admin')
 
         name = request.POST.get('name', '').strip()
         code = request.POST.get('code', '').strip()
@@ -277,19 +307,83 @@ def titles(request):
 
 @require_perm('org', 'manage')
 def emp_types(request):
-    """انواع استخدام (EmpType)."""
-    from .models import EmpType
+    """نوع استخدام و پیکربندی LeaveTypeهای مجاز (EmpType)."""
+    from apps.attendance.models import LeaveType
+
     if request.method == 'POST':
-        EmpType.objects.get_or_create(
-            name=request.POST.get('name', '').strip(),
-            code=request.POST.get('code', '').strip())
-        audit(request.user, 'add', 'EmpType')
+        action = request.POST.get('action', 'add')
+        if action in ('add', 'edit'):
+            name = request.POST.get('name', '').strip()
+            code = request.POST.get('code', '').strip()
+            if action == 'edit':
+                try:
+                    item_id = int(request.POST.get('emp_type_id'))
+                except (TypeError, ValueError):
+                    messages.error(request, 'شناسهٔ نوع استخدام معتبر نیست.')
+                    return redirect('org:emp_types')
+                item = get_object_or_404(EmpType, pk=item_id)
+            else:
+                item = None
+            raw_leave_ids = request.POST.getlist('valid_leave_types')
+            leave_ids = (_parse_primary_keys(raw_leave_ids)
+                         if raw_leave_ids else [])
+            leave_types = LeaveType.objects.filter(pk__in=leave_ids or [])
+            if not name or not code:
+                messages.error(request, 'نام و کد نوع استخدام الزامی است.')
+            elif leave_ids is None or leave_types.count() != len(leave_ids):
+                messages.error(request, 'فهرست مرخصی‌های مجاز نامعتبر است.')
+            elif EmpType.objects.filter(code=code).exclude(
+                    pk=item.pk if item else None).exists():
+                messages.error(request, 'کد نوع استخدام تکراری است.')
+            else:
+                if item is None:
+                    item = EmpType()
+                    operation = 'add'
+                else:
+                    operation = 'change'
+                item.name = name
+                item.code = code
+                item.save()
+                item.valid_leave_types.set(leave_types)
+                audit(request.user, operation, 'EmpType', item.pk)
+                messages.success(request, 'نوع استخدام ذخیره شد.')
+        elif action in ('delete', 'delete_all'):
+            raw_ids = ([request.POST.get('emp_type_id')]
+                       if action == 'delete' else request.POST.getlist('ids'))
+            ids = _parse_primary_keys(raw_ids)
+            items = EmpType.objects.filter(pk__in=ids or [])
+            if ids is None or items.count() != len(ids):
+                messages.error(request, 'فهرست انواع استخدام انتخاب‌شده معتبر نیست.')
+            elif items.filter(employees__isnull=False).exists():
+                messages.error(request, 'نوع استخدام تخصیص‌یافته به پرسنل حذف نمی‌شود.')
+            else:
+                deleted_ids = list(items.values_list('pk', flat=True))
+                items.delete()
+                for item_id in deleted_ids:
+                    audit(request.user, 'delete', 'EmpType', item_id)
+                messages.success(request, 'نوع(های) استخدام انتخاب‌شده حذف شد.')
         return redirect('org:emp_types')
-    rows = [[t.name, t.code] for t in EmpType.objects.all()]
-    return render(request, 'org/simple_list.html', {
-        'title': 'انواع استخدام', 'rows_data': rows,
-        'cols': [('name', 'نام'), ('code', 'کد')],
-        'form_fields': [('name', 'نام', 'text'), ('code', 'کد', 'text')]})
+
+    edit_id = request.GET.get('edit')
+    if edit_id:
+        try:
+            edit_id = int(edit_id)
+        except (TypeError, ValueError):
+            return _forbidden(request)
+        selected = get_object_or_404(EmpType.objects.prefetch_related(
+            'valid_leave_types'), pk=edit_id)
+    else:
+        selected = None
+    selected_leave_ids = (set(selected.valid_leave_types.values_list('pk', flat=True))
+                          if selected else set())
+    items = EmpType.objects.annotate(
+        employee_count=Count('employees', distinct=True)).prefetch_related(
+            'valid_leave_types').order_by('name')
+    return render(request, 'org/emp_types.html', {
+        'items': items, 'selected': selected,
+        'selected_leave_ids': selected_leave_ids,
+        'leave_types': LeaveType.objects.order_by('name'),
+    })
 
 
 @require_perm('org', 'manage')
@@ -345,29 +439,92 @@ def certificates(request):
 def custom_fields(request):
     """فیلدهای سفارشی پرسنل (UserAddProperty)."""
     from .models import EmployeeFieldDef
-    if request.method == 'POST' and has_perm(request.user, 'org', 'manage'):
+    can_manage = has_perm(request.user, 'org', 'manage')
+    if request.method == 'POST':
+        if not can_manage:
+            return _forbidden(request)
+        action = request.POST.get('action', 'add')
         filter_id = request.POST.get('filter_id')
-        if filter_id:
-            field = get_object_or_404(EmployeeFieldDef, pk=filter_id, is_active=True)
+        if action == 'filter' or filter_id:
+            try:
+                field_id = int(filter_id)
+            except (TypeError, ValueError):
+                messages.error(request, 'شناسهٔ فیلد معتبر نیست.')
+                return redirect('org:custom_fields')
+            field = get_object_or_404(EmployeeFieldDef, pk=field_id, is_active=True)
             field.is_search_filter = request.POST.get('is_search_filter') == 'on'
             field.save(update_fields=['is_search_filter'])
             audit(request.user, 'change', 'EmployeeFieldDef', field.pk)
             messages.success(request, 'تنظیم فیلتر پیشرفته ذخیره شد.')
-            return redirect('org:custom_fields')
-        field_type = request.POST.get('field_type') or EmployeeFieldDef.FieldType.TEXT
-        if field_type not in EmployeeFieldDef.FieldType.values:
-            messages.error(request, 'نوع فیلد نامعتبر است.')
-        else:
-            EmployeeFieldDef.objects.create(
-                title=request.POST.get('title', '').strip(),
-                field_type=field_type,
-                options=request.POST.get('options', '').strip(),
-                is_search_filter=request.POST.get('is_search_filter') == 'on')
-            audit(request.user, 'add', 'EmployeeFieldDef')
-            return redirect('org:custom_fields')
+        elif action in ('add', 'edit'):
+            title = request.POST.get('title', '').strip()
+            field_type = request.POST.get('field_type') or EmployeeFieldDef.FieldType.TEXT
+            if action == 'edit':
+                try:
+                    field_id = int(request.POST.get('field_id'))
+                except (TypeError, ValueError):
+                    messages.error(request, 'شناسهٔ فیلد معتبر نیست.')
+                    return redirect('org:custom_fields')
+                field = get_object_or_404(
+                    EmployeeFieldDef, pk=field_id, is_active=True)
+            else:
+                field = None
+            raw_options = request.POST.get('options', '').replace('|', '\n')
+            options = list(dict.fromkeys(
+                value.strip() for value in raw_options.splitlines()
+                if value.strip()))
+            if not title:
+                messages.error(request, 'عنوان فیلد الزامی است.')
+            elif field_type not in EmployeeFieldDef.FieldType.values:
+                messages.error(request, 'نوع فیلد نامعتبر است.')
+            elif field_type == EmployeeFieldDef.FieldType.DROPDOWN and not options:
+                messages.error(request, 'برای فیلد فهرستی حداقل یک گزینه لازم است.')
+            else:
+                if field is None:
+                    field = EmployeeFieldDef()
+                    operation = 'add'
+                else:
+                    operation = 'change'
+                field.title = title
+                field.field_type = field_type
+                field.options = '|'.join(options) if field_type == \
+                    EmployeeFieldDef.FieldType.DROPDOWN else ''
+                field.is_search_filter = request.POST.get('is_search_filter') == 'on'
+                field.is_active = True
+                field.save()
+                audit(request.user, operation, 'EmployeeFieldDef', field.pk)
+                messages.success(request, 'فیلد سفارشی ذخیره شد.')
+        elif action in ('delete', 'delete_all'):
+            raw_ids = ([request.POST.get('field_id')]
+                       if action == 'delete' else request.POST.getlist('ids'))
+            field_ids = _parse_primary_keys(raw_ids)
+            fields = EmployeeFieldDef.objects.filter(
+                pk__in=field_ids or [], is_active=True)
+            if field_ids is None or fields.count() != len(field_ids):
+                messages.error(request, 'فهرست فیلدهای انتخاب‌شده معتبر نیست.')
+            else:
+                deleted_ids = list(fields.values_list('pk', flat=True))
+                fields.update(is_active=False, is_search_filter=False)
+                for field_id in deleted_ids:
+                    audit(request.user, 'delete', 'EmployeeFieldDef', field_id)
+                messages.success(
+                    request, 'فیلدها غیرفعال شدند؛ مقادیر ذخیره‌شدهٔ پرسنل حفظ شدند.')
+        return redirect('org:custom_fields')
+
+    edit_id = request.GET.get('edit')
+    if edit_id:
+        try:
+            edit_id = int(edit_id)
+        except (TypeError, ValueError):
+            return _forbidden(request)
+        selected = get_object_or_404(
+            EmployeeFieldDef, pk=edit_id, is_active=True)
+    else:
+        selected = None
     return render(request, 'org/custom_fields.html', {
-        'fields': EmployeeFieldDef.objects.filter(is_active=True),
-        'can_manage': has_perm(request.user, 'org', 'manage')})
+        'fields': EmployeeFieldDef.objects.filter(is_active=True).order_by('pk'),
+        'selected': selected, 'can_manage': can_manage,
+    })
 
 
 @require_perm('org', 'view')
