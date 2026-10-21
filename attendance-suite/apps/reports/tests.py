@@ -22,7 +22,8 @@ class PersonnelReportTests(TestCase):
         self.admin = User.objects.create_superuser('report-admin', password='x')
         self.client.force_login(self.admin)
         self.employee = Employee.objects.create(
-            badge_no='RP-101', first_name='آرمان', last_name='آزمایشی')
+            badge_no='RP-101', first_name='آرمان', last_name='آزمایشی',
+            program_user=True)
 
     def test_csv_neutralizes_formula_like_text_without_changing_numbers(self):
         response = _csv_response('test', ['value'], [

@@ -69,9 +69,13 @@ def change_lock_check(request):
         result = checker.check(change_type, code)
         if not isinstance(result, LicenseCheckResult):
             raise TypeError("License provider returned an untyped result")
-        message = (result.message or "درخواست توسط سرویس لایسنس پردازش شد.")[:1000]
-        if code in message:
-            message = "سرویس لایسنس درخواست را پردازش کرد؛ پیام حاوی کد نمایش داده نشد."
+        # Do not surface provider-supplied text: even a trusted integration
+        # could include the submitted activation code in its diagnostic.
+        message = (
+            "درخواست توسط سرویس معتبر لایسنس پذیرفته شد."
+            if result.accepted else
+            "درخواست توسط سرویس معتبر لایسنس پذیرفته نشد."
+        )
         audit(request.user,
               "license_change_accepted" if result.accepted else "license_change_rejected",
               "T5License", detail=f"change_type={change_type}; provider=configured")

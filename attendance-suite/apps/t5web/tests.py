@@ -26,8 +26,8 @@ class FakeLicenseChecker:
         if code.startswith("explode-"):
             raise RuntimeError(f"provider diagnostic: {code}")
         if code == "valid-test-code":
-            return LicenseCheckResult(True, "کد آزمایشی توسط provider آزمایشی پذیرفته شد.")
-        return LicenseCheckResult(False, "کد آزمایشی پذیرفته نشد.")
+            return LicenseCheckResult(True, f"provider received: {code}")
+        return LicenseCheckResult(False, f"provider rejected: {code}")
 
 
 class T5NavigationTests(TestCase):
@@ -331,8 +331,9 @@ class T5ManagerAccountTests(TestCase):
         })
         self.assertEqual(accepted.status_code, 200)
         self.assertEqual(accepted.json(), {
-            "ok": True, "message": "کد آزمایشی توسط provider آزمایشی پذیرفته شد."
+            "ok": True, "message": "درخواست توسط سرویس معتبر لایسنس پذیرفته شد."
         })
+        self.assertNotIn("valid-test-code", accepted.content.decode())
         self.assertEqual(FakeLicenseChecker.calls, [("4", "valid-test-code")])
         self.assertFalse(AuditLog.objects.filter(
             model="T5License", detail__contains="valid-test-code"
@@ -379,6 +380,25 @@ class T5ManagerAccountTests(TestCase):
             user=account, action="program_access_revoked", model="T5Web"
         ).exists())
 
+    def test_revoking_legacy_program_user_terminates_existing_session(self):
+        account = User.objects.create_user(
+            "legacy-program-user", password="Strong-Passphrase-789!",
+            employee=self.employee,
+        )
+        self.client.force_login(account)
+        before_revoke = self.client.get(reverse("attendance:dashboard"))
+        self.assertTrue(before_revoke.wsgi_request.user.is_authenticated)
+
+        self.employee.program_user = False
+        self.employee.save(update_fields=["program_user"])
+        after_revoke = self.client.get(reverse("attendance:dashboard"))
+        self.assertEqual(after_revoke.status_code, 302)
+        self.assertEqual(after_revoke.url, reverse("core:login"))
+        self.assertFalse(after_revoke.wsgi_request.user.is_authenticated)
+        self.assertTrue(AuditLog.objects.filter(
+            user=account, action="program_access_revoked", model="T5Web"
+        ).exists())
+
     @override_settings(LOGIN_CAPTCHA_ENABLED=False)
     def test_login_requires_reference_program_user_flag(self):
         restricted_employee = Employee.objects.create(
@@ -411,7 +431,8 @@ class T5ScopedReadTests(TestCase):
     def setUp(self):
         self.department = Department.objects.create(name="مالی", code="FIN")
         self.employee = Employee.objects.create(
-            badge_no="SCOPE-1", first_name="آ", last_name="م", department=self.department
+            badge_no="SCOPE-1", first_name="آ", last_name="م",
+            department=self.department, program_user=True,
         )
         self.other = Employee.objects.create(
             badge_no="SCOPE-2", first_name="ب", last_name="ن", department=self.department

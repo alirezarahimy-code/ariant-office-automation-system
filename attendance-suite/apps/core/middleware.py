@@ -20,10 +20,13 @@ class T5ProgramAccessMiddleware:
     def __call__(self, request):
         user = getattr(request, "user", None)
         if user and user.is_authenticated and not user.is_superuser:
-            grant = ProgramAccess.objects.filter(
+            grant_exists = ProgramAccess.objects.filter(
                 user=user, program=ProgramAccess.Program.T5WEB
-            ).only("is_allowed").first()
-            if grant is not None and not has_program_access(user, ProgramAccess.Program.T5WEB):
+            ).exists()
+            # Enforce explicit grants and the legacy ProgramUser fallback on
+            # every request so revocation also terminates existing sessions.
+            if ((grant_exists or user.employee_id)
+                    and not has_program_access(user, ProgramAccess.Program.T5WEB)):
                 audit(
                     user, "program_access_revoked", model="T5Web",
                     detail=request.path,

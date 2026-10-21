@@ -120,7 +120,7 @@ def login_view(request):
                 return redirect('attendance:dashboard')
             if user is not None and user.is_active and not has_web_access:
                 audit(user, 'login_denied', model='T5Web',
-                      detail='کاربر وب برای پروندهٔ پرسنلی غیرفعال است.', ip=ip)
+                      detail='دسترسی T5Web برای پروندهٔ پرسنلی غیرفعال است.', ip=ip)
                 error = 'دسترسی T5Web برای این پروندهٔ پرسنلی فعال نیست.'
             else:
                 record_login_failure(username, ip)

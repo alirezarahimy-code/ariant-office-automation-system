@@ -210,7 +210,8 @@ class UnisUsbImportTests(TestCase):
         from apps.core.models import User
         self.admin = User.objects.create_superuser('usb-admin', password='x')
         self.employee = Employee.objects.create(
-            badge_no='5001', first_name='سارا', last_name='آزمایش')
+            badge_no='5001', first_name='سارا', last_name='آزمایش',
+            program_user=True)
         self.device = Device.objects.create(
             name='Virdi USB', serial='V-USB', brand=Device.Brand.VIRDI)
         self.bridge = UnisBridge.objects.create(
