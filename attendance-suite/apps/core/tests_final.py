@@ -496,7 +496,54 @@ class NewPagesSmokeTests(TestCase):
         resp = self.client.post(reverse('attendance:insert_record'), {
             'selectedBadgeNumbers': ['9002'], 'date': '2026-10-20',
             'time': '08:00', 'check_type': 'in', 'description': 'دستی'})
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 200)
         from apps.attendance.models import Punch
-        self.assertTrue(Punch.objects.filter(employee__badge_no='9002',
-                                             source='web').exists())
+        punch = Punch.objects.get(employee__badge_no='9002', source='web')
+        self.assertEqual(punch.direction, Punch.Direction.IN)
+        self.assertEqual(punch.check_type, 0)
+
+    def test_insert_record_accepts_reference_field_names_and_jalali_date(self):
+        from django.urls import reverse
+        from apps.org.models import Employee
+        Employee.objects.create(badge_no='9003', first_name='م', last_name='ت')
+        response = self.client.post(reverse('attendance:insert_record'), {
+            'selectedBadgeNumbers': ['9003'], 'dateHijri': '1405/07/28',
+            'timeOfDay': '09:15', 'checkType': '1', 'isFreeze': 'false',
+        })
+        self.assertEqual(response.status_code, 200)
+        from apps.attendance.models import Punch
+        punch = Punch.objects.get(employee__badge_no='9003')
+        self.assertEqual(punch.date, jdatetime.date(1405, 7, 28).togregorian())
+        self.assertEqual(punch.time, gregorian.time(9, 15))
+        self.assertEqual(punch.direction, Punch.Direction.OUT)
+        self.assertEqual(punch.check_type, 1)
+
+    def test_insert_record_rejects_unmapped_check_types_and_empty_selection(self):
+        from django.urls import reverse
+        from apps.org.models import Employee
+        Employee.objects.create(badge_no='9004', first_name='ن', last_name='ت')
+        url = reverse('attendance:insert_record')
+        response = self.client.post(url, {
+            'selectedBadgeNumbers': ['9004'], 'dateHijri': '1405/07/28',
+            'timeOfDay': '08:00', 'checkType': '7',
+        })
+        self.assertEqual(response.status_code, 200)
+        from apps.attendance.models import Punch
+        self.assertFalse(Punch.objects.filter(employee__badge_no='9004').exists())
+        response = self.client.post(url, {
+            'dateHijri': '1405/07/28', 'timeOfDay': '08:00', 'checkType': '0',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Punch.objects.exists())
+
+    def test_insert_record_freezes_scoped_badge_and_rejects_external_referrer(self):
+        from django.urls import reverse
+        from apps.org.models import Employee
+        Employee.objects.create(badge_no='9005', first_name='ث', last_name='ت')
+        response = self.client.get(reverse('attendance:insert_record'), {
+            'badgeNumber': '9005', 'referrerURL': 'https://evil.example/steal',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="isFreeze" value="true"')
+        self.assertContains(response, 'name="badgeNumber" value="9005"')
+        self.assertNotContains(response, 'https://evil.example/steal')

@@ -5,6 +5,7 @@ import jdatetime
 from django.contrib import messages
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.core.services import audit, has_perm, require_perm, scoped_employees
 
@@ -558,30 +559,173 @@ def total_control(request):
 
 @require_perm('attendance', 'add')
 def insert_record(request):
-    """ثبت تردد دستی (InsertRecord) — چند پرسنل + نوع تردد + تاریخ/ساعت."""
+    """ثبت دستی تردد با قراردادهای اصلی T5ِ تاریخ/ساعت/CheckType.
+
+    مدل محلی فقط ورود/خروج را به‌عنوان Punch پشتیبانی می‌کند؛ کدهای LeaveType
+    عمداً تا پیاده‌سازی مدل/محاسبهٔ متناظر پذیرفته نمی‌شوند.
+    """
     from apps.org.models import Employee
+
     allowed_employees = scoped_employees(
-        request.user, 'attendance', Employee.objects.filter(is_active=True))
+        request.user, 'attendance', Employee.objects.filter(is_active=True)
+    ).order_by('badge_no')
+
+    def safe_referrer(value):
+        value = (value or '').strip()
+        if value and url_has_allowed_host_and_scheme(
+                value, allowed_hosts={request.get_host()},
+                require_https=request.is_secure()):
+            return value
+        return ''
+
+    def render_form(*, selected_badges=None, frozen=False, frozen_badge='',
+                    date_value=None, time_value=None, check_type='0',
+                    referrer_url=''):
+        selected_badges = [str(value) for value in (selected_badges or [])]
+        employees = list(allowed_employees[:400])
+        visible_badges = {employee.badge_no for employee in employees}
+        # Keep a frozen or previously selected, scoped employee visible even when
+        # their badge is outside the first page of the picker.
+        if selected_badges:
+            extras = allowed_employees.filter(
+                badge_no__in=selected_badges).exclude(badge_no__in=visible_badges)
+            employees.extend(extras)
+        return render(request, 'attendance/insert_record.html', {
+            'employees': employees,
+            'selected_badge_numbers': selected_badges,
+            'is_freeze': frozen,
+            'frozen_badge_number': str(frozen_badge or ''),
+            'date_value': (jdatetime.date.today().strftime('%Y/%m/%d')
+                            if date_value is None else date_value),
+            'time_value': '08:00' if time_value is None else time_value,
+            'check_type': str(check_type),
+            'referrer_url': safe_referrer(referrer_url),
+        })
+
     if request.method == 'POST':
+        frozen = request.POST.get('isFreeze', '').lower() in {'true', '1', 'on'}
+        frozen_badge = request.POST.get('badgeNumber', '').strip()
         badges = request.POST.getlist('selectedBadgeNumbers')
-        date = request.POST.get('date', '')
-        tm = request.POST.get('time', '08:00')
-        check_type = request.POST.get('check_type', 'in')
-        desc = request.POST.get('description', '')
-        n = 0
-        for b in badges:
-            emp = allowed_employees.filter(badge_no=b).first()
-            if not emp:
+        if frozen:
+            badges = [frozen_badge] if frozen_badge else []
+
+        # `dateHijri`/`timeOfDay`/`checkType` are the T5 field names. The legacy
+        # names remain accepted for existing callers and tests.
+        date_text = request.POST.get('dateHijri')
+        legacy_date = not bool(date_text)
+        date_text = (date_text or request.POST.get('date', '')).strip()
+        time_text = request.POST.get('timeOfDay')
+        if time_text is None:
+            time_text = request.POST.get('time')
+        if time_text is None:
+            time_text = '08:00'
+        time_text = time_text.strip()
+        raw_type = request.POST.get('checkType')
+        if raw_type is None:
+            raw_type = request.POST.get('check_type', 'in')
+        description = request.POST.get('description', '').strip()
+        referrer_url = safe_referrer(request.POST.get('referrerURL'))
+
+        try:
+            if not date_text:
+                raise ValueError('تاریخ نامعتبر است.')
+            if legacy_date:
+                # The old local form accepted ISO Gregorian dates as well as
+                # Jalali dates; retain that compatibility during the rebuild.
+                try:
+                    date_value = gregorian.date.fromisoformat(date_text)
+                except ValueError:
+                    date_value = _parse_date(date_text)
+            else:
+                date_value = _parse_date(date_text)
+            time_value = _parse_time(time_text)
+            if time_value is None:
+                raise ValueError('ساعت نامعتبر است.')
+        except (TypeError, ValueError, OverflowError):
+            messages.error(request, 'تاریخ یا ساعت نامعتبر است؛ مقدار را بررسی کنید.')
+            return render_form(
+                selected_badges=badges, frozen=frozen,
+                frozen_badge=frozen_badge, date_value=date_text,
+                time_value=time_text, check_type=raw_type,
+                referrer_url=referrer_url)
+
+        try:
+            if str(raw_type).strip().lower() in {'in', 'out'}:
+                check_type = 0 if str(raw_type).strip().lower() == 'in' else 1
+            else:
+                check_type = int(raw_type)
+            if check_type not in (0, 1):
+                raise ValueError
+        except (TypeError, ValueError, OverflowError):
+            messages.error(request, 'CheckType نامعتبر است؛ فعلاً فقط ۰ (ورود) و ۱ (خروج) پشتیبانی می‌شود.')
+            return render_form(
+                selected_badges=badges, frozen=frozen,
+                frozen_badge=frozen_badge, date_value=date_text,
+                time_value=time_text, check_type=raw_type,
+                referrer_url=referrer_url)
+
+        if not badges:
+            messages.error(request, 'پرسنلی انتخاب نشده است.')
+            return render_form(
+                selected_badges=badges, frozen=frozen,
+                frozen_badge=frozen_badge, date_value=date_text,
+                time_value=time_text, check_type=check_type,
+                referrer_url=referrer_url)
+
+        employees_by_badge = {
+            employee.badge_no: employee
+            for employee in allowed_employees.filter(badge_no__in=set(badges))
+        }
+        inserted = 0
+        rejected = 0
+        direction = (Punch.Direction.IN if check_type == 0
+                     else Punch.Direction.OUT)
+        for badge in badges:
+            employee = employees_by_badge.get(str(badge))
+            if employee is None:
+                rejected += 1
                 continue
-            Punch.objects.create(
-                employee=emp, date=date, time=tm, direction=check_type,
-                source='web', description=desc)
-            n += 1
-        audit(request.user, 'add', 'Punch', detail=f'{n} manual punches {date}')
-        messages.success(request, f'{n} تردد ثبت شد.')
-        return redirect('attendance:insert_record')
-    return render(request, 'attendance/insert_record.html', {
-        'employees': allowed_employees[:400]})
+            punch = Punch.objects.create(
+                employee=employee,
+                date=date_value,
+                time=time_value,
+                direction=direction,
+                check_type=check_type,
+                source=Punch.Source.WEB,
+                description=description,
+                created_by=request.user,
+            )
+            audit(request.user, 'add', 'Punch', punch.pk,
+                  detail=f'T5 InsertRecord; badge={employee.badge_no}; '
+                         f'checkType={check_type}; {date_value} {time_value}')
+            inserted += 1
+
+        if inserted:
+            messages.success(request, f'{inserted} تردد ثبت شد.')
+        if rejected:
+            messages.warning(request, f'{rejected} شناسه خارج از دامنهٔ مجاز نادیده گرفته شد.')
+        if not inserted and not rejected:
+            messages.error(request, 'هیچ رکوردی درج نشد.')
+
+        return render_form(
+            selected_badges=badges, frozen=frozen,
+            frozen_badge=frozen_badge, date_value=date_text,
+            time_value=time_text, check_type=check_type,
+            referrer_url=referrer_url)
+
+    raw_badge = request.GET.get('badgeNumber', '-1').strip()
+    frozen = raw_badge not in {'', '-1'}
+    selected = [raw_badge] if frozen and allowed_employees.filter(
+        badge_no=raw_badge).exists() else []
+    if frozen and not selected:
+        frozen = False
+        messages.error(request, 'پرسنل انتخاب‌شده در دامنهٔ دسترسی شما نیست.')
+    return render_form(
+        selected_badges=selected, frozen=frozen,
+        frozen_badge=selected[0] if selected else '',
+        date_value=jdatetime.date.today().strftime('%Y/%m/%d'),
+        time_value='08:00', check_type='0',
+        referrer_url=request.GET.get('referrerURL', ''))
 
 
 @require_perm('attendance', 'change')
