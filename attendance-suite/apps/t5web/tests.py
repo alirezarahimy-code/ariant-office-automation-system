@@ -291,7 +291,7 @@ class T5ManagerAccountTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 403)
 
-    def test_change_lock_page_is_restricted_and_fails_closed_without_provider(self):
+    def test_change_lock_matches_reference_error_without_provider(self):
         FakeLicenseChecker.calls.clear()
         page_url = reverse("t5web:change_lock")
         check_url = reverse("t5web:change_lock_check")
@@ -307,8 +307,9 @@ class T5ManagerAccountTests(TestCase):
         response = self.client.post(check_url, {
             "ChangeType": "1", "Code": "never-store-this-license-key",
         })
-        self.assertEqual(response.status_code, 503)
-        self.assertIn("هیچ تغییری اعمال نشد", response.json()["message"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/plain; charset=utf-8")
+        self.assertEqual(response.content.decode(), "خطا در انجام عملیات")
         self.assertNotIn("never-store-this-license-key", response.content.decode())
         self.assertEqual(FakeLicenseChecker.calls, [])
         self.assertFalse(AuditLog.objects.filter(

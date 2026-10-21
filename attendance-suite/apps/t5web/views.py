@@ -1,6 +1,8 @@
+from time import sleep
+
 from django.contrib import messages
 from django.db import IntegrityError, transaction
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
@@ -25,14 +27,9 @@ LICENSE_CHANGE_TYPES = (
 @require_perm("core", "manage")
 @require_GET
 def change_lock(request):
-    """Render the reference ChangeLock form without license-side effects."""
-    from django.conf import settings
-
+    """Render the ChangeLock form with the six reference change types."""
     return render(request, "t5web/change_lock.html", {
         "change_types": LICENSE_CHANGE_TYPES,
-        "license_provider_configured": bool(
-            getattr(settings, "T5_LICENSE_CHECKER", "")
-        ),
         "license_check_url": reverse("t5web:change_lock_check"),
     })
 
@@ -59,13 +56,15 @@ def change_lock_check(request):
     try:
         checker = configured_license_checker()
         if checker is None:
-            return JsonResponse({
-                "ok": False,
-                "message": (
-                    "سرویس معتبر لایسنس T5 پیکربندی نشده است؛ "
-                    "کد بررسی یا ذخیره نشد و هیچ تغییری اعمال نشد."
-                ),
-            }, status=503)
+            # The exact shipped ChangeLock.Check body in T5V3Web 3.5.7
+            # returns Persian.ErrorOperation after a one-second delay; it
+            # does not inspect either submitted argument or mutate license data.
+            sleep(1)
+            return HttpResponse(
+                "خطا در انجام عملیات",
+                content_type="text/plain; charset=utf-8",
+                status=200,
+            )
         result = checker.check(change_type, code)
         if not isinstance(result, LicenseCheckResult):
             raise TypeError("License provider returned an untyped result")

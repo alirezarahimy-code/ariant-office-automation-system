@@ -3,11 +3,6 @@
 {% block content %}
 <div class="page-head"><div><h1>تغییر لایسنس</h1></div></div>
 <div class="card">
-  {% if not license_provider_configured %}
-    <div class="alert alert-warning" role="status">
-      سرویس معتبر لایسنس T5 پیکربندی نشده است. این صفحه کد فعال‌سازی را تولید، بررسی یا ذخیره نمی‌کند؛ تا زمان اتصال سرویس مورد تأیید فروشنده هیچ تغییری اعمال نمی‌شود.
-    </div>
-  {% endif %}
   <div id="license-result" class="alert" role="status" hidden></div>
   <form method="post" action="{{ license_check_url }}" id="frmCode" autocomplete="off">
     {% csrf_token %}
@@ -20,7 +15,7 @@
     <div class="field">
       <label for="Code">کد</label>
       <input id="Code" name="Code" type="password" maxlength="512" required autocomplete="new-password">
-      <small class="help">کد برای ارسال به سرویس مجاز استفاده می‌شود و در سامانه ذخیره یا در گزارش‌ها ثبت نمی‌شود.</small>
+      <small class="help">کد در سامانه ذخیره یا در گزارش‌ها ثبت نمی‌شود.</small>
     </div>
     <button type="submit" class="btn btn-primary">تأیید</button>
   </form>
@@ -41,11 +36,17 @@
         headers: {'X-Requested-With': 'XMLHttpRequest'},
         credentials: 'same-origin'
       });
-      const payload = await response.json();
-      result.textContent = payload.message || 'پاسخی از سرویس دریافت نشد.';
-      result.className = `alert ${payload.ok ? 'alert-success' : 'alert-error'}`;
+      const contentType = response.headers.get('Content-Type') || '';
+      if (contentType.includes('application/json')) {
+        const payload = await response.json();
+        result.textContent = payload.message || 'پاسخی از سرویس دریافت نشد.';
+        result.className = `alert ${payload.ok ? 'alert-success' : 'alert-error'}`;
+        if (payload.ok) form.querySelector('#Code').value = '';
+      } else {
+        result.textContent = await response.text();
+        result.className = 'alert alert-error';
+      }
       result.hidden = false;
-      if (payload.ok) form.querySelector('#Code').value = '';
     } catch (_) {
       result.textContent = 'نتیجه از سرویس لایسنس دریافت نشد؛ وضعیت نهایی را از سرویس معتبر پیگیری کنید.';
       result.className = 'alert alert-warning';
