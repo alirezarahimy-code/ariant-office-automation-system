@@ -199,10 +199,19 @@ class PersonnelReportTests(TestCase):
         first = self.client.get(url, params)
         self.assertEqual(first.context['page_obj'].paginator.num_pages, 2)
         self.assertEqual(len(first.context['rows']), 1)
-        self.assertEqual(first.context['rows'][0][1:], [1, 1, 0, 15, 5, 400, 25])
+        self.assertEqual(first.context['rows'][0][:2], [
+            self.employee.badge_no, 'آرمان آزمایشی'])
+        self.assertEqual(first.context['rows'][0][2:], [1, 1, 0, 15, 5, 400, 25])
         second = self.client.get(url, {**params, 'page': '2'})
         self.assertEqual(len(second.context['rows']), 1)
-        self.assertEqual(second.context['rows'][0][0], str(other))
+        self.assertEqual(second.context['rows'][0][0], other.badge_no)
+        export_response = self.client.get(url, {**params, 'export': 'csv'})
+        csv_rows = list(csv.reader(
+            export_response.content.decode('utf-8-sig').splitlines()))
+        self.assertEqual(csv_rows[0][:2], ['شماره کارگری', 'نام'])
+        self.assertEqual(csv_rows[1][:2], [
+            self.employee.badge_no, 'آرمان آزمایشی'])
+        self.assertEqual(csv_rows[2][:2], [other.badge_no, 'نگار دوم'])
 
     def test_personnel_selector_uses_reference_advanced_filter_families(self):
         AppSetting.objects.create(key='certificates', value='کارشناسی|ارشد')

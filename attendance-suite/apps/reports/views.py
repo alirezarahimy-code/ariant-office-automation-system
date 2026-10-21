@@ -281,8 +281,9 @@ def _personnel_report(request, code):
                'کارکرد (دقیقه)', 'تأخیر',
                'تعجیل', 'اضافه‌کاری', 'وضعیت']
               if code == 'daily' else
-              ['پرسنل', 'روزهای ثبت‌شده', 'حاضر', 'غیبت', 'تأخیر (دقیقه)',
-               'تعجیل (دقیقه)', 'کارکرد (دقیقه)', 'اضافه‌کاری (دقیقه)'])
+              ['شماره کارگری', 'نام', 'روزهای ثبت‌شده', 'حاضر', 'غیبت',
+               'تأخیر (دقیقه)', 'تعجیل (دقیقه)', 'کارکرد (دقیقه)',
+               'اضافه‌کاری (دقیقه)'])
     rows = []
     report_ready = criteria_submitted and bool(selected_employees) and not date_error
 
@@ -324,7 +325,8 @@ def _personnel_report(request, code):
         for employee in selected_employees:
             totals = aggregates.get(employee.pk, {})
             summary_rows.append([
-                str(employee), totals.get('total_days', 0),
+                employee.badge_no, f'{employee.first_name} {employee.last_name}',
+                totals.get('total_days', 0),
                 totals.get('present_days', 0), totals.get('absent_days', 0),
                 totals.get('late_minutes') or 0, totals.get('early_minutes') or 0,
                 totals.get('worked_minutes') or 0,
