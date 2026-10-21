@@ -103,9 +103,11 @@ def _daily_report_rows(records):
         if not out_times and record.check_out:
             out_times.append(record.check_out.strftime('%H:%M'))
         jalali_date = to_jdate(record.date)
+        employee = record.employee
         rows.append([
-            str(record.employee), _jdate_text(record.date),
-            weekday_names[jalali_date.weekday()],
+            employee.badge_no, f'{employee.first_name} {employee.last_name}',
+            employee.department.name if employee.department_id else '',
+            _jdate_text(record.date), weekday_names[jalali_date.weekday()],
             *(in_times[:3] + [''] * (3 - len(in_times[:3]))),
             *(out_times[:3] + [''] * (3 - len(out_times[:3]))),
             record.worked_minutes, record.late_minutes, record.early_minutes,
@@ -274,8 +276,9 @@ def _personnel_report(request, code):
         to_date_text = _jdate_text(date_to)
 
     title = ('گزارش روزانه فردی' if code == 'daily' else 'گزارش مجموع')
-    header = (['پرسنل', 'تاریخ', 'روز هفته', 'ورود ۱', 'ورود ۲', 'ورود ۳',
-               'خروج ۱', 'خروج ۲', 'خروج ۳', 'کارکرد (دقیقه)', 'تأخیر',
+    header = (['شماره کارگری', 'نام', 'واحد', 'تاریخ', 'روز هفته',
+               'ورود ۱', 'ورود ۲', 'ورود ۳', 'خروج ۱', 'خروج ۲', 'خروج ۳',
+               'کارکرد (دقیقه)', 'تأخیر',
                'تعجیل', 'اضافه‌کاری', 'وضعیت']
               if code == 'daily' else
               ['پرسنل', 'روزهای ثبت‌شده', 'حاضر', 'غیبت', 'تأخیر (دقیقه)',
@@ -287,7 +290,8 @@ def _personnel_report(request, code):
         daily_qs = DailyRecord.objects.filter(
             employee__in=selected_employees,
             date__gte=date_from, date__lte=date_to,
-        ).select_related('employee').order_by('employee__last_name', 'employee__first_name', 'date')
+        ).select_related('employee', 'employee__department').order_by(
+            'employee__last_name', 'employee__first_name', 'date')
         if request.GET.get('export') == 'csv' and has_perm(request.user, 'reports', 'export'):
             raw = list(daily_qs[:MAX_DAILY_EXPORT_ROWS + 1])
             if len(raw) > MAX_DAILY_EXPORT_ROWS:

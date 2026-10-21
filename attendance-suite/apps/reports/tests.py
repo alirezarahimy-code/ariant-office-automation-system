@@ -1,3 +1,4 @@
+import csv
 import datetime as gregorian
 from unittest.mock import patch
 
@@ -70,6 +71,9 @@ class PersonnelReportTests(TestCase):
         self.assertContains(response, 'isMonthly')
 
     def test_daily_report_filters_jalali_interval_and_renders_jalali_date(self):
+        department = Department.objects.create(name='واحد نمونه', code='RP-DPT')
+        self.employee.department = department
+        self.employee.save(update_fields=['department'])
         date = jdatetime.date(1404, 7, 6).togregorian()
         DailyRecord.objects.create(
             employee=self.employee, date=date,
@@ -92,23 +96,31 @@ class PersonnelReportTests(TestCase):
             employee=self.employee,
             date=jdatetime.date(1404, 8, 1).togregorian(),
             worked_minutes=400, state=DailyRecord.State.ONTIME)
-        response = self.client.get(
-            reverse('reports:run_standard', args=['daily']), {
-                'selectedBadgeNumbers': [self.employee.badge_no],
-                'FromDateHijri': '1404/07/01',
-                'ToDateHijri': '1404/07/30',
-            })
+        url = reverse('reports:run_standard', args=['daily'])
+        params = {
+            'selectedBadgeNumbers': [self.employee.badge_no],
+            'FromDateHijri': '1404/07/01',
+            'ToDateHijri': '1404/07/30',
+        }
+        response = self.client.get(url, params)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['report_ready'])
         self.assertEqual(len(response.context['rows']), 1)
-        self.assertEqual(response.context['rows'][0][1], '1404/07/06')
-        self.assertEqual(response.context['rows'][0][3:6],
-                         ['08:00', '10:00', '13:00'])
-        self.assertEqual(response.context['rows'][0][6:9],
-                         ['12:00', '14:00', '17:00'])
-        self.assertEqual(response.context['rows'][0][9], 540)
-        self.assertEqual(len(response.context['header']), 14)
+        row = response.context['rows'][0]
+        self.assertEqual(row[:5], [
+            self.employee.badge_no, 'آرمان آزمایشی', 'واحد نمونه',
+            '1404/07/06', 'یکشنبه'])
+        self.assertEqual(row[5:8], ['08:00', '10:00', '13:00'])
+        self.assertEqual(row[8:11], ['12:00', '14:00', '17:00'])
+        self.assertEqual(row[11], 540)
+        self.assertEqual(len(response.context['header']), 16)
         self.assertContains(response, '۱۴۰۴/۰۷/۰۶')
+        export_response = self.client.get(url, {**params, 'export': 'csv'})
+        csv_rows = list(csv.reader(
+            export_response.content.decode('utf-8-sig').splitlines()))
+        self.assertEqual(csv_rows[0][:5], [
+            'شماره کارگری', 'نام', 'واحد', 'تاریخ', 'روز هفته'])
+        self.assertEqual(csv_rows[1][:5], row[:5])
 
     def test_daily_report_pages_by_employee_and_exports_all_selected_rows(self):
         start = jdatetime.date(1404, 7, 1).togregorian()
@@ -130,11 +142,11 @@ class PersonnelReportTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['page_obj'].paginator.num_pages, 51)
         self.assertEqual(len(response.context['rows']), 1)
-        self.assertEqual(response.context['rows'][0][0], str(self.employee))
+        self.assertEqual(response.context['rows'][0][0], self.employee.badge_no)
 
         second_page = self.client.get(url, {**params, 'page': '2'})
         self.assertEqual(len(second_page.context['rows']), 1)
-        self.assertEqual(second_page.context['rows'][0][0], str(employees[1]))
+        self.assertEqual(second_page.context['rows'][0][0], employees[1].badge_no)
         csv_response = self.client.get(url, {**params, 'export': 'csv'})
         self.assertEqual(csv_response.status_code, 200)
         self.assertIn('text/csv', csv_response['Content-Type'])
