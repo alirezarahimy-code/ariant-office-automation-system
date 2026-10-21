@@ -23,6 +23,8 @@ from apps.org.models import (Department, Employee, EmployeeFieldDef,
 
 from .models import ReportDef
 
+MAX_DAILY_EXPORT_ROWS = 10000
+
 # فیلدهای مجاز هر مدل برای گزارش‌ساز (بدون SQL دل‌بخواه — امنیت)
 MODEL_MAP = {
     'daily_record': (DailyRecord, {
@@ -70,6 +72,46 @@ def _report_value(value):
     if isinstance(value, gregorian.time):
         return value.strftime('%H:%M:%S')
     return str(value) if value is not None else ''
+
+
+def _daily_report_rows(records):
+    """Render local daily records with the reference's three in/out slots."""
+    records = list(records)
+    if not records:
+        return []
+    employee_ids = {record.employee_id for record in records}
+    dates = {record.date for record in records}
+    punches_by_day = {}
+    for punch in Punch.objects.filter(
+            employee_id__in=employee_ids, date__in=dates
+    ).order_by('employee_id', 'date', 'time', 'pk'):
+        key = (punch.employee_id, punch.date)
+        punches_by_day.setdefault(key, {Punch.Direction.IN: [], Punch.Direction.OUT: []})
+        slot = punches_by_day[key].get(punch.direction)
+        if slot is not None:
+            slot.append(punch.time.strftime('%H:%M'))
+
+    weekday_names = ('شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه',
+                     'چهارشنبه', 'پنجشنبه', 'جمعه')
+    rows = []
+    for record in records:
+        punches = punches_by_day.get((record.employee_id, record.date), {})
+        in_times = list(punches.get(Punch.Direction.IN, ()))
+        out_times = list(punches.get(Punch.Direction.OUT, ()))
+        if not in_times and record.check_in:
+            in_times.append(record.check_in.strftime('%H:%M'))
+        if not out_times and record.check_out:
+            out_times.append(record.check_out.strftime('%H:%M'))
+        jalali_date = to_jdate(record.date)
+        rows.append([
+            str(record.employee), _jdate_text(record.date),
+            weekday_names[jalali_date.weekday()],
+            *(in_times[:3] + [''] * (3 - len(in_times[:3]))),
+            *(out_times[:3] + [''] * (3 - len(out_times[:3]))),
+            record.worked_minutes, record.late_minutes, record.early_minutes,
+            record.overtime_minutes, record.get_state_display(),
+        ])
+    return rows
 
 
 def _certificate_choices():
@@ -232,10 +274,12 @@ def _personnel_report(request, code):
         to_date_text = _jdate_text(date_to)
 
     title = ('گزارش روزانه فردی' if code == 'daily' else 'گزارش مجموع')
-    header = (['پرسنل', 'تاریخ', 'ورود', 'خروج', 'کارکرد (دقیقه)',
-               'تأخیر', 'تعجیل', 'اضافه‌کاری', 'وضعیت']
+    header = (['پرسنل', 'تاریخ', 'روز هفته', 'ورود ۱', 'ورود ۲', 'ورود ۳',
+               'خروج ۱', 'خروج ۲', 'خروج ۳', 'کارکرد (دقیقه)', 'تأخیر',
+               'تعجیل', 'اضافه‌کاری', 'وضعیت']
               if code == 'daily' else
-              ['پرسنل', 'حاضر', 'تأخیر', 'غیبت', 'کارکرد (دقیقه)', 'اضافه‌کاری'])
+              ['پرسنل', 'روزهای ثبت‌شده', 'حاضر', 'غیبت', 'تأخیر (دقیقه)',
+               'تعجیل (دقیقه)', 'کارکرد (دقیقه)', 'اضافه‌کاری (دقیقه)'])
     rows = []
     report_ready = criteria_submitted and bool(selected_employees) and not date_error
 
@@ -245,23 +289,16 @@ def _personnel_report(request, code):
             date__gte=date_from, date__lte=date_to,
         ).select_related('employee').order_by('employee__last_name', 'employee__first_name', 'date')
         if request.GET.get('export') == 'csv' and has_perm(request.user, 'reports', 'export'):
-            raw = list(daily_qs[:10000])
-            export_rows = [[str(item.employee), _jdate_text(item.date),
-                            item.check_in.strftime('%H:%M') if item.check_in else '',
-                            item.check_out.strftime('%H:%M') if item.check_out else '',
-                            item.worked_minutes, item.late_minutes, item.early_minutes,
-                            item.overtime_minutes, item.get_state_display()]
-                           for item in raw]
-            return _csv_response(title, header, export_rows)
+            raw = list(daily_qs[:MAX_DAILY_EXPORT_ROWS + 1])
+            if len(raw) > MAX_DAILY_EXPORT_ROWS:
+                return HttpResponse(
+                    'برای جلوگیری از خروجی ناقص، بازه یا تعداد پرسنل را کمتر کنید.',
+                    status=413, content_type='text/plain; charset=utf-8')
+            return _csv_response(title, header, _daily_report_rows(raw))
         page_obj = Paginator(selected_employees, 1).get_page(request.GET.get('page'))
         page_employees = list(page_obj.object_list)
         page_records = daily_qs.filter(employee__in=page_employees)
-        rows = [[str(item.employee), _jdate_text(item.date),
-                 item.check_in.strftime('%H:%M') if item.check_in else '',
-                 item.check_out.strftime('%H:%M') if item.check_out else '',
-                 item.worked_minutes, item.late_minutes, item.early_minutes,
-                 item.overtime_minutes, item.get_state_display()]
-                for item in page_records]
+        rows = _daily_report_rows(page_records)
     elif report_ready and code == 'sum':
         aggregates = {
             item['employee_id']: item
@@ -269,10 +306,12 @@ def _personnel_report(request, code):
                 employee__in=selected_employees,
                 date__gte=date_from, date__lte=date_to,
             ).values('employee_id').annotate(
+                total_days=Count('pk'),
                 present_days=Count('pk', filter=~Q(state__in=(
                     DailyRecord.State.ABSENT, DailyRecord.State.HOLIDAY))),
-                late_days=Count('pk', filter=Q(late_minutes__gt=0)),
                 absent_days=Count('pk', filter=Q(state=DailyRecord.State.ABSENT)),
+                late_minutes=Sum('late_minutes'),
+                early_minutes=Sum('early_minutes'),
                 worked_minutes=Sum('worked_minutes'),
                 overtime_minutes=Sum('overtime_minutes'),
             )
@@ -281,8 +320,9 @@ def _personnel_report(request, code):
         for employee in selected_employees:
             totals = aggregates.get(employee.pk, {})
             summary_rows.append([
-                str(employee), totals.get('present_days', 0),
-                totals.get('late_days', 0), totals.get('absent_days', 0),
+                str(employee), totals.get('total_days', 0),
+                totals.get('present_days', 0), totals.get('absent_days', 0),
+                totals.get('late_minutes') or 0, totals.get('early_minutes') or 0,
                 totals.get('worked_minutes') or 0,
                 totals.get('overtime_minutes') or 0,
             ])

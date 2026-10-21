@@ -1,4 +1,5 @@
 import datetime as gregorian
+from unittest.mock import patch
 
 import jdatetime
 from django.contrib.auth import get_user_model
@@ -74,6 +75,19 @@ class PersonnelReportTests(TestCase):
             employee=self.employee, date=date,
             check_in=gregorian.time(8, 0), check_out=gregorian.time(17, 0),
             worked_minutes=540, state=DailyRecord.State.ONTIME)
+        for punch_time, direction in (
+                (gregorian.time(8, 0), Punch.Direction.IN),
+                (gregorian.time(10, 0), Punch.Direction.IN),
+                (gregorian.time(12, 0), Punch.Direction.OUT),
+                (gregorian.time(13, 0), Punch.Direction.IN),
+                (gregorian.time(14, 0), Punch.Direction.OUT),
+                (gregorian.time(15, 0), Punch.Direction.IN),
+                (gregorian.time(17, 0), Punch.Direction.OUT),
+                (gregorian.time(18, 0), Punch.Direction.IN),
+                (gregorian.time(19, 0), Punch.Direction.OUT)):
+            Punch.objects.create(
+                employee=self.employee, date=date, time=punch_time,
+                direction=direction)
         DailyRecord.objects.create(
             employee=self.employee,
             date=jdatetime.date(1404, 8, 1).togregorian(),
@@ -88,7 +102,12 @@ class PersonnelReportTests(TestCase):
         self.assertTrue(response.context['report_ready'])
         self.assertEqual(len(response.context['rows']), 1)
         self.assertEqual(response.context['rows'][0][1], '1404/07/06')
-        self.assertEqual(response.context['rows'][0][4], 540)
+        self.assertEqual(response.context['rows'][0][3:6],
+                         ['08:00', '10:00', '13:00'])
+        self.assertEqual(response.context['rows'][0][6:9],
+                         ['12:00', '14:00', '17:00'])
+        self.assertEqual(response.context['rows'][0][9], 540)
+        self.assertEqual(len(response.context['header']), 14)
         self.assertContains(response, '۱۴۰۴/۰۷/۰۶')
 
     def test_daily_report_pages_by_employee_and_exports_all_selected_rows(self):
@@ -123,6 +142,24 @@ class PersonnelReportTests(TestCase):
         self.assertIn(self.employee.last_name, csv_text)
         self.assertIn(employees[-1].last_name, csv_text)
 
+    def test_daily_csv_refuses_silent_truncation_over_export_limit(self):
+        first_date = jdatetime.date(1404, 7, 1).togregorian()
+        for offset in range(2):
+            DailyRecord.objects.create(
+                employee=self.employee,
+                date=first_date + gregorian.timedelta(days=offset),
+                worked_minutes=480, state=DailyRecord.State.ONTIME)
+        params = {
+            'selectedBadgeNumbers': [self.employee.badge_no],
+            'FromDateHijri': '1404/07/01', 'ToDateHijri': '1404/07/02',
+            'export': 'csv',
+        }
+        with patch('apps.reports.views.MAX_DAILY_EXPORT_ROWS', 1):
+            response = self.client.get(
+                reverse('reports:run_standard', args=['daily']), params)
+        self.assertEqual(response.status_code, 413)
+        self.assertContains(response, 'خروجی ناقص', status_code=413)
+
     def test_sum_report_pages_one_summary_per_selected_employee(self):
         other = Employee.objects.create(
             badge_no='RP-SUM-2', first_name='نگار', last_name='دوم')
@@ -130,7 +167,8 @@ class PersonnelReportTests(TestCase):
         for index, employee in enumerate((self.employee, other)):
             DailyRecord.objects.create(
                 employee=employee, date=date, worked_minutes=400 + index,
-                state=DailyRecord.State.ONTIME)
+                late_minutes=15 + index, early_minutes=5,
+                overtime_minutes=25, state=DailyRecord.State.LATE)
         params = {
             'selectedBadgeNumbers': [self.employee.badge_no, other.badge_no],
             'isMonthly': 'true', 'year': '1404', 'month': '7',
@@ -139,6 +177,7 @@ class PersonnelReportTests(TestCase):
         first = self.client.get(url, params)
         self.assertEqual(first.context['page_obj'].paginator.num_pages, 2)
         self.assertEqual(len(first.context['rows']), 1)
+        self.assertEqual(first.context['rows'][0][1:], [1, 1, 0, 15, 5, 400, 25])
         second = self.client.get(url, {**params, 'page': '2'})
         self.assertEqual(len(second.context['rows']), 1)
         self.assertEqual(second.context['rows'][0][0], str(other))
