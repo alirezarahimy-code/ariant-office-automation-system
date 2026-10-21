@@ -123,6 +123,10 @@ class PersonnelReportTests(TestCase):
         self.assertEqual(row[5:8], ['08:00', '10:00', '13:00'])
         self.assertEqual(row[8:11], ['12:00', '14:00', '17:00'])
         self.assertEqual(row[11], 540)
+        self.assertEqual(response.context['header'][11:], [
+            'کارکرد (دقیقه)', 'تأخیر (دقیقه)', 'تعجیل (دقیقه)',
+            'اضافه‌کاری (دقیقه)', 'وضعیت',
+        ])
         self.assertEqual(len(response.context['header']), 16)
         self.assertContains(response, '۱۴۰۴/۰۷/۰۶')
         export_response = self.client.get(url, {**params, 'export': 'csv'})
