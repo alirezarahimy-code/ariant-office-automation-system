@@ -101,8 +101,10 @@ class SecurityTests(TestCase):
         self.assertContains(about, reverse('core:home_index'))
         self.assertContains(about, reverse('core:about'))
         home = self.client.get(reverse('core:home_index'))
-        self.assertEqual(home.status_code, 302)
-        self.assertEqual(home.url, reverse('attendance:dashboard'))
+        self.assertEqual(home.status_code, 200)
+        self.assertContains(home, 'صفحه اصلی')
+        self.assertContains(home, self.employee.first_name)
+        self.assertContains(home, reverse('core:about'))
 
     def test_permission_denied_403(self):
         self.client.force_login(self.user)
@@ -322,6 +324,13 @@ class SecurityTests(TestCase):
         from apps.core.models import AuditLog
         self.assertTrue(AuditLog.objects.filter(action='login').exists())
 
+    def test_t5_login_defaults_to_reference_home_index(self):
+        response = self.client.post(reverse('core:login'), {
+            'userName': 'u1', 'Password': 'x',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('core:home_index'))
+
     def test_t5_login_field_names_and_safe_return_url(self):
         login_url = reverse('core:login')
         form = self.client.get(login_url, {'ReturnURL': '/attendance/requests/'})
@@ -353,7 +362,7 @@ class SecurityTests(TestCase):
             'ReturnURL': '//evil.example/redirect',
         })
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('attendance:dashboard'))
+        self.assertEqual(response['Location'], reverse('core:home_index'))
 
     def test_first_login_must_change_password_and_cannot_bypass_gate(self):
         self.user.must_change_password = True

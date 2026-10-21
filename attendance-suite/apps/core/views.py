@@ -117,7 +117,7 @@ def login_view(request):
                         return_url, allowed_hosts={request.get_host()},
                         require_https=request.is_secure()):
                     return redirect(return_url)
-                return redirect('attendance:dashboard')
+                return redirect('core:home_index')
             if user is not None and user.is_active and not has_web_access:
                 audit(user, 'login_denied', model='T5Web',
                       detail='دسترسی T5Web برای پروندهٔ پرسنلی غیرفعال است.', ip=ip)
@@ -143,7 +143,21 @@ def logout_view(request):
 
 @login_required
 def home(request):
-    return redirect('attendance:dashboard')
+    return redirect('core:home_index')
+
+
+@login_required
+def home_index(request):
+    """T5 home page: role-visible dashboard links and the signed-in profile."""
+    employee = getattr(request.user, 'employee', None)
+    return render(request, 'core/home.html', {
+        'employee': employee,
+        'position_title': employee.position.title if employee and employee.position else '',
+        'manager_position_title': (
+            employee.manager.position.title
+            if employee and employee.manager and employee.manager.position else ''
+        ),
+    })
 
 
 @login_required
@@ -227,7 +241,7 @@ def change_pass(request):
             update_session_auth_hash(request, request.user)
             audit(request.user, 'change', 'User', request.user.pk, detail='password')
             messages.success(request, 'رمز با موفقیت تغییر کرد.')
-            return redirect('attendance:dashboard')
+            return redirect('core:home_index')
     return render(request, 'core/change_pass.html', {
         'force_password_change': force_password_change,
     })

@@ -7,7 +7,7 @@ app_name = 'core'
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('Home/Index', views.home, name='home_index'),
+    path('Home/Index', views.home_index, name='home_index'),
     path('Home/About', views.about, name='about'),
     path('login/', views.login_view, name='login'),
     path('login/captcha.png', views.captcha_image, name='captcha_image'),

@@ -70,7 +70,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 LOGIN_URL = 'core:login'
-LOGIN_REDIRECT_URL = 'attendance:dashboard'
+LOGIN_REDIRECT_URL = 'core:home_index'
 LOGOUT_REDIRECT_URL = 'core:login'
 # Optional dotted class path implementing the trusted vendor license contract.
 T5_LICENSE_CHECKER = os.environ.get('T5_LICENSE_CHECKER', '').strip()
