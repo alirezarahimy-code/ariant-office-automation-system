@@ -48,6 +48,16 @@ class T5NavigationTests(TestCase):
             context["t5_menu_groups"][0]["items"][0]["label"], "مدرک تحصیلی"
         )
 
+    def test_unis_virdi_bridge_is_not_misrepresented_as_t5_usb_management(self):
+        user = User.objects.create_superuser("t5-menu-admin", password="test-pass")
+        request = RequestFactory().get("/")
+        request.user = user
+        items = [item for group in t5web_navigation(request)["t5_menu_groups"]
+                 for item in group["items"]]
+        self.assertNotIn(reverse("device:usb_import"),
+                         [item["url"] for item in items])
+        self.assertNotIn("مدیریت اطلاعات USB", [item["label"] for item in items])
+
     def test_menu_is_permission_filtered(self):
         user = User.objects.create_user("t5-employee", password="test-pass")
         role = Role.objects.create(name="گزارش‌خوان", code="report-reader")

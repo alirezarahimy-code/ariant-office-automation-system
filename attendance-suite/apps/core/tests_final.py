@@ -445,25 +445,22 @@ class NewPagesSmokeTests(TestCase):
             'شیفت‌های موقت', 'اختصاص قوانین',
         ])
 
-    def test_usb_menu_requires_both_attendance_and_device_permissions(self):
+    def test_unis_usb_bridge_is_not_exposed_as_a_t5_menu_feature(self):
+        from django.urls import reverse
         from apps.core.models import Permission, Role, User, UserRole
         from apps.t5web.menu import t5web_navigation
         user = User.objects.create_user('usb-menu-user', password='x')
         role = Role.objects.create(name='USB ops', code='usb-menu-ops')
-        attendance_perm = Permission.objects.get_or_create(
-            module='attendance', action='manage')[0]
-        device_perm = Permission.objects.get_or_create(
-            module='device', action='manage')[0]
-        role.permissions.add(attendance_perm)
+        role.permissions.add(
+            Permission.objects.get_or_create(module='attendance', action='manage')[0],
+            Permission.objects.get_or_create(module='device', action='manage')[0],
+        )
         UserRole.objects.create(user=user, role=role)
         request = type('Request', (), {'user': user})()
-        labels = [entry['label'] for group in t5web_navigation(request)['t5_menu_groups']
-                  for entry in group['items']]
-        self.assertNotIn('مدیریت اطلاعات USB', labels)
-        role.permissions.add(device_perm)
-        labels = [entry['label'] for group in t5web_navigation(request)['t5_menu_groups']
-                  for entry in group['items']]
-        self.assertIn('مدیریت اطلاعات USB', labels)
+        items = [entry for group in t5web_navigation(request)['t5_menu_groups']
+                 for entry in group['items']]
+        self.assertNotIn('مدیریت اطلاعات USB', [item['label'] for item in items])
+        self.assertNotIn(reverse('device:usb_import'), [item['url'] for item in items])
 
     def test_userinfo_create_and_edit(self):
         from django.urls import reverse

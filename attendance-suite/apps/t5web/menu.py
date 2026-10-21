@@ -47,8 +47,6 @@ T5_MENU = (
         (
             ("درج تردد", "attendance:insert_record", "attendance.add"),
             ("درج مرخصی و مأموریت روزانه", "attendance:daily_leave_batch", "attendance.manage"),
-            ("مدیریت اطلاعات USB", "device:usb_import",
-             ("attendance.manage", "device.manage")),
             ("ویرایش تأخیر و تعجیل", "attendance:edit_late_early", "attendance.manage"),
             ("صدور مجوز کسر کار", "attendance:valid_leaves", "attendance.manage"),
             ("پیش‌کارت", "attendance:pre_cards",
