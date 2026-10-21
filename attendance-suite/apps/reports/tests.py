@@ -12,6 +12,7 @@ from apps.core.models import AppSetting, Permission, Role, RoleDataScope, UserRo
 from apps.org.models import (Department, Employee, EmployeeFieldDef,
                              EmployeeFieldVal, EmpType)
 from apps.reports.models import ReportDef
+from apps.reports.views import _csv_response
 
 User = get_user_model()
 
@@ -22,6 +23,15 @@ class PersonnelReportTests(TestCase):
         self.client.force_login(self.admin)
         self.employee = Employee.objects.create(
             badge_no='RP-101', first_name='آرمان', last_name='آزمایشی')
+
+    def test_csv_neutralizes_formula_like_text_without_changing_numbers(self):
+        response = _csv_response('test', ['value'], [
+            ['=1+1'], ['  @SUM(A1)'], [-12], ['+2'], ['\t=1'],
+        ])
+        rows = list(csv.reader(response.content.decode('utf-8-sig').splitlines()))
+        self.assertEqual([row[0] for row in rows[1:]], [
+            "'=1+1", "'  @SUM(A1)", '-12', "'+2", "'\t=1",
+        ])
 
     def test_standard_report_applies_custom_jalali_interval(self):
         selected_date = jdatetime.date(1404, 7, 6).togregorian()

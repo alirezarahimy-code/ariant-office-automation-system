@@ -613,13 +613,22 @@ def run_standard(request, code):
     })
 
 
+def _csv_safe(value):
+    """Neutralize spreadsheet formulas in untrusted text while preserving numbers."""
+    if isinstance(value, str):
+        stripped = value.lstrip(' \t\r\n')
+        if value[:1] in ('=', '+', '-', '@', '\t', '\r', '\n') or stripped[:1] in ('=', '+', '-', '@'):
+            return "'" + value
+    return value
+
+
 def _csv_response(title, header, rows):
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="report.csv"'
     response.write('\ufeff')  # BOM برای اکسل
     writer = csv.writer(response)
     writer.writerow(header)
-    writer.writerows(rows)
+    writer.writerows([_csv_safe(value) for value in row] for row in rows)
     return response
 
 

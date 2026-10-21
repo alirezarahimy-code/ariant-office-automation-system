@@ -18,7 +18,7 @@
 ## نتیجهٔ اعتبارسنجی
 
 - `python manage.py test apps.core.tests_final.EmployeeExcelImportTests --verbosity 2`: چهار آزمون موفق.
-- `python manage.py test --verbosity 1`: **۱۴۸ آزمون موفق** (پایگاه‌های `default` و `unis`); از این‌ها ۱۴ آزمون گزارش شامل فیلترهای پیشرفته و صفحه‌بندی یک کارمند در هر صفحه، حداکثر سه ورود/خروج برای Daily، مجموع‌های Sum، و رد CSV روزانهٔ بیش از ۱۰٬۰۰۰ ردیف بدون کوتاه‌سازی خاموش را می‌پوشانند. آزمون‌های تازهٔ LeaveType و پیش‌کارت، CRUD مرجع، جلوگیری از حذف دادهٔ مصرف‌شده، مرز بازه، فیلتر دستگاه، OnlyFirst، همگام‌سازی CheckType با Punch و مسیر ماهانه را پوشش می‌دهند. یک هشدار قدیمی برای datetimeهای naive در fixture تست `RawRecord.punch_time` باقی است؛ شکست آزمون نیست.
+- `python manage.py test --verbosity 1`: **۱۴۹ آزمون موفق** (پایگاه‌های `default` و `unis`); از این‌ها ۱۵ آزمون گزارش شامل فیلترهای پیشرفته و صفحه‌بندی یک کارمند در هر صفحه، حداکثر سه ورود/خروج و ستون‌های مستقل شماره/نام/واحد برای Daily، مجموع‌های Sum، رد CSV روزانهٔ بیش از ۱۰٬۰۰۰ ردیف بدون کوتاه‌سازی خاموش، و خنثی‌سازی متن فرمول‌مانند CSV را می‌پوشانند. آزمون‌های تازهٔ LeaveType و پیش‌کارت، CRUD مرجع، جلوگیری از حذف دادهٔ مصرف‌شده، مرز بازه، فیلتر دستگاه، OnlyFirst، همگام‌سازی CheckType با Punch و مسیر ماهانه را پوشش می‌دهند. یک هشدار قدیمی برای datetimeهای naive در fixture تست `RawRecord.punch_time` باقی است؛ شکست آزمون نیست.
 - `python manage.py check`: بدون مشکل.
 - `python manage.py makemigrations --check --dry-run`: `No changes detected`.
 - `git diff --check`: موفق.
