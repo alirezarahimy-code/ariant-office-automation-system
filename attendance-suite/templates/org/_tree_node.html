@@ -1,4 +1,4 @@
-<li><strong>{{ n.d.name }}</strong> <span class="chip">{{ n.d.code }}</span>
-{% if n.kids %}<ul style="list-style:none;margin-right:24px">
-{% for c in n.kids %}{% include 'org/_tree_node.html' with n=c %}{% endfor %}
-</ul>{% endif %}</li>
+<li>
+  <a class="{% if selected and selected.pk == n.d.pk %}dept-selected{% endif %}" href="?dept_id={{ n.d.pk }}">{{ n.d.name }}</a>
+  {% if n.kids %}<ul>{% for c in n.kids %}{% include 'org/_tree_node.html' with n=c %}{% endfor %}</ul>{% endif %}
+</li>

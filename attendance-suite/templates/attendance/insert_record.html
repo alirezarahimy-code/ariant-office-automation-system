@@ -1,28 +1,225 @@
 {% extends 'base.html' %}
-{% block title %}ثبت تردد دستی{% endblock %}
+{% block title %}درج تردد{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>ثبت تردد دستی</h1><p class="sub">InsertRecord — برای چند پرسنل همزمان</p></div></div>
-<form method="post" action="{% url 'attendance:insert_record' %}">{% csrf_token %}
-<div class="card">
-  <div class="card-title">۱) انتخاب پرسنل (چندتایی)</div>
-  <div style="max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
-    {% for e in employees %}
-      <label style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px">
-        <input type="checkbox" name="selectedBadgeNumbers" value="{{ e.badge_no }}">
-        {{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</label>
+<div class="page-head">
+  <div>
+    <h1>درج تردد</h1>
+    <p class="sub">InsertRecord — ثبت گروهی تردد با قرارداد تاریخ و CheckType نسخهٔ مرجع</p>
+  </div>
+</div>
+<form method="post" action="{% url 'attendance:insert_record' %}">
+  {% csrf_token %}
+  <input type="hidden" name="isFreeze" value="{{ is_freeze|yesno:'true,false' }}">
+  <input type="hidden" name="referrerURL" value="{{ referrer_url }}">
+  {% if is_freeze %}
+    <input type="hidden" name="badgeNumber" value="{{ frozen_badge_number }}">
+  {% endif %}
+  <div id="selectedBadgeInputs" hidden>
+    {% for badge in selected_badge_numbers %}
+      <input type="hidden" name="selectedBadgeNumbers" value="{{ badge }}">
     {% endfor %}
   </div>
-</div>
-<div class="card">
-  <div class="card-title">۲) مشخصات تردد</div>
-  <div class="form-grid">
-    <div class="field"><label>تاریخ (جلالی)</label><input name="date" placeholder="1405-07-28" required></div>
-    <div class="field"><label>ساعت</label><input name="time" value="08:00" required></div>
-    <div class="field"><label>نوع</label><select name="check_type">
-      <option value="in">ورود</option><option value="out">خروج</option></select></div>
-    <div class="field"><label>شرح</label><input name="description"></div>
-    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">ثبت تردد</button></div>
-  </div>
-</div>
+
+  <section class="card">
+    <div class="card-title">انتخاب پرسنل</div>
+    {% if not is_freeze %}
+      <div class="form-grid" style="margin-bottom:12px">
+        <div class="field">
+          <label for="personnelSearch">جستجوی پرسنل</label>
+          <input id="personnelSearch" type="search" autocomplete="off" placeholder="نام، نام خانوادگی یا شناسه">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" type="button" id="selectVisible">انتخاب موارد نمایان</button>
+            <button class="btn" type="button" id="invertVisible">معکوس‌کردن انتخاب نمایان</button>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+    <div id="personnelList" data-search-url="{% url 'attendance:insert_record_people' %}" style="max-height:320px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px">
+      {% for e in employees %}
+        <label class="personnel-option" data-badge="{{ e.badge_no }}" data-name="{{ e.first_name }} {{ e.last_name }}" data-department="{{ e.department.name|default:'' }}" style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px">
+          <input class="personnel-checkbox" type="checkbox" value="{{ e.badge_no }}"
+                 {% if e.badge_no in selected_badge_numbers %}checked{% endif %}
+                 {% if is_freeze %}disabled{% endif %}>
+          <span>{{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</span>
+          {% if e.department %}<small>({{ e.department.name }})</small>{% endif %}
+        </label>
+      {% empty %}
+        <p>پرسنلی در دامنهٔ دسترسی شما وجود ندارد.</p>
+      {% endfor %}
+    </div>
+    {% if not is_freeze %}
+      <button class="btn" type="button" id="loadMorePeople" hidden>بارگذاری افراد بیشتر</button>
+      <p id="pickerStatus" class="sub" aria-live="polite">برای جستجوی کل فهرست، چند حرف از نام یا شناسه را وارد کنید.</p>
+    {% else %}<p class="sub">انتخاب پرسنل در این حالت ثابت است.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-title">مشخصات تردد</div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="dateHijri">تاریخ</label>
+        <input id="dateHijri" name="dateHijri" value="{{ date_value }}" placeholder="۱۴۰۵/۰۷/۲۸" required>
+      </div>
+      <div class="field">
+        <label for="timeOfDay">زمان</label>
+        <input id="timeOfDay" name="timeOfDay" value="{{ time_value }}" placeholder="08:00" inputmode="numeric" required>
+      </div>
+      <div class="field">
+        <label for="checkType">نوع رکورد</label>
+        <select id="checkType" name="checkType">
+          <option value="0" {% if check_type == '0' %}selected{% endif %}>ورود</option>
+          <option value="1" {% if check_type == '1' %}selected{% endif %}>خروج</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" type="submit">درج تردد</button>
+      </div>
+    </div>
+    <p class="sub">در مدل فعلی فقط CheckTypeهای ۰ (ورود) و ۱ (خروج) قابل ثبت‌اند؛ انواع LeaveType پس از تکمیل نگاشت داده/محاسبات فعال می‌شوند.</p>
+  </section>
 </form>
+
+{% if referrer_url %}
+  <p><a class="btn" href="{{ referrer_url }}">بازگشت به صفحه قبلی</a></p>
+{% endif %}
+
+{% if not is_freeze %}
+<script>
+  (() => {
+    const search = document.getElementById('personnelSearch');
+    const list = document.getElementById('personnelList');
+    const hidden = document.getElementById('selectedBadgeInputs');
+    const status = document.getElementById('pickerStatus');
+    const more = document.getElementById('loadMorePeople');
+    const selected = new Map();
+    let page = 1;
+    let query = '';
+    let hasMore = false;
+    let debounce = null;
+
+    const userFromLabel = label => ({
+      badgeNo: label.dataset.badge,
+      name: label.dataset.name,
+      department: label.dataset.department
+    });
+
+    function syncHiddenInputs() {
+      hidden.replaceChildren();
+      for (const badge of selected.keys()) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'selectedBadgeNumbers';
+        input.value = badge;
+        hidden.appendChild(input);
+      }
+    }
+
+    function addPerson(person) {
+      if (list.querySelector(`[data-badge="${CSS.escape(String(person.badgeNo))}"]`)) return;
+      const label = document.createElement('label');
+      label.className = 'personnel-option';
+      label.dataset.badge = String(person.badgeNo);
+      label.dataset.name = person.name || '';
+      label.dataset.department = person.department || '';
+      label.style.cssText = 'display:inline-flex;gap:6px;align-items:center;margin:4px 10px';
+
+      const checkbox = document.createElement('input');
+      checkbox.className = 'personnel-checkbox';
+      checkbox.type = 'checkbox';
+      checkbox.value = String(person.badgeNo);
+      checkbox.checked = selected.has(checkbox.value);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) selected.set(checkbox.value, person);
+        else selected.delete(checkbox.value);
+        syncHiddenInputs();
+      });
+
+      const caption = document.createElement('span');
+      caption.textContent = `${person.badgeNo} — ${person.name || ''}`;
+      label.append(checkbox, caption);
+      if (person.department) {
+        const department = document.createElement('small');
+        department.textContent = ` (${person.department})`;
+        label.appendChild(department);
+      }
+      list.appendChild(label);
+    }
+
+    async function loadPeople(nextPage = 1, append = false) {
+      if (!append) {
+        page = 1;
+        list.replaceChildren();
+      }
+      status.textContent = 'در حال دریافت فهرست پرسنل…';
+      const params = new URLSearchParams({q: query, page: String(nextPage)});
+      try {
+        const response = await fetch(`${list.dataset.searchUrl}?${params}`, {
+          headers: {'Accept': 'application/json'},
+          credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('picker request failed');
+        const data = await response.json();
+        data.results.forEach(addPerson);
+        page = data.page;
+        hasMore = data.has_more;
+        more.hidden = !hasMore;
+        status.textContent = selected.size
+          ? `${selected.size} پرسنل انتخاب شده‌اند.`
+          : 'جستجو در فهرست مجاز پرسنل انجام شد.';
+      } catch (_error) {
+        more.hidden = true;
+        status.textContent = 'دریافت فهرست پرسنل ناموفق بود؛ دوباره تلاش کنید.';
+      }
+    }
+
+    document.querySelectorAll('.personnel-option').forEach(label => {
+      const checkbox = label.querySelector('.personnel-checkbox');
+      const person = userFromLabel(label);
+      if (checkbox.checked) selected.set(checkbox.value, person);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) selected.set(checkbox.value, person);
+        else selected.delete(checkbox.value);
+        syncHiddenInputs();
+      });
+    });
+    syncHiddenInputs();
+
+    search?.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        query = search.value.trim();
+        loadPeople(1, false);
+      }, 250);
+    });
+    more?.addEventListener('click', () => {
+      if (hasMore) loadPeople(page + 1, true);
+    });
+    document.getElementById('selectVisible')?.addEventListener('click', () => {
+      list.querySelectorAll('.personnel-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+        selected.set(checkbox.value, userFromLabel(checkbox.closest('.personnel-option')));
+      });
+      syncHiddenInputs();
+      status.textContent = `${selected.size} پرسنل انتخاب شده‌اند.`;
+    });
+    document.getElementById('invertVisible')?.addEventListener('click', () => {
+      list.querySelectorAll('.personnel-checkbox').forEach(checkbox => {
+        checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+          selected.set(checkbox.value, userFromLabel(checkbox.closest('.personnel-option')));
+        } else {
+          selected.delete(checkbox.value);
+        }
+      });
+      syncHiddenInputs();
+      status.textContent = `${selected.size} پرسنل انتخاب شده‌اند.`;
+    });
+    loadPeople(1, false);
+  })();
+</script>
+{% endif %}
 {% endblock %}

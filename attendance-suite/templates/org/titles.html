@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}سمت‌ها | T5Web{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>سمت‌ها</h1><p class="sub">ساختار درختی عناوین، مشخصات نمایشی و دسترسی نگهبان</p></div></div>
+<section class="card">
+  <div class="card-title">{% if selected %}ویرایش سمت{% else %}افزودن سمت{% endif %}</div>
+  <form method="post" autocomplete="off">{% csrf_token %}
+    <input type="hidden" name="action" value="{% if selected %}edit{% else %}add{% endif %}">
+    {% if selected %}<input type="hidden" name="position_id" value="{{ selected.pk }}">{% endif %}
+    <div class="form-grid">
+      <div class="field"><label for="title-name">نام سمت *</label><input id="title-name" name="title" required maxlength="120" value="{{ selected.title|default:'' }}"></div>
+      <div class="field"><label for="display-name">نام نمایشی *</label><input id="display-name" name="display_name" required maxlength="120" value="{{ selected.display_name|default:'' }}"></div>
+      <div class="field"><label for="parent-id">سمت بالادست</label><select id="parent-id" name="parent_id"><option value="">ریشه</option>
+        {% for option in parent_options %}<option value="{{ option.pk }}" {% if selected.parent_id == option.pk %}selected{% endif %}>{{ option.title }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="department-id">واحد</label><select id="department-id" name="department_id"><option value="">بدون واحد</option>
+        {% for d in departments %}<option value="{{ d.pk }}" {% if selected.department_id == d.pk %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="email-address">ایمیل</label><input id="email-address" name="email_address" type="email" maxlength="254" value="{{ selected.email_address|default:'' }}" dir="ltr"></div>
+      <div class="field"><label for="address">نشانی</label><input id="address" name="address" value="{{ selected.address|default:'' }}"></div>
+      <div class="field" style="grid-column:1/-1"><label for="duties">شرح وظایف</label><textarea id="duties" name="duties" rows="3">{{ selected.duties|default:'' }}</textarea></div>
+      <div class="field"><label class="check-row"><input type="checkbox" name="is_manager" {% if selected.is_manager %}checked{% endif %}><span>سمت مدیریتی</span></label></div>
+      <div class="field"><label class="check-row"><input type="checkbox" name="is_guard" {% if selected.is_guard %}checked{% endif %}><span>نگهبان</span></label></div>
+    </div>
+    <fieldset class="guard-depts"><legend>واحدهای مجاز برای دسترسی نگهبان</legend><div class="guard-grid">
+      {% for d in departments %}<label class="check-row"><input type="checkbox" name="guard_departments" value="{{ d.pk }}" {% if d.pk in selected_guard_ids %}checked{% endif %}><span>{{ d.name }}</span></label>{% empty %}<p class="empty">واحدی برای انتخاب وجود ندارد.</p>{% endfor %}
+    </div></fieldset>
+    <div class="actions"><button class="btn btn-primary" type="submit">ذخیره</button>{% if selected %}<a class="btn btn-ghost" href="{% url 'org:titles' %}">انصراف</a>{% endif %}</div>
+  </form>
+</section>
+<section class="card">
+  <div class="card-title">درخت سمت‌ها</div>
+  <form method="post" id="position-bulk-delete" class="bulk-actions">{% csrf_token %}<input type="hidden" name="action" value="delete_all">
+    <button class="btn btn-ghost" type="submit" onclick="return confirm('سمت‌های انتخاب‌شده حذف شوند؟ سمت‌های دارای پرسنل یا زیرسمت حذف نمی‌شوند.')">حذف موارد انتخاب‌شده</button>
+  </form>
+  <div class="table-wrap"><table class="table"><thead><tr><th>انتخاب</th><th>عنوان</th><th>نام نمایشی</th><th>والد</th><th>واحد</th><th>نگهبان/مدیر</th><th>پرسنل</th><th>عملیات</th></tr></thead><tbody>
+    {% for item in items %}<tr>
+      <td><input type="checkbox" name="ids" value="{{ item.pk }}" form="position-bulk-delete" aria-label="انتخاب {{ item.title }}"></td>
+      <td>{{ item.title }}</td><td>{{ item.display_name|default:item.title }}</td><td>{{ parent_names|get_item:item.pk }}</td>
+      <td>{{ item.department|default:'—' }}</td><td>{% if item.is_guard %}نگهبان{% endif %}{% if item.is_manager %} مدیر{% endif %}{% if not item.is_guard and not item.is_manager %}—{% endif %}</td><td>{{ item.employee_count|fa }}</td>
+      <td class="actions"><a class="btn btn-ghost" href="?edit={{ item.pk }}">ویرایش</a>
+        <form method="post" class="inline" onsubmit="return confirm('این سمت حذف شود؟')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="position_id" value="{{ item.pk }}"><button class="btn btn-ghost" type="submit">حذف</button></form>
+      </td>
+    </tr>{% empty %}<tr><td colspan="8" class="empty">سمتی ثبت نشده است.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<style>
+.guard-depts{border:1px solid #cbd5e1;border-radius:10px;padding:12px;margin:16px 0}.guard-depts legend{padding:0 8px;font-weight:700}.guard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}.check-row{display:flex;gap:8px;align-items:center}.bulk-actions{margin-bottom:12px}.table-wrap{overflow:auto}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.field textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px}
+</style>
+{% endblock %}

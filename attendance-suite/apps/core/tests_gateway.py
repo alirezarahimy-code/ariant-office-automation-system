@@ -5,13 +5,16 @@ import sqlite3
 import sys
 import tempfile
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connections
 from django.test import TestCase
 from django.urls import reverse
 
 from apps.attendance.models import Punch
 from apps.device.gateway import run_gateway
-from apps.device.gateway.unis_adapter import BridgeError, sync_bridge, _ident
+from apps.device.gateway.unis_adapter import (
+    BridgeError, decode_unis_export, parse_unis_export, sync_bridge, _ident,
+)
 from apps.device.models import Device, RawRecord, UnisBridge
 from apps.org.models import Employee
 
@@ -69,6 +72,48 @@ class UnisDirModeTests(TestCase):
         self.bridge.save()
         with self.assertRaises(BridgeError):
             sync_bridge(self.bridge)
+
+    def test_cp1256_export_uses_explicit_persian_direction(self):
+        path = os.path.join(self.dir, 'persian.csv')
+        with open(path, 'wb') as fh:
+            fh.write('1001,2026-10-20,08:00:00,خروج\n'.encode('cp1256'))
+        sync_bridge(self.bridge)
+        self.assertEqual(Punch.objects.get().direction, Punch.Direction.OUT)
+        self.assertTrue(os.path.exists(path + '.imported'))
+
+    def test_bad_file_keeps_all_source_exports_unarchived(self):
+        self._write('a-good.csv', '1001,2026-10-20,08:00:00\n')
+        self._write('b-bad.csv', '1001,not-a-date,08:00:00\n')
+        with self.assertRaises(BridgeError):
+            sync_bridge(self.bridge)
+        self.assertTrue(os.path.exists(os.path.join(self.dir, 'a-good.csv')))
+        self.assertTrue(os.path.exists(os.path.join(self.dir, 'b-bad.csv')))
+        self.assertEqual(RawRecord.objects.count(), 0)
+
+    def test_directory_symlinks_are_rejected(self):
+        source = os.path.join(self.dir, 'source.csv')
+        with open(source, 'w', encoding='utf-8') as fh:
+            fh.write('1001,2026-10-20,08:00:00\n')
+        linked = os.path.join(self.dir, 'linked.csv')
+        try:
+            os.symlink(source, linked)
+        except (OSError, NotImplementedError):
+            self.skipTest('symlink creation is not available')
+        with self.assertRaises(BridgeError):
+            sync_bridge(self.bridge)
+        self.assertEqual(RawRecord.objects.count(), 0)
+        self.assertTrue(os.path.exists(source))
+
+    def test_dir_batch_limit_rejects_without_archiving(self):
+        self.bridge.batch_limit = 1
+        self.bridge.save(update_fields=['batch_limit'])
+        self._write('two.csv',
+                    '1001,2026-10-20,08:00:00\n'
+                    '1001,2026-10-20,17:00:00\n')
+        with self.assertRaises(BridgeError):
+            sync_bridge(self.bridge)
+        self.assertTrue(os.path.exists(os.path.join(self.dir, 'two.csv')))
+        self.assertEqual(RawRecord.objects.count(), 0)
 
 
 class UnisDbModeTests(TestCase):
@@ -160,6 +205,128 @@ class ZkGatewayTests(TestCase):
         self.assertEqual(d.brand, Device.Brand.ZK)
 
 
+class UnisUsbImportTests(TestCase):
+    def setUp(self):
+        from apps.core.models import User
+        self.admin = User.objects.create_superuser('usb-admin', password='x')
+        self.employee = Employee.objects.create(
+            badge_no='5001', first_name='سارا', last_name='آزمایش',
+            program_user=True)
+        self.device = Device.objects.create(
+            name='Virdi USB', serial='V-USB', brand=Device.Brand.VIRDI)
+        self.bridge = UnisBridge.objects.create(
+            name='خروجی دفتر', device=self.device, mode=UnisBridge.Mode.DIR,
+            dir_path='/not-used-for-upload')
+        self.client.force_login(self.admin)
+
+    def test_preview_commit_keeps_explicit_unis_direction(self):
+        upload = SimpleUploadedFile(
+            'unis.csv',
+            'pin,date,time,direction\n'
+            '5001,2026-10-20,08:00:00,O\n'
+            '5001,2026-10-20,17:00:00,I\n'.encode('utf-8'),
+            content_type='text/csv')
+        response = self.client.post(reverse('device:usb_import'), {
+            'action': 'preview', 'bridge_id': self.bridge.pk, 'file': upload,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['preview']['valid'], 2)
+        self.assertEqual(RawRecord.objects.count(), 0)
+
+        response = self.client.post(reverse('device:usb_import'), {'action': 'commit'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['result']['converted'], 2)
+        self.assertEqual(set(Punch.objects.values_list('direction', flat=True)),
+                         {Punch.Direction.IN, Punch.Direction.OUT})
+        self.assertEqual(RawRecord.objects.count(), 2)
+        self.bridge.refresh_from_db()
+        self.assertIn('usb=unis.csv', self.bridge.last_result)
+
+    def test_scope_is_enforced_on_preview_and_commit_conversion(self):
+        from apps.core.models import (
+            Permission, Role, RoleDataScope, User, UserRole,
+        )
+        other = Employee.objects.create(
+            badge_no='5002', first_name='مهدی', last_name='واحد دیگر')
+        role = Role.objects.create(name='مدیر محدود', code='usb-limited')
+        permissions = [
+            Permission.objects.get_or_create(module=module, action='manage')[0]
+            for module in ('attendance', 'device')
+        ]
+        role.permissions.set(permissions)
+        RoleDataScope.objects.create(
+            role=role, module='attendance', scope=RoleDataScope.Scope.SELF)
+        user = User.objects.create_user(
+            'usb-limited', password='x', employee=self.employee)
+        UserRole.objects.create(user=user, role=role)
+        import datetime as dt
+        from django.utils import timezone
+        outside_raw = RawRecord.objects.create(
+            device=self.device, pin=other.badge_no,
+            punch_time=timezone.make_aware(dt.datetime(2026, 10, 20, 9, 0)),
+            payload='unis:older-record')
+        self.client.force_login(user)
+        upload = SimpleUploadedFile(
+            'unis.csv',
+            b'pin,date,time\n'
+            b'5001,2026-10-20,08:00:00\n'
+            b'5002,2026-10-20,09:00:00\n', content_type='text/csv')
+        response = self.client.post(reverse('device:usb_import'), {
+            'action': 'preview', 'bridge_id': self.bridge.pk, 'file': upload,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['preview']['valid'], 1)
+        self.client.post(reverse('device:usb_import'), {'action': 'commit'})
+        outside_raw.refresh_from_db()
+        self.assertEqual(outside_raw.state, RawRecord.State.NEW)
+        self.assertEqual(list(Punch.objects.values_list('employee__badge_no', flat=True)),
+                         ['5001'])
+        self.assertFalse(RawRecord.objects.filter(pin='5002').exclude(pk=outside_raw.pk).exists())
+
+    def test_preview_persists_counts_after_refresh_and_can_be_cancelled(self):
+        upload = SimpleUploadedFile(
+            'unis.csv',
+            b'pin,date,time\n5001,2026-10-20,08:00:00\n'
+            b'9999,2026-10-20,09:00:00\n', content_type='text/csv')
+        response = self.client.post(reverse('device:usb_import'), {
+            'action': 'preview', 'bridge_id': self.bridge.pk, 'file': upload,
+        })
+        self.assertEqual(response.context['preview']['total'], 2)
+        self.assertEqual(response.context['preview']['outside_scope'], 1)
+        refreshed = self.client.get(reverse('device:usb_import'))
+        self.assertEqual(refreshed.context['preview']['total'], 2)
+        self.assertEqual(refreshed.context['preview']['outside_scope'], 1)
+        cancelled = self.client.post(reverse('device:usb_import'), {'action': 'cancel'})
+        self.assertEqual(cancelled.status_code, 302)
+        self.assertIsNone(self.client.get(reverse('device:usb_import')).context['preview'])
+        self.assertEqual(RawRecord.objects.count(), 0)
+
+    def test_rejects_proprietary_or_unapproved_upload(self):
+        upload = SimpleUploadedFile('device.dat', b'not a UNIS export')
+        response = self.client.post(reverse('device:usb_import'), {
+            'action': 'preview', 'bridge_id': self.bridge.pk, 'file': upload,
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(RawRecord.objects.count(), 0)
+
+    def test_csv_parser_supports_jalali_and_persian_encoding(self):
+        parsed = parse_unis_export(
+            '۵۰۰۱,۱۴۰۵/۰۷/۲۸,۰۸:۳۰:۰۰,ورود\n',
+            bridge_name='پل', file_name='خروجی.csv')
+        self.assertEqual(parsed[0]['pin'], '5001')
+        self.assertIn('dir=ورود', parsed[0]['payload'])
+        self.assertIn('ورود', decode_unis_export('ورود'.encode('cp1256')))
+        utf16_export = '5001,1405/07/28,08:30:00,ورود\n'.encode('utf-16')
+        self.assertIn('ورود', decode_unis_export(utf16_export))
+
+    def test_requires_both_attendance_and_device_management(self):
+        from apps.core.models import User
+        user = User.objects.create_user('usb-reader', password='x')
+        self.client.force_login(user)
+        response = self.client.get(reverse('device:usb_import'))
+        self.assertEqual(response.status_code, 403)
+
+
 class UnisViewTests(TestCase):
     def setUp(self):
         from apps.core.models import User
@@ -176,6 +343,11 @@ class UnisViewTests(TestCase):
             'dir_path': '/tmp/x', 'is_active': 'on'})
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(UnisBridge.objects.filter(name='پل جدید').exists())
+        zk = Device.objects.create(name='ZK', serial='ZK-UNIS-INVALID')
+        self.client.post(reverse('device:unis_bridge'), {
+            'name': 'پل نامعتبر', 'device_id': zk.pk, 'mode': 'dir',
+            'dir_path': '/tmp/x', 'is_active': 'on'})
+        self.assertFalse(UnisBridge.objects.filter(name='پل نامعتبر').exists())
 
     def test_sync_button_runs(self):
         device = Device.objects.create(name='V', serial='V-3',
@@ -185,6 +357,10 @@ class UnisViewTests(TestCase):
             dir_path=tempfile.mkdtemp())
         resp = self.client.post(reverse('device:unis_sync', args=[bridge.pk]))
         self.assertEqual(resp.status_code, 302)
+        bridge.is_active = False
+        bridge.save(update_fields=['is_active'])
+        resp = self.client.post(reverse('device:unis_sync', args=[bridge.pk]))
+        self.assertEqual(resp.status_code, 404)
 
     def test_requires_permission(self):
         from apps.core.models import User

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}مدیریت اطلاعات USB | T5Web{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>مدیریت اطلاعات USB</h1><p class="sub">ورود فایل CSV/TXT خروجی نرم‌افزار UNIS برای دستگاه Virdi</p></div>
+  <a class="btn btn-ghost" href="{% url 'device:operations' %}">عملیات روی دستگاه‌ها</a>
+</div>
+<div class="notice"><strong>مسیر مجاز Virdi:</strong> این صفحه فقط خروجی متنی UNIS را می‌خواند؛ فایل اختصاصی دستگاه یا اتصال مستقیم Virdi پشتیبانی نمی‌شود.</div>
+{% if result %}
+<section class="card result">
+  <h2>نتیجهٔ ورود: {{ result.file_name }}</h2>
+  <p>ردیف بررسی‌شده: {{ result.rows|fa }} | رکورد جدید: {{ result.created|fa }} | تکراری: {{ result.skipped|fa }} | تبدیل‌شده به تردد: {{ result.converted|fa }} | کد ناشناس/خطا: {{ result.errors|fa }}</p>
+  <a class="btn btn-primary" href="{% url 'device:usb_import' %}">ورود فایل دیگر</a>
+</section>
+{% endif %}
+{% if not result %}
+<section class="card">
+  <h2>انتخاب فایل خروجی UNIS</h2>
+  {% if bridges %}
+  <form method="post" enctype="multipart/form-data" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="preview">
+    <div class="field"><label for="bridge-id">پل UNIS / دستگاه Virdi</label><select id="bridge-id" name="bridge_id" required>
+      <option value="">انتخاب کنید</option>{% for bridge in bridges %}<option value="{{ bridge.pk }}" {% if selected_bridge_id|stringformat:'s' == bridge.pk|stringformat:'s' %}selected{% endif %}>{{ bridge.name }} — {{ bridge.device.name }}</option>{% endfor %}
+    </select></div>
+    <div class="field"><label for="unis-file">فایل CSV/TXT (حداکثر ۱۰ مگابایت)</label><input id="unis-file" type="file" name="file" accept=".csv,.txt,text/csv,text/plain" required></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">پیش‌نمایش و بررسی</button></div>
+  </form>
+  <p class="sub">ستون‌های مجاز: کد پرسنلی، تاریخ، ساعت و جهت اختیاری؛ یا کد پرسنلی و تاریخ‌وساعت. تاریخ میلادی و جلالی پذیرفته می‌شود.</p>
+  {% else %}<p class="empty">پل فعالی برای دستگاه Virdi تعریف نشده است. ابتدا پل UNIS را در بخش عملیات دستگاه تنظیم کنید.</p>{% endif %}
+</section>
+{% endif %}
+{% if preview %}
+<section class="card">
+  <div class="page-head"><div><h2>پیش‌نمایش: {{ preview.file_name }}</h2><p class="sub">کل ردیف‌ها: {{ preview.total|fa }} | قابل ورود در دامنهٔ مجاز: {{ preview.valid|fa }} | ردشده: {{ preview.outside_scope|fa }}</p></div></div>
+  <div class="table-wrap"><table class="table"><thead><tr><th>ردیف فایل</th><th>کد پرسنلی</th><th>زمان</th><th>وضعیت</th></tr></thead><tbody>
+    {% for row in preview.rows %}<tr><td>{{ row.line|fa }}</td><td dir="ltr">{{ row.pin }}</td><td dir="ltr">{{ row.time }}</td><td>{% if row.importable %}<span class="chip chip-ok">{{ row.status }}</span>{% else %}<span class="chip chip-error">{{ row.status }}</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if preview.total > preview.rows|length %}<p class="sub">تنها ۴۰ ردیف نخست نمایش داده شده‌اند؛ تعداد کل بالا محاسبه شده است.</p>{% endif %}
+  <div class="actions">
+    {% if preview.can_commit %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="commit"><button class="btn btn-primary" type="submit">ثبت {{ preview.valid|fa }} رکورد مجاز</button></form>{% endif %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">لغو پیش‌نمایش</button></form>
+  </div>
+</section>
+{% endif %}
+<style>
+.notice{padding:14px 18px;margin:0 0 18px;border-radius:10px;background:#fff7ed;color:#7c2d12;border:1px solid #fed7aa;line-height:1.9}.form-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end}.field{margin:8px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input,.field select{min-width:220px;width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:white}.table-wrap{overflow:auto}.actions{display:flex;gap:8px;margin-top:16px}.actions form{margin:0}.chip-ok{background:#dcfce7;color:#166534}.chip-error{background:#fee2e2;color:#991b1b}.result h2{margin-top:0}
+@media(max-width:900px){.form-grid{grid-template-columns:1fr}.field input,.field select{min-width:0}}
+</style>
+{% endblock %}

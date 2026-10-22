@@ -9,4 +9,5 @@ urlpatterns = [
     path('device/', include('apps.device.urls')),
     path('attendance/', include('apps.attendance.urls')),
     path('reports/', include('apps.reports.urls')),
+    path('t5/', include('apps.t5web.urls')),
 ]

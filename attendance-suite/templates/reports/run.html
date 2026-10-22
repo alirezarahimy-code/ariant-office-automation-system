@@ -3,25 +3,48 @@
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><h1>{{ title }}</h1><p class="sub">ماه {{ month|default:''|fa }} / {{ year|default:''|fa }}</p></div>
+  <div><h1>{{ title }}</h1><p class="sub">بازه: {{ period_label|fa }}</p></div>
   <div class="actions">
-    {% if can_export %}<a class="btn btn-primary" href="?export=csv&year={{ year }}&month={{ month }}">خروجی اکسل (CSV)</a>{% endif %}
+    {% if can_export %}<a class="btn btn-primary" href="{{ export_url }}">خروجی اکسل (CSV)</a>{% endif %}
     <a class="btn" href="{% url 'reports:index' %}">فهرست گزارش‌ها</a>
   </div>
 </div>
+{% if code != 'devices' and code != 'balances' %}
 <form class="card form-grid" method="get" style="margin-bottom:14px">
-  <div class="field"><label>از تاریخ (اختیاری)</label><input name="date_from" value="{{ request.GET.date_from }}" placeholder="1404/07/01"></div>
-  <div class="field"><label>تا تاریخ (اختیاری)</label><input name="date_to" value="{{ request.GET.date_to }}" placeholder="1404/07/30"></div>
+  <div class="field"><label><input id="isMonthly" type="checkbox" name="isMonthly" value="true"{% if is_monthly %} checked{% endif %} onchange="toggleMode()"> بازهٔ ماهانه</label></div>
+  <div class="field monthly-field"><label for="year">سال</label><input id="year" name="year" type="number" min="1300" max="1600" value="{{ year }}"></div>
+  <div class="field monthly-field"><label for="month">ماه</label><select id="month" name="month">
+    <option value="1"{% if month == 1 %} selected{% endif %}>فروردین</option><option value="2"{% if month == 2 %} selected{% endif %}>اردیبهشت</option>
+    <option value="3"{% if month == 3 %} selected{% endif %}>خرداد</option><option value="4"{% if month == 4 %} selected{% endif %}>تیر</option>
+    <option value="5"{% if month == 5 %} selected{% endif %}>مرداد</option><option value="6"{% if month == 6 %} selected{% endif %}>شهریور</option>
+    <option value="7"{% if month == 7 %} selected{% endif %}>مهر</option><option value="8"{% if month == 8 %} selected{% endif %}>آبان</option>
+    <option value="9"{% if month == 9 %} selected{% endif %}>آذر</option><option value="10"{% if month == 10 %} selected{% endif %}>دی</option>
+    <option value="11"{% if month == 11 %} selected{% endif %}>بهمن</option><option value="12"{% if month == 12 %} selected{% endif %}>اسفند</option>
+  </select></div>
+  <div class="field interval-field"><label for="fromDate">از تاریخ جلالی</label><input id="fromDate" name="date_from" value="{{ date_from }}" placeholder="۱۴۰۴/۰۷/۰۱"></div>
+  <div class="field interval-field"><label for="toDate">تا تاریخ جلالی</label><input id="toDate" name="date_to" value="{{ date_to }}" placeholder="۱۴۰۴/۰۷/۳۰"></div>
   <div class="field"><label>&nbsp;</label><button class="btn" type="submit">اعمال بازه</button></div>
 </form>
+{% endif %}
 <table class="table">
   <thead><tr>{% for h in header %}<th>{{ h }}</th>{% endfor %}</tr></thead>
   <tbody>
-  {% for row in rows %}
-    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-  {% empty %}
-    <tr><td colspan="{{ header|length }}" class="empty">داده‌ای یافت نشد.</td></tr>
-  {% endfor %}
+  {% for row in rows %}<tr>{% for cell in row %}<td>{{ cell|fa }}</td>{% endfor %}</tr>
+  {% empty %}<tr><td colspan="{{ header|length }}" class="empty">داده‌ای یافت نشد.</td></tr>{% endfor %}
   </tbody>
 </table>
+<script>
+  function toggleMode() {
+    const monthly = document.getElementById('isMonthly').checked;
+    document.querySelectorAll('.monthly-field').forEach((el) => {
+      el.style.display = monthly ? '' : 'none';
+      el.querySelectorAll('input,select').forEach((input) => input.disabled = !monthly);
+    });
+    document.querySelectorAll('.interval-field').forEach((el) => {
+      el.style.display = monthly ? 'none' : '';
+      el.querySelectorAll('input,select').forEach((input) => input.disabled = monthly);
+    });
+  }
+  if (document.getElementById('isMonthly')) toggleMode();
+</script>
 {% endblock %}

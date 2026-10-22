@@ -1,9 +1,50 @@
 {% extends 'base.html' %}
-{% block title %}چارت واحدها{% endblock %}
+{% block title %}چارت و تخصیص پرسنل{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>چارت سازمانی واحدها</h1><p class="sub">{{ count }} واحد فعال</p></div>
-<div class="actions"><a class="btn" href="{% url 'org:department_new' %}">واحد جدید</a></div></div>
-<div class="card"><ul style="list-style:none;line-height:2.4">
-{% for n in tree %}{% include 'org/_tree_node.html' with n=n %}{% endfor %}
-</ul></div>
+<div class="page-head"><div><h1>چارت سازمانی</h1><p class="sub">{{ count }} واحد فعال — تخصیص و خروج پرسنل از واحد</p></div>
+<div class="actions"><a class="btn" href="{% url 'org:department_admin' %}">مدیریت واحدها</a></div></div>
+<div class="chart-layout">
+  <aside class="card"><div class="card-title">درخت واحدها</div>
+    <ul class="dept-tree">{% for n in tree %}{% include 'org/_tree_node.html' with n=n %}{% empty %}<li class="empty">واحدی ثبت نشده است.</li>{% endfor %}</ul>
+  </aside>
+  <main>
+    {% if selected %}
+      <section class="card"><div class="card-title">واحد انتخاب‌شده: {{ selected.name }}</div>
+        <div class="personnel-columns">
+          <div>
+            <h3>پرسنل داخل واحد <span class="chip">{{ in_dept|length }}</span></h3>
+            {% if can_manage %}<form method="post" action="{% url 'org:org_chart' %}">{% csrf_token %}
+              <input type="hidden" name="action" value="fire"><input type="hidden" name="dept_id" value="{{ selected.pk }}">
+            {% endif %}
+            <input class="search-input" type="search" placeholder="جستجو در فهرست" oninput="filterPeople(this,'inside-people')">
+            <div class="person-list"><ul id="inside-people">
+              {% for person in in_dept %}<li><label><input type="checkbox" name="badge_numbers" value="{{ person.badge_no }}">{{ person.badge_no }} — {{ person.first_name }} {{ person.last_name }}</label></li>
+              {% empty %}<li class="empty">پرسنلی در این واحد نیست.</li>{% endfor %}
+            </ul></div>
+            {% if can_manage %}<div class="selection-actions"><button class="btn btn-ghost" type="button" onclick="selectVisible('inside-people',true)">انتخاب همه</button><button class="btn btn-ghost" type="button" onclick="selectVisible('inside-people',false)">معکوس</button><button class="btn btn-danger" type="submit" onclick="return confirm('پرسنل انتخاب‌شده از این واحد خارج شوند؟')">خروج از واحد</button></div></form>{% endif %}
+          </div>
+          <div>
+            <h3>پرسنل خارج از این واحد <span class="chip">{{ outside_people|length }}</span></h3>
+            {% if can_manage %}<form method="post" action="{% url 'org:org_chart' %}">{% csrf_token %}
+              <input type="hidden" name="action" value="employ"><input type="hidden" name="dept_id" value="{{ selected.pk }}">
+            {% endif %}
+            <input class="search-input" type="search" placeholder="جستجو در فهرست" oninput="filterPeople(this,'free-people')">
+            <div class="person-list"><ul id="free-people">
+              {% for person in outside_people %}<li><label><input type="checkbox" name="badge_numbers" value="{{ person.badge_no }}">{{ person.badge_no }} — {{ person.first_name }} {{ person.last_name }}</label></li>
+              {% empty %}<li class="empty">پرسنلی خارج از این واحد نیست.</li>{% endfor %}
+            </ul></div>
+            {% if can_manage %}<div class="selection-actions"><button class="btn btn-ghost" type="button" onclick="selectVisible('free-people',true)">انتخاب همه</button><button class="btn btn-ghost" type="button" onclick="selectVisible('free-people',false)">معکوس</button><button class="btn btn-primary" type="submit" onclick="return confirm('پرسنل انتخاب‌شده به این واحد تخصیص یابند؟')">تخصیص به واحد</button></div></form>{% endif %}
+          </div>
+        </div>
+      </section>
+    {% else %}<section class="card empty">برای مشاهده و مدیریت پرسنل، یک واحد از درخت انتخاب کنید.</section>{% endif %}
+  </main>
+</div>
+<script>
+function filterPeople(input,id){const q=input.value.trim().toLocaleLowerCase();document.querySelectorAll('#'+id+' li').forEach(li=>{li.hidden=!li.textContent.toLocaleLowerCase().includes(q);});}
+function selectVisible(id,all){document.querySelectorAll('#'+id+' li:not([hidden]) input[type=checkbox]').forEach(cb=>{cb.checked=all?true:!cb.checked;});}
+</script>
+<style>
+.chart-layout{display:grid;grid-template-columns:minmax(220px,.65fr) minmax(500px,1.6fr);gap:18px;align-items:start}.dept-tree,.dept-tree ul{list-style:none;padding-right:14px;line-height:2}.dept-tree a{display:inline-block;padding:3px 7px;border-radius:6px;text-decoration:none}.personnel-columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}.person-list{height:360px;overflow:auto;border:1px solid #cbd5e1;border-radius:8px;padding:8px}.person-list ul{list-style:none;padding:0}.person-list li{padding:5px}.person-list label{display:flex;gap:8px;align-items:center}.search-input{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin:6px 0}.selection-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.selection-actions .btn-danger{background:#b91c1c;color:white}.dept-selected{font-weight:700;background:#e0f2fe}@media(max-width:850px){.chart-layout,.personnel-columns{grid-template-columns:1fr}}
+</style>
 {% endblock %}

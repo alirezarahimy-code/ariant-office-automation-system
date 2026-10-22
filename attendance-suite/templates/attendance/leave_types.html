@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}انواع خروج{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>انواع خروج</h1></div>
+  <div class="actions"><button class="btn btn-primary" type="button" onclick="showNewLeaveType()">افزودن</button></div>
+</div>
+<div class="card">
+  <form method="post" action="{% url 'attendance:leave_types' %}">
+    {% csrf_token %}
+    <table class="table">
+      <thead><tr><th><input type="checkbox" aria-label="انتخاب همه" onclick="document.querySelectorAll('.leave-type-select').forEach((el) => el.checked = this.checked)"></th><th>نام</th><th>عملیات</th></tr></thead>
+      <tbody>
+      {% for item in rows %}
+        <tr>
+          <td><input class="leave-type-select" type="checkbox" name="selected_ids" value="{{ item.pk }}"></td>
+          <td>{{ item.name }}</td>
+          <td class="actions">
+            <a class="btn" href="{% url 'attendance:leave_types' %}?leave_type_id={{ item.pk }}">ویرایش</a>
+            <button class="btn btn-danger" name="delete_id" value="{{ item.pk }}" type="submit" onclick="return confirm('نوع مرخصی حذف شود؟')">حذف</button>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="3" class="empty">موردی نیست.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% if rows %}<div class="actions"><button class="btn btn-danger" name="action" value="delete_selected" type="submit" onclick="return confirm('انواع انتخاب‌شده حذف شوند؟')">حذف انتخاب‌شده‌ها</button></div>{% endif %}
+  </form>
+</div>
+<div id="leaveTypePanel" class="card"{% if not show_panel %} style="display:none"{% endif %}>
+  <div class="card-title"><span id="leaveTypeTitle">{% if row %}ویرایش{% else %}افزودن نوع خروج{% endif %}</span></div>
+  <form method="post" action="{% url 'attendance:leave_types' %}">
+    {% csrf_token %}<input type="hidden" name="leave_type_id" value="{{ values.leave_type_id }}">
+    <div class="form-grid">
+      <div class="field"><label for="LeaveName">نام مرخصی <b>*</b></label><input id="LeaveName" name="LeaveName" maxlength="100" required value="{{ values.LeaveName }}"></div>
+      <div class="field"><label for="Symbol">نماد <b>*</b></label><input id="Symbol" name="Symbol" maxlength="24" required value="{{ values.Symbol }}"></div>
+      <div class="field"><label for="LeaveType1">نوع</label><select id="LeaveType1" name="LeaveType1">
+        {% for value, label in kind_choices %}<option value="{{ value }}"{% if values.LeaveType1 == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+      <div class="field">
+        <label>بازه</label>
+        <div><label><input type="radio" name="IsHourly" value="true"{% if values.IsHourly %} checked{% endif %} onchange="setHourlyFields()"> ساعتی</label>
+        <label><input type="radio" name="IsHourly" value="false"{% if not values.IsHourly %} checked{% endif %} onchange="setHourlyFields()"> روزانه</label></div>
+      </div>
+      <div class="field"><label for="Color">رنگ</label><input id="Color" name="Color" type="color" value="{{ values.Color|default:'#000000' }}"></div>
+      <div class="field"><label for="StateKey">کلید وضعیت</label><input id="StateKey" name="StateKey" type="number" min="0" max="2147483647" value="{{ values.StateKey|default:4 }}"></div>
+      <div class="field hourly-field"><label for="MaxHoursInADay">حداکثر ساعتی در روز</label><input id="MaxHoursInADay" name="MaxHoursInADay" value="{{ values.MaxHoursInADay }}" placeholder="۰۶:۰۰"></div>
+      <div class="field hourly-field"><label for="MaxHoursInAMonth">حداکثر ساعتی در ماه</label><input id="MaxHoursInAMonth" name="MaxHoursInAMonth" value="{{ values.MaxHoursInAMonth }}" placeholder="۱۲:۰۰"></div>
+      <div class="field daily-field"><label for="MaxDailyInYear">حداکثر روزانه در سال</label><input id="MaxDailyInYear" name="MaxDailyInYear" type="number" step="1" min="0" value="{{ values.MaxDailyInYear }}"></div>
+      <div class="field daily-field"><label for="MaxDailyInMonth">حداکثر روزانه در ماه</label><input id="MaxDailyInMonth" name="MaxDailyInMonth" type="number" step="0.1" min="0" value="{{ values.MaxDailyInMonth }}"></div>
+      <div class="field"><label for="EachXHoursADay">هر چند ساعت معادل یک روز است</label><input id="EachXHoursADay" name="EachXHoursADay" value="{{ values.EachXHoursADay }}" placeholder="۰۸:۰۰"></div>
+      <div class="field"><label for="GetInType">روش استحقاق</label><select id="GetInType" name="GetInType">
+        {% for value, label in get_in_type_choices %}<option value="{{ value }}"{% if values.GetInType == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label for="ParameterID">پارامتر</label><select id="ParameterID" name="ParameterID"><option value="">—</option>
+        {% for p in parameters %}<option value="{{ p.pk }}"{% if values.ParameterID == p.pk %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label for="ForNextYear">انتقال به سال بعد</label><input id="ForNextYear" name="ForNextYear" type="number" step="0.1" min="0" value="{{ values.ForNextYear }}"></div>
+      <div class="field"><label for="MaxMinus">حداکثر منفی</label><input id="MaxMinus" name="MaxMinus" type="number" step="0.1" min="0" value="{{ values.MaxMinus }}"></div>
+      <div class="field"><label for="DecreaseFromLeaveID">کسر از</label><select id="DecreaseFromLeaveID" name="DecreaseFromLeaveID"><option value="">—</option>
+        {% for item in leave_types %}<option value="{{ item.pk }}"{% if values.DecreaseFromLeaveID == item.pk %} selected{% endif %}>{{ item.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field check-field"><label><input type="checkbox" name="ForNextYearSum" value="true"{% if values.ForNextYearSum %} checked{% endif %}> جمع انتقال سال بعد</label></div>
+      <div class="field check-field"><label><input type="checkbox" name="Payment" value="true"{% if values.Payment %} checked{% endif %}> بدون پرداخت</label></div>
+      <div class="field check-field"><label><input type="checkbox" name="GetInHolidays" value="true"{% if values.GetInHolidays %} checked{% endif %}> محاسبه در تعطیلات</label></div>
+      <div class="field check-field"><label><input type="checkbox" name="AutoInHolidays" value="true"{% if values.AutoInHolidays %} checked{% endif %}> محاسبه خودکار در تعطیلات</label></div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" type="submit" name="action" value="save">ذخیره</button><a class="btn" href="{% url 'attendance:leave_types' %}">انصراف</a></div>
+  </form>
+</div>
+<script>
+  function setHourlyFields() {
+    const hourly = document.querySelector('input[name="IsHourly"][value="true"]').checked;
+    document.querySelectorAll('.hourly-field input').forEach((el) => el.disabled = !hourly);
+    document.querySelectorAll('.daily-field input').forEach((el) => el.disabled = hourly);
+    document.getElementById('StateKey').disabled = !hourly;
+  }
+  function showNewLeaveType() {
+    document.getElementById('leaveTypePanel').style.display = '';
+    document.getElementById('leaveTypeTitle').textContent = 'افزودن نوع خروج';
+    document.querySelector('#leaveTypePanel input[name="leave_type_id"]').value = '-1';
+    document.getElementById('LeaveName').value = '';
+    document.getElementById('Symbol').value = '';
+    document.getElementById('LeaveType1').value = 'leave';
+    document.querySelector('input[name="IsHourly"][value="true"]').checked = true;
+    document.getElementById('Color').value = '#000000';
+    document.getElementById('StateKey').value = '4';
+    document.getElementById('MaxHoursInADay').value = '06:00';
+    document.getElementById('MaxHoursInAMonth').value = '12:00';
+    document.getElementById('MaxDailyInYear').value = '30';
+    document.getElementById('MaxDailyInMonth').value = '2.5';
+    document.getElementById('EachXHoursADay').value = '08:00';
+    document.getElementById('GetInType').value = 'month_first';
+    document.getElementById('ForNextYear').value = '9';
+    document.getElementById('MaxMinus').value = '0';
+    document.querySelectorAll('#leaveTypePanel input[type="checkbox"]').forEach((el) => el.checked = false);
+    setHourlyFields();
+  }
+  setHourlyFields();
+</script>
+{% endblock %}

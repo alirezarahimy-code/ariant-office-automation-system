@@ -5,7 +5,7 @@
 <div class="page-head"><div><h1>رکوردهای خام دستگاه</h1>
 <p class="sub">با وضعیت انتقال (ضدتکرار)</p></div>
 <div class="actions">
-  {% if can_manage %}<form method="post" action="{% url 'device:sync_punches' %}" class="inline">{% csrf_token %}
+  {% if can_convert %}<form method="post" action="{% url 'device:sync_punches' %}" class="inline">{% csrf_token %}
     <button class="btn btn-primary" type="submit"
             onclick="return confirm('رکوردهای خام به رویداد تردد تبدیل شوند؟');">همگام‌سازی با تردد</button>
   </form>{% endif %}

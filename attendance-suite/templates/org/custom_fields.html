@@ -1,18 +1,53 @@
 {% extends 'base.html' %}
+{% load suite_tags %}
 {% block title %}فیلدهای سفارشی{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>فیلدهای سفارشی پرسنل</h1><p class="sub">UserAddProperty — فیلدهای دلخواه روی فایل پرسنلی</p></div></div>
 {% if can_manage %}
-<div class="card"><form method="post" class="form-grid">{% csrf_token %}
-  <div class="field"><label>عنوان</label><input name="title" required></div>
-  <div class="field"><label>نوع</label><select name="field_type">
-    <option value="text">متنی</option><option value="select">انتخابی</option><option value="bool">بله/خیر</option></select></div>
-  <div class="field"><label>گزینه‌ها (برای انتخابی — با |)</label><input name="options" placeholder="گزینه۱|گزینه۲"></div>
-  <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن</button></div>
-</form></div>
+<section class="card">
+  <div class="card-title">{% if selected %}ویرایش فیلد{% else %}افزودن فیلد{% endif %}</div>
+  <form method="post" class="form-grid">{% csrf_token %}
+    <input type="hidden" name="action" value="{% if selected %}edit{% else %}add{% endif %}">
+    {% if selected %}<input type="hidden" name="field_id" value="{{ selected.pk }}">{% endif %}
+    <div class="field"><label for="property-title">عنوان</label><input id="property-title" name="title" maxlength="120" required value="{{ selected.title|default:'' }}"></div>
+    <div class="field"><label for="property-type">نوع</label><select id="property-type" name="field_type">
+      <option value="text" {% if selected.field_type == 'text' %}selected{% endif %}>متنی</option>
+      <option value="number" {% if selected.field_type == 'number' %}selected{% endif %}>عدد</option>
+      <option value="date" {% if selected.field_type == 'date' %}selected{% endif %}>تاریخ</option>
+      <option value="dropdown" {% if selected.field_type == 'dropdown' %}selected{% endif %}>انتخابی</option>
+      <option value="boolean" {% if selected.field_type == 'boolean' %}selected{% endif %}>بله/خیر</option></select></div>
+    <div class="field" style="grid-column:1/-1"><label for="property-options">گزینه‌ها (برای نوع انتخابی — جداشده با | یا خط جدید)</label><textarea id="property-options" name="options" rows="3" placeholder="گزینه۱|گزینه۲">{{ selected.options|default:'' }}</textarea></div>
+    <div class="field"><label class="check-row"><input type="checkbox" name="is_search_filter" {% if selected.is_search_filter %}checked{% endif %}><span>نمایش در فیلتر پیشرفتهٔ انتخاب پرسنل</span></label></div>
+    <div class="field"><label>&nbsp;</label><div class="actions"><button class="btn btn-primary" type="submit">ذخیره</button>
+      {% if selected %}<a class="btn btn-ghost" href="{% url 'org:custom_fields' %}">انصراف</a>{% endif %}</div></div>
+  </form>
+</section>
 {% endif %}
-<table class="table"><thead><tr><th>عنوان</th><th>نوع</th><th>گزینه‌ها</th></tr></thead><tbody>
-{% for f in fields %}<tr><td>{{ f.title }}</td><td>{{ f.get_field_type_display }}</td><td class="mono">{{ f.options|default:'—' }}</td></tr>
-{% empty %}<tr><td colspan="3" class="empty">فیلدی تعریف نشده.</td></tr>{% endfor %}
-</tbody></table>
+<section class="card">
+  <div class="card-title">فهرست فیلدها</div>
+  {% if can_manage %}<form method="post" id="property-bulk-delete" class="bulk-actions">
+    {% csrf_token %}<input type="hidden" name="action" value="delete_all">
+    <button class="btn btn-ghost" type="submit" onclick="return confirm('فیلدهای انتخاب‌شده غیرفعال شوند؟ مقادیر پرسنل حفظ خواهد شد.')">غیرفعال‌سازی موارد انتخاب‌شده</button>
+  </form>{% endif %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr>{% if can_manage %}<th>انتخاب</th>{% endif %}<th>عنوان</th><th>نوع</th><th>فیلتر پیشرفته</th><th>گزینه‌ها</th>{% if can_manage %}<th>عملیات</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for f in fields %}
+      <tr>
+        {% if can_manage %}<td><input type="checkbox" name="ids" value="{{ f.pk }}" form="property-bulk-delete" aria-label="انتخاب {{ f.title }}"></td>{% endif %}
+        <td>{{ f.title }}</td><td>{{ f.get_field_type_display }}</td>
+        <td>{% if can_manage %}<form method="post" class="actions">{% csrf_token %}<input type="hidden" name="action" value="filter"><input type="hidden" name="filter_id" value="{{ f.pk }}"><label><input type="checkbox" name="is_search_filter"{% if f.is_search_filter %} checked{% endif %}> فعال</label><button class="btn btn-ghost" type="submit">ذخیره</button></form>{% else %}{{ f.is_search_filter|yesno:'بله,خیر' }}{% endif %}</td>
+        <td class="mono">{{ f.options|default:'—' }}</td>
+        {% if can_manage %}<td class="actions"><a class="btn btn-ghost" href="?edit={{ f.pk }}">ویرایش</a>
+          <form method="post" class="inline" onsubmit="return confirm('این فیلد غیرفعال شود؟ مقادیر ذخیره‌شده حفظ خواهد شد.')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="field_id" value="{{ f.pk }}"><button class="btn btn-ghost" type="submit">غیرفعال‌سازی</button></form>
+        </td>{% endif %}
+      </tr>
+    {% empty %}<tr><td colspan="{% if can_manage %}6{% else %}4{% endif %}" class="empty">فیلدی تعریف نشده.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if can_manage %}<p class="sub">حذف در این فرم به معنی غیرفعال‌سازی است تا مقادیر ثبت‌شدهٔ پرسنل از بین نروند.</p>{% endif %}
+</section>
+<style>
+.bulk-actions{margin-bottom:12px}.table-wrap{overflow:auto}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.field textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px}.check-row{display:flex;gap:8px;align-items:center}
+</style>
 {% endblock %}

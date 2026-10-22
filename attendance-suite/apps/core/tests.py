@@ -4,6 +4,7 @@ import datetime as gregorian
 import jdatetime
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.attendance.models import (AttendancePolicy, DailyRecord, Holiday,
                                     LeaveBalance, LeaveType, Punch, Request,
@@ -177,7 +178,7 @@ class AttendanceLogicTests(TestCase):
 class DeviceTests(TestCase):
     def test_raw_record_unique(self):
         dev = Device.objects.create(name='ورودی', serial='SN-1')
-        t = gregorian.datetime(2026, 10, 19, 8, 0)
+        t = timezone.make_aware(gregorian.datetime(2026, 10, 19, 8, 0))
         RawRecord.objects.create(device=dev, pin='300', punch_time=t)
         with self.assertRaises(Exception):
             RawRecord.objects.create(device=dev, pin='300', punch_time=t)

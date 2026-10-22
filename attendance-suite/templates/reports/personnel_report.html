@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ title }}</h1><p class="sub">انتخاب پرسنل و بازهٔ زمانی</p></div>
+  <div class="actions">
+    {% if report_ready and can_export %}<a class="btn btn-primary" href="{{ export_url }}">خروجی اکسل (CSV)</a>{% endif %}
+    <a class="btn" href="{% url 'reports:index' %}">فهرست گزارش‌ها</a>
+  </div>
+</div>
+<form method="get" class="card" id="personnelReportForm" data-search-url="{% url 'reports:employee_search' %}">
+  <div class="card-title">انتخاب پرسنل</div>
+  <div class="form-grid">
+    <div class="field"><label for="employeeSearch">جستجوی پرسنل</label><input id="employeeSearch" type="search" placeholder="نام یا شماره کارگری"></div>
+    <div class="field"><label for="departmentSearch">جستجوی شعب</label><input id="departmentSearch" type="search" placeholder="نام واحد سازمانی"></div>
+  </div>
+  <div class="department-tree" role="tree" aria-label="درخت واحدهای سازمانی" style="max-height:220px;overflow:auto;border:1px solid #d9e1ec;border-radius:8px;padding:8px;margin:8px 0">
+    {% for node in department_nodes %}<label class="department-node" data-search="{{ node.name }}" role="treeitem" aria-level="{{ node.depth|add:'1' }}" style="display:block;padding:3px 4px;padding-right:{{ node.depth }}rem">
+      <input class="department-filter" type="checkbox" value="{{ node.id }}" data-subtree="{{ node.subtree_ids }}" data-ancestors="{{ node.ancestor_ids }}"> {{ node.name }}
+    </label>{% empty %}<p class="empty">واحد سازمانی در دامنهٔ دسترسی یافت نشد.</p>{% endfor %}
+  </div>
+  <details class="card" style="margin:8px 0;padding:10px">
+    <summary style="cursor:pointer">جستجوی پیشرفته</summary>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field advanced-filter" data-filter-kind="certificate">
+        <label><input class="advanced-filter-enabled" type="checkbox"> مدرک تحصیلی</label>
+        <select class="advanced-filter-value"><option value="">انتخاب کنید</option>{% for item in certificates %}<option value="{{ item }}">{{ item }}</option>{% endfor %}</select>
+      </div>
+      <div class="field advanced-filter" data-filter-kind="employment_type">
+        <label><input class="advanced-filter-enabled" type="checkbox"> نوع استخدام</label>
+        <select class="advanced-filter-value"><option value="">انتخاب کنید</option>{% for item in employment_types %}<option value="{{ item.pk }}">{{ item.name }}</option>{% endfor %}</select>
+      </div>
+      {% for item in search_properties %}
+      <div class="field advanced-filter" data-filter-kind="custom" data-filter-id="{{ item.pk }}">
+        <label><input class="advanced-filter-enabled" type="checkbox"> {{ item.title }}</label>
+        {% if item.field_type == 'boolean' %}
+          <input class="advanced-filter-value" type="checkbox" aria-label="{{ item.title }}">
+        {% elif item.field_type == 'dropdown' %}
+          <select class="advanced-filter-value"><option value="">انتخاب کنید</option>{% for choice in item.filter_options %}<option value="{{ choice }}">{{ choice }}</option>{% endfor %}</select>
+        {% else %}
+          <input class="advanced-filter-value" type="text" placeholder="{{ item.title }}">
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="actions"><button class="btn" type="button" onclick="filterEmployees()">اعمال فیلترها</button><button class="btn" type="button" onclick="clearAdvancedFilters()">پاک‌کردن فیلترها</button></div>
+  </details>
+  <div class="actions">
+    <button class="btn" type="button" onclick="setEmployeeChecks(true)">همه</button>
+    <button class="btn" type="button" onclick="reverseEmployeeChecks()">معکوس‌کردن انتخاب</button>
+  </div>
+  <div class="employee-picker" style="max-height:280px;overflow:auto;border:1px solid #d9e1ec;border-radius:8px;padding:8px;margin:10px 0">
+    {% for employee in employees %}
+      <label class="employee-option" data-department="{{ employee.department_id|default:'' }}" data-search="{{ employee.first_name }} {{ employee.last_name }} {{ employee.badge_no }} {{ employee.department.name|default:'' }}" style="display:block;padding:4px 6px">
+        <input type="checkbox" name="selectedBadgeNumbers" value="{{ employee.badge_no }}"{% if employee.badge_no in selected_badges %} checked{% endif %}>
+        {{ employee.first_name }} {{ employee.last_name }} ({{ employee.badge_no|fa }})
+      </label>
+    {% empty %}<p class="empty">پرسنلی در دامنهٔ دسترسی شما وجود ندارد.</p>{% endfor %}
+  </div>
+  <p id="employeeFilterStatus" class="sub" aria-live="polite"></p>
+
+  <div class="card-title">انتخاب بازه زمانی</div>
+  <div class="form-grid">
+    <div class="field"><label><input id="isMonthly" type="checkbox" name="isMonthly" value="true"{% if is_monthly %} checked{% endif %} onchange="toggleReportDateMode()"> بازهٔ ماهانه</label></div>
+    <div class="field monthly-field"><label for="year">سال</label><input id="year" name="year" type="number" min="1300" max="1600" value="{{ year }}"></div>
+    <div class="field monthly-field"><label for="month">ماه</label>
+      <select id="month" name="month">
+        <option value="1"{% if month == '1' or month == 1 %} selected{% endif %}>فروردین</option>
+        <option value="2"{% if month == '2' or month == 2 %} selected{% endif %}>اردیبهشت</option>
+        <option value="3"{% if month == '3' or month == 3 %} selected{% endif %}>خرداد</option>
+        <option value="4"{% if month == '4' or month == 4 %} selected{% endif %}>تیر</option>
+        <option value="5"{% if month == '5' or month == 5 %} selected{% endif %}>مرداد</option>
+        <option value="6"{% if month == '6' or month == 6 %} selected{% endif %}>شهریور</option>
+        <option value="7"{% if month == '7' or month == 7 %} selected{% endif %}>مهر</option>
+        <option value="8"{% if month == '8' or month == 8 %} selected{% endif %}>آبان</option>
+        <option value="9"{% if month == '9' or month == 9 %} selected{% endif %}>آذر</option>
+        <option value="10"{% if month == '10' or month == 10 %} selected{% endif %}>دی</option>
+        <option value="11"{% if month == '11' or month == 11 %} selected{% endif %}>بهمن</option>
+        <option value="12"{% if month == '12' or month == 12 %} selected{% endif %}>اسفند</option>
+      </select>
+    </div>
+    <div class="field interval-field"><label for="fromDate">از تاریخ</label><input id="fromDate" name="FromDateHijri" value="{{ from_date }}" placeholder="۱۴۰۵/۰۱/۰۱"></div>
+    <div class="field interval-field"><label for="toDate">تا تاریخ</label><input id="toDate" name="ToDateHijri" value="{{ to_date }}" placeholder="۱۴۰۵/۰۱/۳۱"></div>
+  </div>
+  <div class="actions"><button class="btn btn-primary" type="submit">نمایش</button></div>
+</form>
+
+{% if criteria_submitted and not selected_count %}
+  <div class="card"><p class="sub">برای نمایش گزارش دست‌کم یک نفر را انتخاب کنید.</p></div>
+{% elif report_ready %}
+  <div class="page-head">
+    <div><h2>{{ title }}</h2><p class="sub">پرسنل: {{ selected_count|fa }} — بازه: {{ from_date }} تا {{ to_date }}</p></div>
+    {% if page_obj %}<div class="actions"><span class="chip">صفحه {{ page_obj.number|fa }} از {{ page_obj.paginator.num_pages|fa }}</span></div>{% endif %}
+  </div>
+  <div class="actions" style="margin-bottom:10px">
+    {% if previous_url %}<a class="btn" href="{{ previous_url }}">صفحه قبل</a>{% endif %}
+    {% if next_url %}<a class="btn" href="{{ next_url }}">صفحه بعد</a>{% endif %}
+  </div>
+  <table class="table">
+    <thead><tr>{% for heading in header %}<th>{{ heading }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in rows %}<tr>{% for cell in row %}<td>{{ cell|fa }}</td>{% endfor %}</tr>
+    {% empty %}<tr><td colspan="{{ header|length }}" class="empty">داده‌ای یافت نشد.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+{% elif criteria_submitted %}
+  <div class="card"><p class="sub">برای نمایش گزارش، بازهٔ معتبر و یک یا چند پرسنل انتخاب کنید.</p></div>
+{% endif %}
+<script>
+  function setEmployeeChecks(checked) {
+    document.querySelectorAll('.employee-option input[type="checkbox"]').forEach((el) => {
+      if (el.closest('.employee-option').style.display !== 'none') el.checked = checked;
+    });
+  }
+  function reverseEmployeeChecks() {
+    document.querySelectorAll('.employee-option input[type="checkbox"]').forEach((el) => {
+      if (el.closest('.employee-option').style.display !== 'none') el.checked = !el.checked;
+    });
+  }
+  function toggleReportDateMode() {
+    const monthly = document.getElementById('isMonthly').checked;
+    document.querySelectorAll('.monthly-field').forEach((el) => {
+      el.style.display = monthly ? '' : 'none';
+      el.querySelectorAll('input,select').forEach((input) => input.disabled = !monthly);
+    });
+    document.querySelectorAll('.interval-field').forEach((el) => {
+      el.style.display = monthly ? 'none' : '';
+      el.querySelectorAll('input,select').forEach((input) => input.disabled = monthly);
+    });
+  }
+  let employeeFilterTimer;
+  let employeeFilterVersion = 0;
+  function scheduleEmployeeFilter() {
+    window.clearTimeout(employeeFilterTimer);
+    employeeFilterTimer = window.setTimeout(filterEmployees, 250);
+  }
+  async function filterEmployees() {
+    const params = new URLSearchParams();
+    const term = document.getElementById('employeeSearch').value.trim();
+    if (term) params.set('q', term);
+    const checkedDepartments = [...document.querySelectorAll('.department-filter:checked')];
+    const checkedDepartmentIds = new Set(checkedDepartments.map((input) => input.value));
+    checkedDepartments.forEach((input) => {
+      const hasSelectedAncestor = input.dataset.ancestors.split(',')
+        .some((id) => checkedDepartmentIds.has(id));
+      if (!hasSelectedAncestor) params.append('department', input.value);
+    });
+    document.querySelectorAll('.advanced-filter').forEach((filter) => {
+      const enabled = filter.querySelector('.advanced-filter-enabled');
+      if (!enabled.checked) return;
+      const kind = filter.dataset.filterKind;
+      const valueInput = filter.querySelector('.advanced-filter-value');
+      let value = valueInput.value;
+      if (kind === 'custom') {
+        if (valueInput.type === 'checkbox') value = valueInput.checked ? 'true' : 'false';
+        params.append('custom_filter', filter.dataset.filterId);
+        params.set(`custom_${filter.dataset.filterId}`, value);
+      } else if (value) {
+        params.set(kind, value);
+      }
+    });
+
+    const employeeOptions = [...document.querySelectorAll('.employee-option')];
+    const status = document.getElementById('employeeFilterStatus');
+    if (!params.toString()) {
+      employeeOptions.forEach((el) => el.style.display = 'block');
+      status.textContent = '';
+      return;
+    }
+
+    const version = ++employeeFilterVersion;
+    status.textContent = 'در حال جستجو…';
+    try {
+      const url = new URL(document.getElementById('personnelReportForm').dataset.searchUrl, window.location.href);
+      url.search = params.toString();
+      const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+      if (!response.ok) throw new Error('جستجوی پرسنل انجام نشد.');
+      const payload = await response.json();
+      if (version !== employeeFilterVersion) return;
+      if (payload.truncated) {
+        employeeOptions.forEach((el) => el.style.display = 'block');
+        status.textContent = 'بیش از ۵۰۰ نتیجه یافت شد؛ فیلتر را دقیق‌تر کنید.';
+        return;
+      }
+      const matches = new Set(payload.results.map((item) => item.badge_no));
+      employeeOptions.forEach((el) => {
+        const checkbox = el.querySelector('input[type="checkbox"]');
+        el.style.display = matches.has(checkbox.value) ? 'block' : 'none';
+      });
+      status.textContent = `${payload.results.length} نفر یافت شد.`;
+    } catch (error) {
+      if (version === employeeFilterVersion) status.textContent = error.message;
+    }
+  }
+  function clearAdvancedFilters() {
+    document.getElementById('employeeSearch').value = '';
+    document.getElementById('departmentSearch').value = '';
+    document.querySelectorAll('.advanced-filter').forEach((filter) => {
+      filter.querySelector('.advanced-filter-enabled').checked = false;
+      const value = filter.querySelector('.advanced-filter-value');
+      if (value.type === 'checkbox') value.checked = false;
+      else value.value = '';
+    });
+    document.querySelectorAll('.department-filter').forEach((input) => input.checked = false);
+    filterDepartmentTree();
+    filterEmployees();
+  }
+  function filterDepartmentTree() {
+    const term = document.getElementById('departmentSearch').value.trim().toLocaleLowerCase();
+    document.querySelectorAll('.department-node').forEach((node) => {
+      node.style.display = node.dataset.search.toLocaleLowerCase().includes(term) ? 'block' : 'none';
+    });
+  }
+  function departmentChanged(event) {
+    const selectedIds = new Set(event.target.dataset.subtree.split(','));
+    document.querySelectorAll('.department-filter').forEach((input) => {
+      if (selectedIds.has(input.value)) input.checked = event.target.checked;
+    });
+    if (!event.target.checked) {
+      event.target.dataset.ancestors.split(',').filter(Boolean).forEach((id) => {
+        const parent = document.querySelector(`.department-filter[value="${id}"]`);
+        if (parent) parent.checked = false;
+      });
+    }
+    filterEmployees();
+  }
+  document.getElementById('employeeSearch').addEventListener('input', scheduleEmployeeFilter);
+  document.getElementById('departmentSearch').addEventListener('input', filterDepartmentTree);
+  document.querySelectorAll('.department-filter').forEach((input) => {
+    input.addEventListener('change', departmentChanged);
+  });
+  toggleReportDateMode();
+</script>
+{% endblock %}

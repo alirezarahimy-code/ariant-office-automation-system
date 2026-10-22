@@ -10,6 +10,8 @@ class User(AbstractUser):
     employee = models.OneToOneField(
         'org.Employee', verbose_name='کارمند', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='user')
+    must_change_password = models.BooleanField(
+        'الزام تغییر گذرواژه در ورود بعدی', default=False)
 
     class Meta:
         verbose_name = 'کاربر'
@@ -93,6 +95,42 @@ class UserRole(models.Model):
         verbose_name = 'نقش کاربر'
         verbose_name_plural = 'نقش‌های کاربران'
         unique_together = [('user', 'role')]
+
+
+class ProgramAccess(models.Model):
+    """T5-owned grants for the three distinct applications.
+
+    These rows define program entry, while Role/Permission define actions
+    inside a program. TWF and Link5 will consume this same identity contract.
+    """
+
+    class Program(models.TextChoices):
+        T5WEB = 't5web', 'T5Web'
+        TWF = 'twf', 'TWF'
+        LINK5 = 'link5', 'Link5'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='کاربر',
+        on_delete=models.CASCADE, related_name='program_access')
+    program = models.CharField('برنامه', max_length=12, choices=Program.choices)
+    is_allowed = models.BooleanField('دسترسی مجاز', default=False)
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='تعیین‌کننده',
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='granted_program_access')
+    updated_at = models.DateTimeField('آخرین تغییر', auto_now=True)
+
+    class Meta:
+        verbose_name = 'دسترسی به برنامه'
+        verbose_name_plural = 'دسترسی‌های برنامه'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'program'], name='unique_user_program_access')
+        ]
+        ordering = ['program']
+
+    def __str__(self) -> str:
+        return f'{self.user} — {self.get_program_display()}'
 
 
 class AuditLog(models.Model):

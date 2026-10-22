@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}تعطیلات تقویم{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>تعطیلات تقویم: {{ calendar.name }}</h1><p class="sub">{{ calendar.name }}</p></div><a class="btn" href="{% url 'attendance:holidays' %}">بازگشت به تقویم‌ها</a></div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field"><label for="date">تاریخ</label><input id="date" name="date" placeholder="1404/01/01" required></div>
+    <div class="field"><label for="description">شرح</label><input id="description" name="description" maxlength="200"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">افزودن تعطیلی</button></div>
+  </form>
+</div>
+<table class="table"><thead><tr><th>تاریخ</th><th>شرح</th><th>عملیات</th></tr></thead><tbody>
+  {% for item in holidays %}<tr><td>{{ item.date|jdate }}</td><td>{{ item.description }}</td><td>
+    <form method="post" class="inline" onsubmit="return confirm('تعطیلی حذف شود؟')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="holiday_id" value="{{ item.pk }}"><button class="btn" type="submit">حذف</button></form>
+  </td></tr>{% empty %}<tr><td colspan="3" class="empty">تعطیلی ثبت نشده است.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

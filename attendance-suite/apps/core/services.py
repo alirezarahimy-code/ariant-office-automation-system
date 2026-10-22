@@ -6,7 +6,7 @@ from functools import wraps
 from django.core.cache import cache
 from django.shortcuts import redirect
 
-from .models import AuditLog, Permission, RoleDataScope, UserRole
+from .models import AuditLog, Permission, ProgramAccess, RoleDataScope, UserRole
 
 RATE_LIMIT_ATTEMPTS = 5          # تعداد تلاش مجاز
 RATE_LIMIT_WINDOW = 300          # بازه ثانیه
@@ -29,6 +29,29 @@ def user_permissions(user) -> set[str]:
 def has_perm(user, module: str, action: str) -> bool:
     return (user.is_superuser
             or f'{module}.{action}' in user_permissions(user))
+
+
+def has_program_access(user, program: str) -> bool:
+    """Check T5's application-level grant, separate from in-app RBAC."""
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    if user.is_superuser:
+        return True
+    if user.employee_id:
+        if not user.employee.is_active:
+            return False
+        # The shipped T5 AccountController checks UserInfo.ProgramUser before
+        # creating a web session. Keep that gate even with local grants.
+        if (program == ProgramAccess.Program.T5WEB
+                and not user.employee.program_user):
+            return False
+    access = ProgramAccess.objects.filter(user=user, program=program).first()
+    if access is not None:
+        return access.is_allowed
+    # Legacy accounts predate explicit per-application grants. In T5 3.5.7,
+    # ProgramUser—not WebUser—is the login gate observed in AccountController.
+    return bool(program == ProgramAccess.Program.T5WEB
+                and user.employee_id and user.employee.program_user)
 
 
 def require_perm(module: str, action: str):
@@ -83,6 +106,23 @@ def scoped_employees(user, module: str, qs):
     if scope == RoleDataScope.Scope.DEPT_TREE and emp.department_id:
         depts = [d.pk for d in emp.department.descendants()]
     return qs.filter(department_id__in=depts)
+
+
+def scoped_departments(user, module: str = 'org', qs=None):
+    """Departments visible for assigning new people or viewing org data."""
+    from apps.org.models import Department
+    qs = qs if qs is not None else Department.objects.all()
+    scope = data_scope(user, module)
+    if scope == RoleDataScope.Scope.ALL or user.is_superuser:
+        return qs
+    employee = getattr(user, 'employee', None)
+    if employee is None or not employee.department_id:
+        return qs.none()
+    if scope == RoleDataScope.Scope.DEPT_TREE:
+        department_ids = [d.pk for d in employee.department.descendants()]
+    else:
+        department_ids = [employee.department_id]
+    return qs.filter(pk__in=department_ids)
 
 
 def audit(user, action: str, model: str = '', object_id='', detail: str = '',

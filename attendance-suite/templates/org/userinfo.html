@@ -7,13 +7,22 @@
 </div>
 <div class="card">
   <div class="card-title">جستجو / انتخاب پرسنل</div>
+  <form method="get" action="{% url 'org:userinfo' %}" style="display:flex;gap:8px;margin:10px 0">
+    <input name="q" value="{{ personnel_query }}" placeholder="شماره کارگری، نام یا شماره پرسنلی" aria-label="جستجوی پرسنل">
+    <button class="btn btn-ghost" type="submit">جستجو</button>
+  </form>
   <div style="display:flex;flex-wrap:wrap;gap:8px">
     {% for e in employees %}
       <a class="chip" style="text-decoration:none" href="{% url 'org:userinfo_edit' e.pk %}">{{ e.badge_no }} — {{ e.first_name }} {{ e.last_name }}</a>
-    {% endfor %}
+    {% empty %}<span class="empty">پرسنلی با این جستجو پیدا نشد.</span>{% endfor %}
   </div>
+  {% if employee_page.has_other_pages %}<nav class="actions" aria-label="صفحه‌های پرسنل" style="margin-top:12px">
+    {% if employee_page.has_previous %}<a class="btn btn-ghost" href="?q={{ personnel_query|urlencode }}&page={{ employee_page.previous_page_number }}">قبلی</a>{% endif %}
+    <span>صفحهٔ {{ employee_page.number }} از {{ employee_page.paginator.num_pages }}</span>
+    {% if employee_page.has_next %}<a class="btn btn-ghost" href="?q={{ personnel_query|urlencode }}&page={{ employee_page.next_page_number }}">بعدی</a>{% endif %}
+  </nav>{% endif %}
 </div>
-<form method="post" action="{% if emp %}{% url 'org:userinfo_edit' emp.pk %}{% else %}{% url 'org:userinfo' %}{% endif %}">
+<form method="post" enctype="multipart/form-data" action="{% if emp %}{% url 'org:userinfo_edit' emp.pk %}{% else %}{% url 'org:userinfo' %}{% endif %}">
   {% csrf_token %}
   <div class="card">
     <div class="card-title">۱) هویتی</div>
@@ -28,9 +37,13 @@
         <option value="">—</option>
         <option value="M" {% if emp.gender == 'M' %}selected{% endif %}>مرد</option>
         <option value="F" {% if emp.gender == 'F' %}selected{% endif %}>زن</option></select></div>
-      <div class="field"><label>تاریخ تولد (جلالی)</label><input name="birthday" value="{{ emp.birthday|default:'' }}" placeholder="1365-01-15"></div>
-      <div class="field"><label>مدرک تحصیلی</label><input name="certificate" value="{{ emp.certificate }}"></div>
+      <div class="field"><label>تاریخ تولد (جلالی)</label><input name="birthday" value="{{ date_values.birthday }}" placeholder="1365-01-15" inputmode="numeric" dir="ltr"></div>
+      <div class="field"><label>مدرک تحصیلی</label><select name="certificate_id"><option value="">—</option>
+        {% for cert in certificates %}<option value="{{ cert.pk }}" {% if emp.certificate_ref_id == cert.pk %}selected{% endif %}>{{ cert.name }}</option>{% endfor %}
+        {% if emp.certificate and not emp.certificate_ref_id %}<option value="legacy" selected>{{ emp.certificate }} (قدیمی)</option>{% endif %}</select>
+        {% if emp.certificate and not emp.certificate_ref_id %}<input type="hidden" name="legacy_certificate" value="{{ emp.certificate }}">{% endif %}</div>
       <div class="field"><label>کد جانبازی</label><input name="janbaz_code" value="{{ emp.janbaz_code }}"></div>
+      <div class="field"><label for="employee-photo">عکس پرسنل (JPEG/PNG/WebP، حداکثر ۵ مگابایت)</label><input id="employee-photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp">{% if photo_url %}<div><img src="{{ photo_url }}" alt="عکس {{ emp.first_name }} {{ emp.last_name }}" style="max-width:120px;max-height:120px;object-fit:cover;border-radius:8px"></div><label class="check-row"><input type="checkbox" name="remove_photo"><span>حذف عکس فعلی</span></label>{% endif %}</div>
     </div>
   </div>
   <div class="card">
@@ -50,19 +63,28 @@
         {% for p in positions %}<option value="{{ p.id }}" {% if emp.position_id == p.id %}selected{% endif %}>{{ p.title }}</option>{% endfor %}</select></div>
       <div class="field"><label>نوع استخدام</label><select name="emp_type_id"><option value="">—</option>
         {% for t in emp_types %}<option value="{{ t.id }}" {% if emp.emp_type_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></div>
-      <div class="field"><label>تاریخ استخدام</label><input name="hire_date" value="{{ emp.hire_date|default:'' }}" placeholder="1398-07-01"></div>
-      <div class="field"><label>تاریخ پایان همکاری</label><input name="end_work_date" value="{{ emp.end_work_date|default:'' }}"></div>
+      <div class="field"><label>تاریخ استخدام</label><input name="hire_date" value="{{ date_values.hire_date }}" placeholder="1398-07-01" inputmode="numeric" dir="ltr"></div>
+      <div class="field"><label>تاریخ پایان همکاری</label><input name="end_work_date" value="{{ date_values.end_work_date }}" placeholder="1405-01-01" inputmode="numeric" dir="ltr"></div>
+      <div class="field"><label class="check-row"><input type="checkbox" name="employment_active" {% if not emp or emp.is_active %}checked{% endif %}><span>پرسنل فعال</span></label><small>غیرفعال‌سازی نرم انجام می‌شود و حساب پیوندخورده را نیز غیرفعال می‌کند.</small></div>
+      <div class="field"><label>شروع اعتبار دسترسی</label><label class="check-row"><input type="checkbox" name="valid_from" {% if valid_from_enabled %}checked{% endif %}><span>فعال</span></label><input name="valid_from_date" value="{{ valid_from_values.date }}" placeholder="1405-01-01" inputmode="numeric" dir="ltr"><input name="valid_from_time" value="{{ valid_from_values.time }}" placeholder="08:00" inputmode="numeric" dir="ltr"></div>
+      <div class="field"><label>پایان اعتبار دسترسی</label><label class="check-row"><input type="checkbox" name="valid_to" {% if valid_to_enabled %}checked{% endif %}><span>فعال</span></label><input name="valid_to_date" value="{{ valid_to_values.date }}" placeholder="1405-12-29" inputmode="numeric" dir="ltr"><input name="valid_to_time" value="{{ valid_to_values.time }}" placeholder="17:00" inputmode="numeric" dir="ltr"></div>
     </div>
   </div>
   <div class="card">
     <div class="card-title">۴) کارت و دستگاه</div>
     <div class="form-grid">
+      <div class="field"><label>نام دستگاه</label><input name="device_name" value="{{ emp.device_name }}"></div>
       <div class="field"><label>شماره کارت</label><input name="device_card_no" value="{{ emp.device_card_no }}"></div>
       <div class="field"><label>گروه دستگاه</label><input name="device_group" value="{{ emp.device_group|default:1 }}"></div>
       <div class="field"><label>رمز دستگاه</label><input name="device_password" value="{{ emp.device_password }}"></div>
       <div class="field"><label>سطح دسترسی دستگاه</label><input name="device_privilege" value="{{ emp.device_privilege|default:0 }}"></div>
       <div class="field"><label>فعال روی دستگاه</label><input type="checkbox" name="device_enable" {% if not emp or emp.device_enable %}checked{% endif %}></div>
+      {% if can_manage_user_devices %}
+      <div class="field"><label for="upload-device-ids">دستگاه‌های ارسال کاربر</label><select id="upload-device-ids" name="upload_device_ids" multiple size="5">{% for d in devices %}<option value="{{ d.pk }}" {% if d.pk in upload_device_ids %}selected{% endif %}>{{ d.name }} — {{ d.serial }}</option>{% endfor %}</select><small>با Ctrl/⌘ چند دستگاه را انتخاب کنید.</small></div>
+      <div class="field"><label for="valid-device-ids">دستگاه‌های مجاز کاربر</label><select id="valid-device-ids" name="valid_device_ids" multiple size="5">{% for d in devices %}<option value="{{ d.pk }}" {% if d.pk in valid_device_ids %}selected{% endif %}>{{ d.name }} — {{ d.serial }}</option>{% endfor %}</select><small>با Ctrl/⌘ چند دستگاه را انتخاب کنید.</small></div>
+      {% elif emp %}<div class="field"><label>دستگاه‌های ارسال کاربر</label><div>{% for d in emp.upload_devices.all %}<span class="chip">{{ d.name }}</span>{% empty %}—{% endfor %}</div></div><div class="field"><label>دستگاه‌های مجاز کاربر</label><div>{% for d in emp.valid_devices.all %}<span class="chip">{{ d.name }}</span>{% empty %}—{% endfor %}</div></div>{% endif %}
     </div>
+    {% if emp and can_queue_user_upload %}<button class="btn btn-ghost" type="submit" name="action" value="queue_device_upload">قرار دادن ارسال کاربر به دستگاه‌ها در صف</button><small>فقط فرمان صف می‌شود؛ اجرای سخت‌افزاری به worker/دستگاه متصل نیاز دارد.</small>{% endif %}
   </div>
   <div class="card">
     <div class="card-title">۵) کاربر سامانه</div>
@@ -77,10 +99,12 @@
     <div class="form-grid">
       {% for pair in cf_pairs %}
         <div class="field"><label>{{ pair.0.title }}</label>
-          {% if pair.0.field_type == 'bool' %}
-            <input type="checkbox" name="cf_{{ pair.0.pk }}" {% if pair.1 == 'on' or pair.1 == '1' %}checked{% endif %}>
+          {% if pair.0.field_type == 'boolean' %}
+            <input type="checkbox" name="cf_{{ pair.0.pk }}" {% if pair.1 == 'on' or pair.1 == '1' or pair.1 == 'true' %}checked{% endif %}>
+          {% elif pair.0.field_type == 'dropdown' %}
+            <select name="cf_{{ pair.0.pk }}"><option value="">—</option>{% for choice in pair.2 %}<option value="{{ choice }}"{% if choice == pair.1 %} selected{% endif %}>{{ choice }}</option>{% endfor %}</select>
           {% else %}
-            <input name="cf_{{ pair.0.pk }}" value="{{ pair.1 }}">
+            <input name="cf_{{ pair.0.pk }}" value="{{ pair.1 }}"{% if pair.0.field_type == 'date' %} placeholder="سال/ماه/روز جلالی"{% endif %}>
           {% endif %}
         </div>
       {% endfor %}

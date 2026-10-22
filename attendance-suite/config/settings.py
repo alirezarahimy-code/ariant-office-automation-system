@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'apps.device',
     'apps.attendance',
     'apps.reports',
+    'apps.t5web.apps.T5WebConfig',
 ]
 
 MIDDLEWARE = [
@@ -29,6 +30,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.T5ProgramAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -44,6 +46,7 @@ TEMPLATES = [{
             'django.template.context_processors.request',
             'django.contrib.auth.context_processors.auth',
             'django.contrib.messages.context_processors.messages',
+            'apps.t5web.menu.t5web_navigation',
         ],
     },
 }]
@@ -66,9 +69,16 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# Personnel photos stay private; they are served through a permission-scoped view.
+MEDIA_ROOT = BASE_DIR / 'private_media'
+MEDIA_URL = '/private-media/'
 LOGIN_URL = 'core:login'
-LOGIN_REDIRECT_URL = 'attendance:dashboard'
+LOGIN_REDIRECT_URL = 'core:home_index'
 LOGOUT_REDIRECT_URL = 'core:login'
+# Optional dotted class path implementing the trusted vendor license contract.
+T5_LICENSE_CHECKER = os.environ.get('T5_LICENSE_CHECKER', '').strip()
+# The T5 3.5.7 web.config enables its login CAPTCHA by default.
+LOGIN_CAPTCHA_ENABLED = os.environ.get('SUITE_LOGIN_CAPTCHA', '1') == '1'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

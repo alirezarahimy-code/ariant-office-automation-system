@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}پیش‌کارت{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>پیش‌کارت</h1><p class="sub">تعریف شماره کارت، مدت اعتبار، وضعیت و دستگاه</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'attendance:pre_cards_apply' %}">اعمال پیش‌کارت</a></div>
+</div>
+<div class="card">
+  <div class="card-title">{% if selected %}ویرایش پیش‌کارت{% else %}افزودن پیش‌کارت{% endif %}</div>
+  <form method="post" action="{% url 'attendance:pre_cards' %}" class="form-grid">
+    {% csrf_token %}
+    {% if selected %}<input type="hidden" name="precard_id" value="{{ selected.pk }}">{% endif %}
+    <div class="field"><label for="txtCardNo">شماره کارت</label>
+      <input id="txtCardNo" name="CardBadgeNumber" type="number" min="1" step="1" required
+             value="{% if selected %}{{ selected.card_badge_number }}{% endif %}">
+    </div>
+    <div class="field"><label for="txtValidSecs">مدت اعتبار (ثانیه)</label>
+      <input id="txtValidSecs" name="ValidSecs" type="number" min="0" step="1" required
+             value="{% if selected %}{{ selected.valid_secs }}{% endif %}">
+    </div>
+    <div class="field"><label for="cmbCardState">وضعیت کارت</label>
+      <select id="cmbCardState" name="LeaveTypeID" required>
+        <option value="">انتخاب کنید</option>
+        {% for lt in leave_types %}<option value="{{ lt.pk }}"{% if selected and selected.leave_type_id == lt.pk %} selected{% endif %}>{{ lt.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label for="cmbDevice">دستگاه</label>
+      <select id="cmbDevice" name="MachineNumber" required>
+        <option value="">انتخاب کنید</option>
+        {% for device in devices %}<option value="{{ device.pk }}"{% if selected and selected.device_id == device.pk %} selected{% endif %}>{{ device.name }} — {{ device.serial }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label for="chkOnlyOne">فقط اولین رکورد</label>
+      <input id="chkOnlyOne" name="OnlyFirst" type="checkbox" value="true"{% if selected and selected.only_first %} checked{% endif %}>
+    </div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit" name="action" value="save">{% if selected %}ویرایش{% else %}افزودن{% endif %}</button></div>
+    {% if selected %}<div class="field"><label>&nbsp;</label><a class="btn" href="{% url 'attendance:pre_cards' %}">لغو</a></div>{% endif %}
+  </form>
+</div>
+<div class="card">
+  <div class="card-title">فهرست پیش‌کارت‌ها</div>
+  <table class="table">
+    <thead><tr><th>شماره کارت</th><th>مدت اعتبار</th><th>وضعیت کارت</th><th>دستگاه</th><th>فقط اولین رکورد</th><th>عملیات</th></tr></thead>
+    <tbody>
+    {% for item in pre_cards %}
+      <tr>
+        <td class="mono">{{ item.card_badge_number|fa }}</td>
+        <td>{{ item.valid_secs|fa }}</td>
+        <td>{{ item.leave_type.name }}</td>
+        <td>{{ item.device.name }}</td>
+        <td>{% if item.only_first %}بله{% else %}خیر{% endif %}</td>
+        <td class="actions">
+          <a class="btn" href="{% url 'attendance:pre_cards' %}?precard_id={{ item.pk }}">ویرایش</a>
+          <form method="post" action="{% url 'attendance:pre_cards' %}" class="inline">
+            {% csrf_token %}<input type="hidden" name="precard_id" value="{{ item.pk }}">
+            <button class="btn btn-danger" type="submit" name="action" value="delete" onclick="return confirm('پیش‌کارت حذف شود؟')">حذف</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">پیش‌کارتی ثبت نشده است.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}صفحه اصلی{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>صفحه اصلی</h1></div></div>
+{% for group in t5_menu_groups %}
+<section class="card home-group">
+  <h2>{{ group.title }}</h2>
+  <div class="home-tiles">
+    {% for item in group.items %}
+      <a class="home-tile" href="{{ item.url }}">{{ item.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% empty %}
+<section class="card"><p>برای این حساب، پیوند داشبوردی در دسترس نیست.</p></section>
+{% endfor %}
+<section class="card">
+  <h2>مشخصات کاربر</h2>
+  {% if employee %}
+  <div class="table-wrap"><table class="table table-hover table-bordered table-responsive table-striped">
+    <thead><tr><th>نام</th><th>نام خانوادگی</th><th>سمت</th><th>سمت بالادست</th></tr></thead>
+    <tbody><tr>
+      <td>{{ employee.first_name }}</td>
+      <td>{{ employee.last_name }}</td>
+      <td>{{ position_title|default:'-' }}</td>
+      <td>{{ manager_position_title|default:'-' }}</td>
+    </tr></tbody>
+  </table></div>
+  {% else %}
+  <p>پروندهٔ پرسنلی به این حساب متصل نشده است.</p>
+  {% endif %}
+</section>
+<style>
+.home-group h2{margin-top:0}.home-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.home-tile{min-height:54px;padding:14px;display:flex;align-items:center;justify-content:center;text-align:center;border:1px solid #e2e8f0;border-radius:10px;color:#1e293b;text-decoration:none;background:#f8fafc}.home-tile:hover,.home-tile:focus-visible{background:#eff6ff;border-color:#93c5fd;outline:none}
+</style>
+{% endblock %}

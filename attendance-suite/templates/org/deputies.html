@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}انتخاب جانشین سمت | T5Web{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>انتخاب جانشین</h1><p class="sub">جانشین‌ها بر اساس سمت سازمانی تعیین می‌شوند؛ این بخش با جانشینی گردش‌کارِ دارای بازهٔ زمانی متفاوت است.</p></div></div>
+<div class="deputy-layout">
+  <section class="card"><div class="card-title">انتخاب سمت اصلی</div>
+    <input class="search-input" type="search" placeholder="جستجوی سمت" oninput="filterList(this,'title-list')">
+    <ul id="title-list" class="title-list">
+      {% for item in positions %}<li><a href="?title_id={{ item.pk }}" {% if principal.pk == item.pk %}class="selected-title"{% endif %}>{{ item.title }}{% if item.department %}<span class="muted"> — {{ item.department.name }}</span>{% endif %}</a></li>
+      {% empty %}<li class="empty">سمتی تعریف نشده است.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    {% if principal %}
+      <div class="card-title">جانشین‌های مجاز برای «{{ principal.title }}»</div>
+      <form method="post">{% csrf_token %}<input type="hidden" name="title_id" value="{{ principal.pk }}">
+        <input class="search-input" type="search" placeholder="جستجوی سمت جانشین" oninput="filterList(this,'deputy-list')">
+        <ul id="deputy-list" class="title-list deputy-list">
+          {% for item in positions %}{% if item.pk != principal.pk %}<li><label><input type="checkbox" name="deputy_title_ids" value="{{ item.pk }}" {% if item.pk in deputy_ids %}checked{% endif %}>{{ item.title }}{% if item.department %}<span class="muted"> — {{ item.department.name }}</span>{% endif %}</label></li>{% endif %}
+          {% empty %}<li class="empty">سمتی برای انتخاب وجود ندارد.</li>{% endfor %}
+        </ul>
+        <button class="btn btn-primary" type="submit">ذخیرهٔ جانشین‌ها</button>
+      </form>
+    {% else %}<p class="empty">برای تنظیم جانشین، ابتدا یک سمت را از فهرست انتخاب کنید.</p>{% endif %}
+  </section>
+</div>
+<script>
+function filterList(input,id){const q=input.value.trim().toLocaleLowerCase();document.querySelectorAll('#'+id+' li').forEach(li=>{li.hidden=!li.textContent.toLocaleLowerCase().includes(q);});}
+</script>
+<style>
+.deputy-layout{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(360px,1.2fr);gap:18px;align-items:start}.search-input{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin:6px 0}.title-list{list-style:none;padding:0;max-height:520px;overflow:auto}.title-list li{padding:6px;border-bottom:1px solid #e2e8f0}.title-list a{display:block;text-decoration:none;padding:4px}.title-list label{display:flex;gap:8px;align-items:center}.selected-title{background:#e0f2fe;border-radius:6px;font-weight:700}.muted{color:#64748b}@media(max-width:780px){.deputy-layout{grid-template-columns:1fr}}
+</style>
+{% endblock %}

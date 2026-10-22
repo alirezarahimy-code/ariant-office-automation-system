@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load suite_tags %}
+{% block title %}ورود اطلاعات کاربران از Excel{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>ورود اطلاعات کاربران از Excel</h1><p class="sub">پیش‌نمایش قبل از ثبت؛ ردیف‌های نامعتبر یا شماره‌های تکراری وارد نمی‌شوند.</p></div></div>
+{% if result %}
+<div class="card"><h2>نتیجهٔ ورود اطلاعات</h2><p>فایل: {{ result.file_name }}</p><p>ثبت‌شده: {{ result.imported }} — ردشده در زمان ثبت: {{ result.skipped }}</p><a class="btn btn-primary" href="{% url 'org:import_excel' %}">ورود فایل دیگر</a></div>
+{% else %}
+<div class="card">
+  <h2>۱) انتخاب فایل و ستون‌ها</h2>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}<input type="hidden" name="action" value="preview">
+    <div class="form-grid">
+      <div class="field"><label for="excel-file">فایل Excel</label><input id="excel-file" name="file" type="file" accept=".xlsx,.xlsm" required><small>فقط xlsx/xlsm، حداکثر ۱۰ مگابایت</small></div>
+      <div class="field"><label for="from-row">از ردیف</label><input id="from-row" name="from_row" type="number" min="1" value="{{ from_row|default:2 }}" required></div>
+      <div class="field"><label for="to-row">تا ردیف</label><input id="to-row" name="to_row" type="number" min="1" value="{{ to_row }}" placeholder="آخرین ردیف"></div>
+    </div>
+    <div class="table-wrap">
+      <table class="table mapping-table"><thead><tr><th>انتخاب</th><th>فیلد پرسنلی</th><th>شمارهٔ ستون</th></tr></thead><tbody>
+        {% for field in fields %}
+        <tr>
+          <td><input type="checkbox" name="selected_fields" value="{{ field.key }}" {% if field.key in selected_fields or not preview and field.required %}checked{% endif %}></td>
+          <td>{{ field.label }}{% if field.required %} *{% endif %}</td>
+          <td><input class="column-number" type="number" min="1" max="200" name="column_{{ field.key }}" value="{{ column_values|get_item:field.key|default:'' }}" placeholder="شماره ستون"></td>
+        </tr>
+        {% endfor %}
+      </tbody></table>
+    </div>
+    <p class="muted">شمارهٔ ستون‌ها از ۱ شروع می‌شود. فیلدهای ستاره‌دار الزامی‌اند. ردیف عنوان را در بازه وارد نکنید.</p>
+    <button class="btn btn-primary" type="submit">نمایش پیش‌نمایش</button>
+  </form>
+</div>
+{% if preview %}
+<div class="card">
+  <h2>۲) بررسی ردیف‌های پرسنلی</h2>
+  <p>فایل: {{ file_name }} — قابل ورود: {{ valid_count }} — دارای خطا: {{ invalid_count }}</p>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>ردیف فایل</th><th>وضعیت</th><th>شماره کارگری</th><th>نام</th><th>نام خانوادگی</th><th>نام دستگاه</th><th>ایمیل</th><th>تلفن</th><th>نشانی</th><th>شماره پرسنلی</th><th>جنسیت</th></tr></thead>
+    <tbody>{% for row in preview %}
+      <tr><td>{{ row.row }}</td><td>{% if row.importable %}<span class="chip chip-success">{{ row.status }}</span>{% else %}<span class="chip chip-danger">{{ row.status }}</span>{% endif %}</td>
+        <td>{{ row.payload.badge_no|default:'-' }}</td><td>{{ row.payload.first_name|default:'-' }}</td><td>{{ row.payload.last_name|default:'-' }}</td><td>{{ row.payload.device_name|default:'-' }}</td><td>{{ row.payload.email|default:'-' }}</td><td>{{ row.payload.tel|default:'-' }}</td><td>{{ row.payload.address|default:'-' }}</td><td>{{ row.payload.personnel_no|default:'-' }}</td><td>{{ row.payload.gender|default:'-' }}</td></tr>
+    {% empty %}<tr><td colspan="11" class="empty">در بازهٔ انتخاب‌شده ردیفی پیدا نشد.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if valid_count %}
+  <form method="post" class="import-confirm" onsubmit="return confirm('فقط ردیف‌های معتبر ثبت شوند؟')">
+    {% csrf_token %}<input type="hidden" name="action" value="commit">
+    <button class="btn btn-primary" type="submit">ثبت {{ valid_count }} پرسنل معتبر</button>
+  </form>
+  {% endif %}
+</div>
+{% if raw_preview %}
+<div class="card">
+  <h2>نمونهٔ دادهٔ خام (برای تطبیق شماره ستون‌ها)</h2>
+  <div class="table-wrap"><table class="table"><thead><tr><th>ردیف</th>{% for cell in raw_preview.0.cells %}<th>{{ forloop.counter }}</th>{% endfor %}</tr></thead><tbody>
+    {% for row in raw_preview %}<tr><td>{{ row.number }}</td>{% for cell in row.cells %}<td>{{ cell|truncatechars:80 }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
+<style>.table-wrap{overflow:auto}.mapping-table input[type=number]{width:110px}.mapping-table td{vertical-align:middle}.import-confirm{margin-top:16px}</style>
+{% endblock %}

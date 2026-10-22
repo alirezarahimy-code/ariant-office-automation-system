@@ -1,0 +1,8 @@
+{% load suite_tags %}
+<li>
+  <a href="{% url 'org:department_edit' node.department.pk %}">{{ node.department.name }}</a>
+  <span class="chip" dir="ltr">{{ node.department.code }}</span>
+  <span class="chip">{{ node.department.employee_count|fa }} پرسنل</span>
+  {% if not node.department.is_active %}<span class="chip chip-muted">غیرفعال</span>{% endif %}
+  {% if node.children %}<ul>{% for node in node.children %}{% include 'org/_department_tree_node.html' with node=node %}{% endfor %}</ul>{% endif %}
+</li>
